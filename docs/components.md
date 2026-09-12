@@ -7,9 +7,9 @@ that setup under M01 in [todo.md](todo.md) before repeating or replacing work.
 | Component | MVP role | Confirmation needed |
 | --- | --- | --- |
 | Laptop | CPython 3.14.6 rules/timers, local SQLite history, serial connection | HP Windows laptop has detected/programmed the Pico and controlled its LEDs; clean application serial messaging remains to be tested |
-| Raspberry Pi Pico-family board | MicroPython display/button peripheral over USB | Exact board, firmware and USB behavior |
-| 1.8-inch LCD | Home pet/clock, setup, large countdown and button labels | Controller, resolution, bus, voltage, orientation and driver |
-| Two 6 mm push buttons | Left/right press or hold | Pins, resistors, polarity and placement |
+| Raspberry Pi Pico-family board | MicroPython display/button peripheral over USB | RP2040 confirmed; exact board variant (Pico vs Pico W), firmware release and USB CDC behavior beyond enumeration still TBD |
+| 1.8-inch LCD | Home pet/clock, setup, large countdown and button labels | ST7735S controller, 128x160, full color, SPI bus confirmed; bus pins, voltage and orientation still TBD |
+| Two 6 mm push buttons | Left/right press or hold | Button 1 on GPIO14, Button 2 on GPIO15 confirmed; pull direction/polarity and placement still TBD |
 | USB data cable | Power and data | Confirmed on an HP Windows laptop by programming the Pico and controlling its LEDs; connector type is not yet recorded |
 | Speaker/buzzer | Future optional sound | Type, drive circuit and pins; outside MVP |
 

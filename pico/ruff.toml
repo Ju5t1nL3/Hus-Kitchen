@@ -1,5 +1,9 @@
-# Provisional until M01 pins and verifies the exact MicroPython firmware.
-target-version = "py39"
+# MicroPython v1.24.0 (RPI_PICO) implements a Python 3.4 baseline plus select
+# later features (e.g. f-strings); Ruff's oldest supported target is py37, so
+# that is used as the closest conservative floor. It is a syntax/lint setting
+# only — it does not validate MicroPython-only APIs; the on-device smoke test
+# in pico/README.md is the real compatibility check.
+target-version = "py37"
 line-length = 88
 
 [lint]

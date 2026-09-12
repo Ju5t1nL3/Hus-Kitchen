@@ -39,13 +39,29 @@ Pico sufficiently to program it and control its LEDs. This confirms the board,
 cable and host can communicate, but does not yet demonstrate that the desk-pet
 application can exchange clean `READY`/`PING`/`PONG` messages in both directions.
 
+Board and MCU: Raspberry Pi Pico (non-W variant), RP2040.
+
+Firmware already on the board: MicroPython v1.24.0, confirmed via
+`sys.implementation`/`sys.version` in a Thonny REPL session.
+
+USB: the board enumerates on Windows as a CDC serial device, VID `2E8A`
+(Raspberry Pi Foundation), PID `0005`, at `COM6` on the current test laptop. This
+PID is the standard MicroPython REPL/CDC identity, matching the already-flashed
+v1.24.0. Still to confirm: connector type, and whether the desk-pet app's
+newline-delimited protocol stays clean alongside REPL traffic once `main.py`
+runs the application loop instead of Thonny's interactive session.
+
+Display: 1.8-inch SPI TFT LCD, 128x160 resolution, full color, ST7735S
+controller. Bus pins (SCK/MOSI/CS/DC/RST/backlight) are not yet assigned —
+confirm and record before implementing `lcd_driver.py`.
+
 Record wiring compactly:
 
 | Logical component | Board pin/GPIO | Direction | Pull/polarity or bus role | Verified |
 | --- | --- | --- | --- | --- |
-| Button 1 | TBD | Input | TBD | No |
-| Button 2 | TBD | Input | TBD | No |
-| Display | TBD | Output/bus | TBD | No |
+| Button 1 | GPIO14 | Input | TBD | No |
+| Button 2 | GPIO15 | Input | TBD | No |
+| Display | TBD (SPI bus) | Output/bus | ST7735S, 128x160, SPI | No |
 
 This is a project-relevant inventory, not a board encyclopedia. Omit peripherals
 the desk pet will never use, but do not omit a capability on which the display,
@@ -62,14 +78,17 @@ buttons, USB protocol, timing, assets or likely sound expansion depends.
 
 | Firmware fact | Verified value |
 | --- | --- |
-| Board download page | TBD |
-| MicroPython release/build | TBD |
-| UF2 filename | TBD |
-| UF2 checksum | TBD |
-| Test date | TBD |
-| Smoke-test result | TBD |
+| Board download page | https://micropython.org/download/RPI_PICO/ |
+| MicroPython release/build | v1.24.0 (already flashed; not reflashed as part of this pass) |
+| UF2 filename | `RPI_PICO-20241025-v1.24.0.uf2` |
+| UF2 checksum | TBD — compute locally (`sha256sum`/`Get-FileHash`) if/when the board is reflashed with a downloaded copy of this UF2 |
+| Test date | TBD — record when the smoke test below is actually run |
+| Smoke-test result | TBD — USB serial, both buttons, display, timing and JSON not yet smoke-tested against this exact build |
 
 Do not assume that an `RPI_PICO` UF2 is valid for another Pico-family board.
+Since v1.24.0 is already running and was not reflashed here, its checksum was
+not independently computed; verify it against the official download page if a
+fresh reflash is ever needed.
 
 ## 3. Align and verify Ruff
 
