@@ -17,7 +17,7 @@ can affect this project:
 | --- | --- |
 | Board | Exact model/variant, MCU (such as RP2040 or RP2350) and board revision |
 | Memory/storage | Flash and RAM capacity, plus usable filesystem space |
-| USB | Connector, data-capable cable, CDC/serial behavior, device name/IDs and whether the application shares the REPL stream |
+| USB | An HP Windows laptop can detect/program the Pico and control its LEDs over the confirmed data cable; still record the connector, CDC/serial behavior, device name/IDs and whether the application shares the REPL stream |
 | Power | Normal power source and voltage requirements |
 | GPIO | Every used pin, its direction, voltage level and connected component |
 | Buttons | Logical ID, GPIO, active-high/low, internal/external pull and observed debounce behavior |
@@ -33,6 +33,11 @@ can affect this project:
 | Expansion | PWM/audio pins, interrupts, PIO or DMA only if planned hardware will require them |
 | Networking | Whether the board has Wi-Fi; the MVP does not use it and future HTTP services stay laptop-side |
 | Existing work | What already works, what was tested, and what remains unfinished |
+
+Known bring-up result: an HP Windows laptop successfully communicated with the
+Pico sufficiently to program it and control its LEDs. This confirms the board,
+cable and host can communicate, but does not yet demonstrate that the desk-pet
+application can exchange clean `READY`/`PING`/`PONG` messages in both directions.
 
 Record wiring compactly:
 

@@ -6,17 +6,21 @@ that setup under M01 in [todo.md](todo.md) before repeating or replacing work.
 
 | Component | MVP role | Confirmation needed |
 | --- | --- | --- |
-| Laptop | CPython 3.14.6 rules/timers, local SQLite history, serial connection | USB serial access and whether macOS-only or cross-platform |
+| Laptop | CPython 3.14.6 rules/timers, local SQLite history, serial connection | HP Windows laptop has detected/programmed the Pico and controlled its LEDs; clean application serial messaging remains to be tested |
 | Raspberry Pi Pico-family board | MicroPython display/button peripheral over USB | Exact board, firmware and USB behavior |
 | 1.8-inch LCD | Home pet/clock, setup, large countdown and button labels | Controller, resolution, bus, voltage, orientation and driver |
 | Two 6 mm push buttons | Left/right press or hold | Pins, resistors, polarity and placement |
-| USB data cable | Power and data | Match the actual connector; original USB-C note is unverified |
+| USB data cable | Power and data | Confirmed on an HP Windows laptop by programming the Pico and controlling its LEDs; connector type is not yet recorded |
 | Speaker/buzzer | Future optional sound | Type, drive circuit and pins; outside MVP |
 
 The original “Pico / Pi Zero W” list was ambiguous. This plan assumes Pico;
 Pi Zero would be a deliberate platform change. LCD versus OLED also needs hardware
 confirmation in these docs. This documentation pass has not independently inspected
 or tested the hardware; it does not imply the team has done no setup or testing.
+
+The expected deployment host is currently an HP Windows laptop. Keep laptop code
+OS-agnostic: discover/configure the serial port rather than hardcoding a Windows
+`COM` name, and isolate OS-specific behavior behind adapters if it becomes necessary.
 
 ## Display and assets
 
@@ -49,9 +53,11 @@ electrical requirements before any new wiring. Put confirmed pins, orientation
 and debounce settings in `pico/hardware_config.py`.
 Do not guess pins from these notes.
 
-The application must own its USB stream: REPL, boot banners, IDE traffic and debug
-printing must not contaminate messages. Confirm that arrangement on the selected
-firmware. Keep button scanning and USB polling responsive while drawing.
+Basic laptop-to-Pico programming/control is confirmed on Windows. The application
+must still prove its bidirectional newline-delimited serial exchange: REPL, boot
+banners, IDE traffic and debug printing must not contaminate messages. Confirm that
+arrangement on the selected firmware. Keep button scanning and USB polling responsive
+while drawing.
 
 Use a fake laptop device link and recorded screen examples during independent
 development. The [serial protocol](serial_protocol.md) is the shared contract;

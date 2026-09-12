@@ -4,6 +4,10 @@ This folder contains the CPython application: timer and emotion rules, SQLite
 history, screen presentation, USB communication and future laptop integrations.
 It must not be copied to or imported by the Pico firmware.
 
+The expected deployment host is an HP Windows laptop; initial tooling was also
+verified on macOS. Keep serial discovery and application code OS-agnostic—never
+hardcode a `COM` port or platform-specific device path in game logic.
+
 ## Tooling
 
 - CPython 3.14.6, selected by `.python-version`; `pyproject.toml` accepts compatible

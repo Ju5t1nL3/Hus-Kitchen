@@ -80,7 +80,7 @@ penalties are discarded; co-op shared loss remains a separate product decision.
 | Question | Working assumption |
 | --- | --- |
 | Existing board setup? | Some setup is already reported. Inventory exact board/display, pins, firmware and USB behavior; reuse completed work and identify gaps. Details are not yet recorded here. |
-| Laptop OS and Python version? | CPython 3.14.6 selected; current development machine is macOS 26.5.2. Confirm USB serial access and decide whether other OSes are supported. |
+| Laptop OS and Python version? | CPython 3.14.6 selected. An HP Windows laptop is the expected deployment host and has programmed/controlled the Pico over USB; initial tooling was also verified on macOS 26.5.2. Keep the code OS-agnostic and avoid fixed device/`COM` paths. |
 | Sprite style/dimensions and actual redraw speed? | Full pet, small faces, food/animations; size to confirmed LCD and measure. |
 | Team size and task assignment? | Four people confirmed; possibly two on software. No assignments in advance; claim individual tasks on the board. |
 | Tuning? | Open-ended. Existing values are provisional, not final decisions. Maintain configurable rules and the agreed low-stress behavior. |

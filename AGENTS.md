@@ -33,9 +33,11 @@ This repository contains planning documents and the initial laptop/Pico director
 scaffold. Application and firmware features are not implemented yet. Do not
 describe planned modules or checks as working code.
 The user reports some board setup is already done; inspect and record it before
-repeating hardware work. The laptop runtime is CPython 3.14.6 on macOS; serial access
-still needs confirmation with the device. Pico MicroPython remains independently
-unpinned until the exact board/installed firmware are documented.
+repeating hardware work. The laptop runtime is CPython 3.14.6. An HP Windows laptop
+has successfully programmed/controlled the Pico over USB; keep application code
+device- and OS-agnostic rather than hardcoding a Windows serial port. Pico
+MicroPython remains independently unpinned until the exact board/installed firmware
+are documented.
 
 The user explicitly asked to improve this file and the previous architecture,
 not preserve their original structure. Their priorities are modularity,
