@@ -23,6 +23,7 @@ uv sync
 uv run ruff format --check .
 uv run ruff check .
 uv run pyright
+uv run python -m unittest discover -s tests -v
 ```
 
 Use `uv run ruff format .` to format laptop code. Commit `uv.lock`; do not commit
@@ -31,8 +32,9 @@ The Pico reuses this locked Ruff executable with its own provisional
 `../pico/ruff.toml`; follow the [Pico bring-up sequence](../pico/README.md) before
 treating that syntax target as verified.
 
-There is no runnable application entry point yet. Add real run/report commands as
-their tasks are completed instead of documenting placeholders as working software.
+There is no runnable application entry point yet. The test command above is active;
+add real run/report commands as their tasks are completed instead of documenting
+placeholders as working software.
 
 ## Planned layout
 
