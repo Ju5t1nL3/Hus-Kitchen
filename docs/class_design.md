@@ -138,7 +138,7 @@ resume keeps that screen, break_skipped returns Home, and pet_created selects Ho
 ## Adding or changing buttons
 
 Use one small action-definition dictionary in app/controls.py, plus declarative
-bindings under controls in config.yaml. Contexts are home, setup, focus_running,
+bindings under controls in laptop/config.yaml. Contexts are home, setup, focus_running,
 focus_paused, break_offer, break_running and break_paused. ActionId is a closed
 literal/enum matching the defined ControlIntents, not an executable string.
 Example binding subset (not a complete configuration):

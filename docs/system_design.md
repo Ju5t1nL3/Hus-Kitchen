@@ -34,7 +34,7 @@ same commit-before-presentation path when a focus or break timer finishes.
 | app | Screen controls, scheduling, state ownership and presentation | Core and feature APIs |
 | adapters | SQLite, USB, system clock, YAML and text output | Core contracts |
 | pico | Hardware input, protocol validation, drawing and sprites | MicroPython and local firmware modules |
-| main.py | Construct dependencies and start/stop the laptop app | Laptop modules |
+| laptop/main.py | Construct dependencies and start/stop the laptop app | Laptop modules |
 
 Keep feature functions pure and resource classes small. Features do not import
 each other; the coordinator combines them. No generic plugin framework or separate
@@ -48,38 +48,47 @@ create empty files. Individual work is claimed in [todo.md](todo.md).
 
 ```text
 AGENTS.md                         # entry point
+README.md                         # repository overview and runtime boundaries
 docs/                             # current product/design/reference documents
-main.py                           # laptop composition root and CLI
-config.yaml                       # user-tunable laptop rules/settings
-pyproject.toml                    # dependencies and type-checker settings
-src/deskpet/
-  core/
-    models.py                     # immutable session, offer, reaction and state records
-    commands.py                   # typed semantic commands
-    events.py                     # versioned envelope and payload unions
-    views.py                      # screen, labels and animation records
-    ports.py                      # EventStore, DeviceLink, Clock
-    config.py                     # validated configuration types
-  features/
-    timers.py                     # focus AND break start/pause/resume/end/complete
-    feeding.py                    # one food through extensible food definitions
-    emotions.py                   # recorded reactions + activity -> mood
-    replay.py                     # deterministic event -> state
-    history.py                    # streak and weekly queries
-  app/
-    application.py                # the single state owner
-    controls.py                   # action definitions, configurable bindings and labels
-    scheduling.py                 # timer samples/deadlines, interruption handling
-    presenter.py                  # state/runtime -> screen snapshot
-  adapters/
-    serial_link.py                # queued read/write, connection/heartbeat
-    wire_codec.py                 # laptop message validation and encoding
-    sqlite_event_store.py         # durable append/read and single-writer lock
-    system_clock.py               # UTC and monotonic time, resume detection
-    config_loader.py              # YAML -> typed configuration
-    text_report.py                # read-only report formatting
-    fakes.py                      # fake store/device/clock
+contracts/                        # runtime-neutral protocol fixtures (task M05)
+laptop/                           # CPython 3.14 uv project
+  pyproject.toml                  # laptop dependencies, Ruff and Pyright settings
+  uv.lock                         # reproducible laptop dependency lock
+  .python-version                 # laptop CPython selection only
+  README.md                       # laptop setup/check instructions
+  main.py                         # future laptop composition root and CLI
+  config.yaml                     # future user-tunable laptop rules/settings
+  src/deskpet/
+    core/
+      models.py                   # immutable session, offer, reaction and state records
+      commands.py                 # typed semantic commands
+      events.py                   # versioned envelope and payload unions
+      views.py                    # screen, labels and animation records
+      ports.py                    # EventStore, DeviceLink, Clock
+      config.py                   # validated configuration types
+    features/
+      timers.py                   # focus AND break start/pause/resume/end/complete
+      feeding.py                  # one food through extensible food definitions
+      emotions.py                 # recorded reactions + activity -> mood
+      replay.py                   # deterministic event -> state
+      history.py                  # streak and weekly queries
+    app/
+      application.py              # the single state owner
+      controls.py                 # action definitions, configurable bindings and labels
+      scheduling.py               # timer samples/deadlines, interruption handling
+      presenter.py                # state/runtime -> screen snapshot
+    adapters/
+      serial_link.py              # queued read/write, connection/heartbeat
+      wire_codec.py               # laptop message validation and encoding
+      sqlite_event_store.py       # durable append/read and single-writer lock
+      system_clock.py             # UTC and monotonic time, resume detection
+      config_loader.py            # YAML -> typed configuration
+      text_report.py              # read-only report formatting
+      fakes.py                    # fake store/device/clock
+  tests/                          # laptop unit/integration tests
 pico/
+  README.md                       # firmware/hardware setup and flashing notes
+  MICROPYTHON_VERSION             # exact tested firmware; currently UNPINNED
   main.py                         # cooperative loop
   protocol.py                     # firmware JSON/session validation
   buttons.py                      # debounce and press/hold detection
@@ -87,13 +96,7 @@ pico/
   lcd_driver.py                   # hardware-specific drawing
   sprites.py                      # full pet, small faces, food and animations
   hardware_config.py              # pins, orientation and debounce
-tests/
-  contracts/                      # shared wire examples and golden event history
-  domain/                         # timers/feeding/emotions/replay/history
-  storage/                        # commit, deduplication, recovery
-  app/                            # fake device integration
-  firmware/                       # parser, gestures and render behavior
-data/                             # ignored local database
+  tests/                          # firmware parser/gesture/render checks
 ```
 
 ## Three kinds of state

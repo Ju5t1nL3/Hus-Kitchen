@@ -1,0 +1,32 @@
+# Tamagotchi Desk Pet
+
+A small physical productivity companion. A laptop application owns timers,
+emotions and history; a USB-connected Raspberry Pi Pico reads buttons and renders
+the screen.
+
+This repository contains two separate Python runtimes:
+
+- [`laptop/`](laptop/) — CPython 3.14 application, managed with uv.
+- [`pico/`](pico/) — MicroPython firmware, flashed separately to the exact board.
+
+They communicate using the versioned JSON Lines protocol described in
+[`docs/serial_protocol.md`](docs/serial_protocol.md). They share protocol contracts,
+but never import code from each other.
+
+Start with [`AGENTS.md`](AGENTS.md) for contributor rules and the documentation map.
+Read [`docs/overview.md`](docs/overview.md) for the short product explanation and
+[`docs/todo.md`](docs/todo.md) before claiming implementation work.
+
+## Repository layout
+
+```text
+AGENTS.md              contributor and LLM entry point
+README.md              repository overview
+docs/                  product, architecture and task documents
+contracts/             runtime-neutral protocol fixtures (added with task M05)
+laptop/                CPython application and laptop tooling
+pico/                  MicroPython firmware and hardware notes
+```
+
+The application is still at the scaffold/planning stage. Setup and run commands
+will grow as the corresponding MVP tasks are implemented.

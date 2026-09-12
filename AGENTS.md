@@ -29,11 +29,13 @@ do not preassign people to modules or assume a permanent integration owner.
 
 ## Project status
 
-This repository currently contains planning documents, not an implementation.
-The architecture, APIs, protocol, and directory tree are the proposed MVP baseline.
-Do not describe planned modules or checks as already implemented.
+This repository contains planning documents and the initial laptop/Pico directory
+scaffold. Application and firmware features are not implemented yet. Do not
+describe planned modules or checks as working code.
 The user reports some board setup is already done; inspect and record it before
-repeating hardware work. Laptop OS/Python selection remains for the user to initiate.
+repeating hardware work. The laptop runtime is CPython 3.14 on macOS; serial access
+still needs confirmation with the device. Pico MicroPython remains independently
+unpinned until the exact board/installed firmware are documented.
 
 The user explicitly asked to improve this file and the previous architecture,
 not preserve their original structure. Their priorities are modularity,
@@ -71,6 +73,9 @@ User instructions override the plan; document material deviations.
 - Follow [implementation guidelines](docs/implementation_guidelines.md): check
   laptop types, validate external data, and apply Twelve-Factor only where it fits
   this local device. Keep methodology details in that guide.
+- Keep laptop tooling under `laptop/`: run uv, Ruff and Pyright there. Pico firmware
+  has its own pinned MicroPython release and firmware-specific tooling/configuration;
+  neither runtime imports from the other.
 - Keep business rules on the laptop. Firmware may debounce, validate messages,
   animate, and detect a lost connection, but cannot calculate breaks, advance or
   pause sessions, choose emotions, interpret button actions, or persist game state.

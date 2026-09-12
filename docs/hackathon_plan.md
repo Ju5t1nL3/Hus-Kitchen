@@ -40,7 +40,7 @@ laptop libraries into MicroPython.
 ## Build order
 
 1. Inspect and document the board setup already done; reuse working wiring,
-   firmware and assets. The user will initiate the laptop OS/Python choice.
+   firmware and assets. The laptop uses CPython 3.14 with tooling under `laptop/`.
    Bootstrap shared contracts and draw home/setup/timer examples; start USB and
    fake-device paths as their inputs become available.
 2. Connect one end-to-end focus start → countdown → saved completion → break offer.
