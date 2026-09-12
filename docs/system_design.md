@@ -51,7 +51,7 @@ AGENTS.md                         # entry point
 README.md                         # repository overview and runtime boundaries
 docs/                             # current product/design/reference documents
 contracts/                        # runtime-neutral protocol fixtures (task M05)
-laptop/                           # CPython 3.14 uv project
+laptop/                           # CPython 3.14.6 uv project
   pyproject.toml                  # laptop dependencies, Ruff and Pyright settings
   uv.lock                         # reproducible laptop dependency lock
   .python-version                 # laptop CPython selection only

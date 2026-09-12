@@ -6,7 +6,7 @@ the screen.
 
 This repository contains two separate Python runtimes:
 
-- [`laptop/`](laptop/) — CPython 3.14 application, managed with uv.
+- [`laptop/`](laptop/) — CPython 3.14.6 application, managed with uv.
 - [`pico/`](pico/) — MicroPython firmware, flashed separately to the exact board.
 
 They communicate using the versioned JSON Lines protocol described in

@@ -5,7 +5,7 @@ code. Tooling is initialized, while application and firmware behavior remain to
 be implemented.
 For the plain-language project explanation, read [the overview](overview.md).
 
-Laptop tooling is initialized under `laptop/`: CPython 3.14, uv, Ruff and Pyright.
+Laptop tooling is initialized under `laptop/`: CPython 3.14.6, uv, Ruff and Pyright.
 Run its commands from that directory. Firmware records its independent MicroPython
 release in `pico/MICROPYTHON_VERSION` after the existing board setup is identified.
 

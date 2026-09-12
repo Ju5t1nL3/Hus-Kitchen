@@ -1,0 +1,14 @@
+.DS_Store
+
+# Laptop Python
+laptop/.venv/
+laptop/.ruff_cache/
+laptop/.mypy_cache/
+laptop/.pytest_cache/
+laptop/.pyright/
+__pycache__/
+*.py[cod]
+
+# Local application data
+data/
+laptop/data/

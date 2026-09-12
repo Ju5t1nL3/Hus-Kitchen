@@ -6,7 +6,7 @@ that setup under M01 in [todo.md](todo.md) before repeating or replacing work.
 
 | Component | MVP role | Confirmation needed |
 | --- | --- | --- |
-| Laptop | CPython 3.14 rules/timers, local SQLite history, serial connection | USB serial access and whether macOS-only or cross-platform |
+| Laptop | CPython 3.14.6 rules/timers, local SQLite history, serial connection | USB serial access and whether macOS-only or cross-platform |
 | Raspberry Pi Pico-family board | MicroPython display/button peripheral over USB | Exact board, firmware and USB behavior |
 | 1.8-inch LCD | Home pet/clock, setup, large countdown and button labels | Controller, resolution, bus, voltage, orientation and driver |
 | Two 6 mm push buttons | Left/right press or hold | Pins, resistors, polarity and placement |

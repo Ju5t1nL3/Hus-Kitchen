@@ -39,8 +39,8 @@ References: [decisions](design_decisions.md), [hardware](components.md),
 | --- | --- | --- | --- | --- | --- |
 | agent:task-board | [x] Done | M00 | Publish this MVP board and contributor claim/update rules; links and workflow agree. | — | Verified 77 local links, table formatting and 23 task IDs; removed preset assignments and updated setup/open-choice notes. |
 | — | [ ] Todo | M01 | Inspect and document existing board setup: exact board/display, wiring, firmware, driver and USB status; identify only unfinished bring-up work. | Existing hardware | Some setup is already reported; do not restart it or assume it is verified. |
-| — | [ ] Todo | M02 | Record laptop OS and Python version, then confirm serial access and the supported environment. | User's choice | User will initiate this decision; do not choose on their behalf. |
-| — | [ ] Todo | M03 | Create laptop package/dependency setup and static-checker configuration; basic import/check command works. | M02 | Coordinate shared pyproject/config files with other claimants. |
+| agent:laptop-bootstrap | [ ] Blocked | M02 | Record laptop OS and Python version, then confirm serial access and the supported environment. | User's choice | CPython 3.14.6 and macOS 26.5.2 recorded. Blocked only on confirming USB serial access with the actual device and deciding whether other OSes are supported. |
+| agent:laptop-bootstrap | [x] Done | M03 | Create laptop package/dependency setup and static-checker configuration; basic import/check command works. | M02 | Laptop-local uv project created. `uv sync`, package import, Ruff format/check, and strict Pyright passed; uv.lock pins Ruff 0.16.7 and Pyright 1.1.414. |
 | — | [ ] Todo | M04 | Implement typed records, commands, event payloads and resource interfaces; type checks pass. | M03 | Follow existing API/event/wire specs; no future reward or sensor types. |
 | — | [ ] Todo | M05 | Add shared protocol/event examples and fake clock, device and store; both sides have agreed test inputs. | M04 | Include pause/end boundary and extra-button examples. |
 
