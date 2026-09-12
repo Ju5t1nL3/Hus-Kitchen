@@ -13,7 +13,7 @@ from deskpet.adapters.wire_codec import (
     PingMessage,
     RenderMessage,
 )
-from deskpet.core.models import ClockReading, PublishStatus
+from deskpet.core.models import ButtonId, ClockReading, PublishStatus
 from deskpet.core.ports import InputCallback
 from deskpet.core.views import (
     AnimationCue,
@@ -52,6 +52,7 @@ class SerialPort(Protocol):
 class _Session:
     connection_id: str
     boot_id: str | None = None
+    buttons: tuple[ButtonId, ...] = ()
     connected: bool = False
     last_button_seq: int = 0
     next_ping_nonce: int = 1
@@ -72,12 +73,14 @@ class SerialDeviceLink:
         self._recent_animation_ids: deque[str] = deque(maxlen=ANIMATION_QUEUE_SIZE)
         self._reader_thread: threading.Thread | None = None
         self._pump_thread: threading.Thread | None = None
+        self._line_decoder = wire_codec.LineDecoder()
 
     # ---- DeviceLink protocol ----
 
     def start(self, on_input: InputCallback) -> None:
         self._on_input = on_input
         self._stop.clear()
+        self._line_decoder.reset()
         self._reader_thread = threading.Thread(target=self._read_loop, daemon=True)
         self._pump_thread = threading.Thread(target=self._pump_loop, daemon=True)
         self._reader_thread.start()
@@ -87,6 +90,8 @@ class SerialDeviceLink:
         with self._lock:
             if self._session is None or not self._session.connected:
                 return PublishStatus.DISCONNECTED
+            if tuple(label.button for label in view.buttons) != self._session.buttons:
+                return PublishStatus.DROPPED
             self._pending_render = RenderMessage(
                 connection_id=self._session.connection_id, revision=revision, view=view
             )
@@ -126,14 +131,10 @@ class SerialDeviceLink:
             if not raw:
                 continue
 
-            line = raw.rstrip(b"\r\n")
-            if not line:
-                continue
-
-            result = wire_codec.decode_line(line, self._clock.read())
-            if isinstance(result, Invalid):
-                continue
-            self._handle_message(result.message)
+            for result in self._line_decoder.feed(raw, self._clock.read()):
+                if isinstance(result, Invalid):
+                    continue
+                self._handle_message(result.message)
 
     def _handle_message(self, message: DeviceMessage) -> None:
         if isinstance(message, DeviceReady):
@@ -149,7 +150,9 @@ class SerialDeviceLink:
             if message.connection_id is None:
                 connection_id = str(uuid.uuid4())
                 self._session = _Session(
-                    connection_id=connection_id, boot_id=message.boot_id
+                    connection_id=connection_id,
+                    boot_id=message.boot_id,
+                    buttons=message.buttons,
                 )
                 self._pending_render = None
                 self._animation_queue.clear()
@@ -161,6 +164,7 @@ class SerialDeviceLink:
                     session is None
                     or message.connection_id != session.connection_id
                     or message.boot_id != session.boot_id
+                    or message.buttons != session.buttons
                 ):
                     return
 
@@ -186,6 +190,7 @@ class SerialDeviceLink:
                 or not session.connected
                 or message.connection_id != session.connection_id
                 or message.boot_id != session.boot_id
+                or message.button not in session.buttons
             ):
                 return
             if message.seq <= session.last_button_seq:
@@ -244,6 +249,7 @@ class SerialDeviceLink:
 
                 render = self._pending_render
                 self._pending_render = None
+                declared_buttons = session.buttons if session is not None else None
                 cue = self._animation_queue.popleft() if self._animation_queue else None
 
             if should_notify_disconnect and connection_id is not None:
@@ -254,7 +260,7 @@ class SerialDeviceLink:
                 last_ping_at_mono_ms = now.monotonic_ms
                 self._write(wire_codec.encode(ping))
             if render is not None:
-                self._write(wire_codec.encode(render))
+                self._write(wire_codec.encode(render, declared_buttons))
             if cue is not None:
                 self._write(wire_codec.encode(cue))
 
