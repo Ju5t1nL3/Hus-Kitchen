@@ -82,8 +82,8 @@ Where a fixed enum is specified, use that type rather than an unrestricted strin
 | timers.break_minutes(focus_minutes, policy) → int | Selected duration and validated break policy | Pure proportional calculation; no Pico involvement |
 | timers.decide(state, command, sample, rules, now) → Decision | Immutable state, timer command, TimerSample or None, validated rules and clock reading | Validate transition, pin terms on start, classify early end, build one event |
 | emotions.select(state, now_utc) → Mood | Event-derived state and explicit UTC | Latest unexpired reaction, then activity default; no I/O or event append |
-| replay.reduce(state, event) → GameState | GameState or None, committed event | Initialization then validated transition; advance last_seq |
-| replay.rebuild(events) → GameState or None | Ordered committed history | Pure fold; empty log returns None, invalid/unsupported history raises ReplayError |
+| replay.apply_event(state, event) → GameState | GameState or None, committed event | Pure reducer: return new state, validate transition and advance last_seq; do not mutate input |
+| replay.rebuild(events) → GameState or None | Ordered committed history | Repeatedly call apply_event; empty log returns None, invalid/unsupported history raises ReplayError |
 | history.current_streak(dates, today) → int | Qualifying dates and explicit today | Consecutive dates ending today or yesterday |
 | history.summarize(events, week_start, timezone, today) → WeeklyReport | User's history and explicit reporting dates | Separate completed focus, early/interrupted time, breaks and feeds |
 
@@ -95,7 +95,7 @@ Feeding is allowed only with no active session or pending break; app also restri
 it to Home. Pure functions cannot produce random IDs or inspect clocks implicitly.
 
 The application creates pet_created on an empty log using configured pet identity.
-The small replay module owns the fixed event dispatch; split reducers by feature
+The small replay module owns the fixed event dispatch; split transition handlers by feature
 only if its size warrants it. Progression modules are added after MVP as described
 in [progression design](progression_design.md); no numerical care model is planned.
 
@@ -106,7 +106,7 @@ in [progression design](progression_design.md); no numerical care model is plann
 | Application(store, device, clock, config) | Injected ports/config → coordinator | Own GameState, RuntimeState, input queue and render revision; no constructor I/O |
 | start() → None | No input | Validate/replay, record neutral restart ending if needed, start USB workers |
 | run() → None | No input | Queue loop with scheduled timeouts; only game-state writer |
-| handle(input, now) → None | Typed input and time | Check interruption/due completion, reject stale controls, decide/commit/reduce/present |
+| handle(input, now) → None | Typed input and time | Check interruption/due completion, reject stale controls, decide/save/apply_event/present |
 | stop() → None | No input | Neutral end, stop/join workers, close resources; idempotent |
 | controls.resolve(button, runtime, state, bindings, actions) → ControlIntent or None | Valid gesture/context, bindings and action definitions | Look up mapping and check availability; no per-button game rules |
 | controls.labels(runtime, state, device_buttons, bindings, actions) → tuple[ButtonLabel, ...] | Same context/bindings/definitions plus advertised physical order | Derive matching labels/enabled states for the presenter |

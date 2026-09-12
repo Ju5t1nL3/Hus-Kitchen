@@ -87,6 +87,9 @@ User instructions override the plan; document material deviations.
   pause sessions, choose emotions, interpret button actions, or persist game state.
 - Separate durable GameState, temporary RuntimeState, and render data.
   Render data is a projection, never the source of truth.
+- Use the reducer-style flow documented in system design: decide, save the event,
+  apply_event, then present. Live updates and replay share the same pure transition
+  function; resource I/O stays in the coordinator/adapters.
 - Use feature modules and explicit typed inputs/outputs. Prefer pure functions
   for rules and small classes for stateful resources. Avoid a giant pet class,
   global mutable state, inheritance hierarchies, and a plugin framework in MVP.

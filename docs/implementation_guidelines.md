@@ -28,6 +28,20 @@ same definitions to resolve input and draw labels; adding a button uses declared
 IDs/pins instead of new per-button branches. Follow the [class design](class_design.md)
 recipe rather than creating a generic plugin framework.
 
+## Use pure state transitions
+
+Follow the [reducer-style architecture](system_design.md#reducer-style-state-updates).
+Use descriptive function names: `decide` checks a request, `apply_event` returns
+updated durable state, `rebuild` reconstructs it from history, and `presenter.build`
+derives the screen. Immutable dataclasses represent their inputs and outputs;
+resource classes handle side effects. The reducer pattern does not require calling
+functions `reduce` or adding a dispatch/store framework.
+
+Test meaningful transitions with explicit before/event/after examples, including
+illegal transitions and preservation of the original state. Verify that applying
+events incrementally gives the same result as rebuilding their history. Persistence
+and USB tests separately verify save-before-publish ordering.
+
 ## Make inputs and outputs explicit
 
 - Annotate laptop function parameters and return values. Use named records for

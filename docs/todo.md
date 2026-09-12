@@ -52,7 +52,7 @@ References: [MVP behavior](features_and_goals.md), [events](event_model.md),
 | --- | --- | --- | --- | --- | --- |
 | — | [ ] Todo | M06 | Implement focus/break rules: duration selection, break calculation, pause/resume, completion and active-time grace boundary. | M04, M05 | Cover 59.999s vs 60s, paused End and neutral break ending. |
 | — | [ ] Todo | M07 | Implement one-food feeding and event-driven emotions; newest reaction expires correctly without hidden stats. | M04, M05 | Reaction durations stay configurable/provisional. |
-| — | [ ] Todo | M08 | Implement deterministic event replay and state transitions; golden history rebuilds exactly; invalid history fails clearly. | M04, M05 | No clock/config reads or animation side effects during replay. |
+| — | [ ] Todo | M08 | Implement pure replay.apply_event and rebuild using the same transition function; incremental and rebuilt state match; invalid history fails clearly. | M04, M05 | Preserve input state; no clock/config reads, I/O or animations inside transitions. |
 | — | [ ] Todo | M09 | Implement SQLite append/read, uniqueness, writer lock and storage errors; commits survive reopen and retries cannot duplicate outcomes. | M04, M05 | Test terminal and break-choice conflicts. |
 | — | [ ] Todo | M10 | Implement streak and weekly text recap; pauses/breaks excluded and cumulative samples not double counted. | M08, M09 | Dashboard and reward accounting are outside MVP. |
 | — | [ ] Todo | M11 | Implement validated configuration, action definitions and button bindings; remapping changes behavior and labels together. | M04, M05 | Simulate a third button without editing timer rules. |

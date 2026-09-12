@@ -119,6 +119,37 @@ pico/
   tests/                          # firmware parser/gesture/render checks
 ```
 
+## Reducer-style state updates
+
+Use the same functional pattern as a React reducer: current state plus a recorded
+event produces a new immutable state. In Python, call this function
+`replay.apply_event(state, event)`; the descriptive name is intentional. No reducer
+library or framework is required.
+
+The application follows this sequence:
+
+```text
+button → semantic command → decide → save event → apply_event → present → USB
+```
+
+A command is a request that may be rejected, such as PauseSession. An event is an
+accepted fact, such as session_paused with its resolved active time. Feature
+`decide` functions check requests using explicitly supplied state, time and rules.
+The coordinator persists the accepted event before applying it. If saving fails,
+it does not advance game state or publish a success animation.
+
+`apply_event` returns new state without changing the input or performing I/O.
+It validates history transitions but does not recalculate outcomes using current
+configuration. `rebuild` repeatedly calls that same function over saved events;
+live updates and restart recovery must never have separate transition logic.
+Clocks, UUID generation, SQLite writes, USB sends and animations belong outside
+this function. One application loop owns the current state reference.
+
+Keep dispatch small; split transition handlers by feature when their size warrants
+it. Avoid one enormous reducer shared by every contributor. Temporary UI navigation
+uses `controls.navigate` and remains separate from durable events; countdown and
+mood are projections of state and explicit time, not per-second saved events.
+
 ## Three kinds of state
 
 - GameState: reconstructable facts, including active/paused session and saved
@@ -147,7 +178,7 @@ Increment the control epoch when button meanings change (navigation, pause/resum
 completion); ordinary clock/mood/countdown refreshes leave it unchanged.
 
 Each feature decision is either one event, a normal rejection or a no-op. Commit
-an event before reducing state or changing the timer's live anchor. Newly committed
+an event before applying it to state or changing the timer's live anchor. Newly committed
 events may generate animations; replay and duplicate appends may not.
 
 Wake at least every second while connected/running, at timer deadlines, and at
