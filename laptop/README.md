@@ -23,6 +23,9 @@ uv run pyright
 
 Use `uv run ruff format .` to format laptop code. Commit `uv.lock`; do not commit
 `.venv/`. Python 3.14 is independent of the MicroPython release in `../pico/`.
+The Pico reuses this locked Ruff executable with its own provisional
+`../pico/ruff.toml`; follow the [Pico bring-up sequence](../pico/README.md) before
+treating that syntax target as verified.
 
 There is no runnable application entry point yet. Add real run/report commands as
 their tasks are completed instead of documenting placeholders as working software.

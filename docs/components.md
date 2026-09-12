@@ -42,9 +42,11 @@ choose an emotion, interpret an action or track a hidden pet stat.
 
 ## Bring-up
 
-First inventory working wiring, firmware, drivers and assets. Record verified
-details here; confirm electrical requirements before any new wiring. Put confirmed
-pins/orientation/debounce in `pico/hardware_config.py`.
+Follow the ordered inventory, firmware-selection and Ruff-alignment checklist in
+the [Pico README](../pico/README.md). Record stable hardware facts here; keep the
+reproducible firmware record and detailed wiring table with the firmware. Confirm
+electrical requirements before any new wiring. Put confirmed pins, orientation
+and debounce settings in `pico/hardware_config.py`.
 Do not guess pins from these notes.
 
 The application must own its USB stream: REPL, boot banners, IDE traffic and debug
