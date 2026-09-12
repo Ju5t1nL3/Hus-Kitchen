@@ -1,0 +1,57 @@
+identity:
+  user_id: local-user
+  pet_id: pet-1
+  device_id: laptop-1
+
+focus:
+  allowed_minutes: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+  default_minutes: 25
+  focus_minutes_per_break_minute: 5
+  minimum_break_minutes: 1
+  grace_active_seconds: 60
+  happy_seconds: 30
+  sad_seconds: 30
+  report_timezone: America/Chicago
+
+feeding:
+  default_food_id: basic
+  definitions:
+    basic:
+      sprite_id: food_basic
+      content_seconds: 20
+
+controls:
+  bindings:
+    home:
+      1.press: feed_default
+      2.press: open_setup
+    setup:
+      1.press: cycle_duration
+      1.hold: back_home
+      2.press: confirm_focus
+      2.hold: back_home
+    focus_running:
+      1.press: end_current
+      2.press: pause_current
+    focus_paused:
+      1.press: end_current
+      2.press: resume_current
+    break_offer:
+      1.press: skip_break
+      2.press: start_break
+    break_running:
+      1.press: end_current
+      2.press: pause_current
+    break_paused:
+      1.press: end_current
+      2.press: resume_current
+
+ui:
+  clock_timezone: America/Chicago
+  max_buttons: 3
+
+device:
+  port: null
+  usb_vid: 11914
+  usb_pid: 5
+  serial_number: null

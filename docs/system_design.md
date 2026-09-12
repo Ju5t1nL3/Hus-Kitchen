@@ -91,7 +91,7 @@ laptop/                           # CPython 3.14.6 uv project
   .python-version                 # laptop CPython selection only
   README.md                       # laptop setup/check instructions
   main.py                         # future laptop composition root and CLI
-  config.yaml                     # future user-tunable laptop rules/settings
+  config.yaml                     # validated user-tunable laptop rules/settings
   src/deskpet/
     core/
       models.py                   # immutable session, offer, reaction and state records

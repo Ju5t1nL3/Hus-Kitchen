@@ -47,7 +47,7 @@ laptop/
 ├── pyproject.toml
 ├── uv.lock
 ├── .python-version
-├── config.yaml                 # added with configuration task M11
+├── config.yaml                 # validated user-tunable rules and bindings
 ├── src/deskpet/
 │   ├── core/
 │   ├── features/
