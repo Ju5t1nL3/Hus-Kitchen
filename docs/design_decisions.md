@@ -11,6 +11,8 @@ verification have been performed.
 - Define system design and class/function contracts, especially Pico → laptop data.
 - Account for likely future features without prematurely building them.
 - Store goals, findings, decisions and plans in Markdown, with AGENTS as entry point.
+- Keep a short, plain-language [overview](overview.md) for the user and newcomers;
+  detailed implementation contracts should remain separately accessible references.
 - Existing Markdown may be cleaned up. The user explicitly clarified that the old
   AGENTS design is editable and should be improved rather than treated as fixed.
 

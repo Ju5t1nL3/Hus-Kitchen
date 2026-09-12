@@ -4,6 +4,10 @@ A physical productivity companion: a laptop owns the game; a USB-connected
 Raspberry Pi Pico displays the pet and reports buttons. The goal is to replace
 phone-checking with a pleasant, glanceable desk device.
 
+For a short, plain-language introduction, read [the overview](docs/overview.md).
+Use the detailed specifications as task-specific references, not a required
+cover-to-cover reading sequence.
+
 ## Project status
 
 This repository currently contains planning documents, not an implementation.
@@ -21,6 +25,7 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 
 | Document | Owns | Read when |
 | --- | --- | --- |
+| [overview.md](docs/overview.md) | Plain-language introduction and example workflow | Understanding the project before implementation details |
 | [features_and_goals.md](docs/features_and_goals.md) | Product goals, MVP behavior, acceptance criteria | Starting any feature |
 | [components.md](docs/components.md) | Hardware inventory, unknowns, hardware boundary | Wiring, drivers, device setup |
 | [system_design.md](docs/system_design.md) | Runtime architecture, dependencies, lifecycle, planned folders | Understanding how pieces connect |
@@ -32,7 +37,8 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 | [design_decisions.md](docs/design_decisions.md) | User preferences, resolved conflicts, assumptions, open questions | Reconsidering a decision |
 
 Start with this file and the MVP goals; then read the documents relevant to the
-task. These files are canonical for their respective topics. When a decision
+task. The overview summarizes the design; the detailed documents are canonical
+for their respective topics. When a decision
 changes, update its owning document and affected contracts in the same change.
 User instructions override the plan; document material deviations.
 
