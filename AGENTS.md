@@ -15,6 +15,18 @@ For a short, plain-language introduction, read [the overview](docs/overview.md).
 Use the detailed specifications as task-specific references, not a required
 cover-to-cover reading sequence.
 
+## Required task tracking
+
+Before starting work, open [docs/todo.md](docs/todo.md), claim the relevant MVP row
+with your GitHub username (or the documented initials/agent fallback), and mark it
+`[ ] Doing`. Respect existing claims and coordinate overlapping files. Update
+progress/blockers while working and before handing off; mark `[x] Done` only after
+its completion check passes, with a short result/reference. Add a row for authorized
+MVP work if needed. Do not claim or check off future roadmap features as MVP work.
+
+There are four team members, possibly only two on software. Tasks are self-selected;
+do not preassign people to modules or assume a permanent integration owner.
+
 ## Project status
 
 This repository currently contains planning documents, not an implementation.
@@ -33,6 +45,7 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 | Document | Owns | Read when |
 | --- | --- | --- |
 | [overview.md](docs/overview.md) | Plain-language introduction and example workflow | Understanding the project before implementation details |
+| [todo.md](docs/todo.md) | MVP task claims, status, completion checks and handoffs | Required before starting work and when updating/finishing it |
 | [features_and_goals.md](docs/features_and_goals.md) | Product goals, MVP behavior, acceptance criteria | Starting any feature |
 | [components.md](docs/components.md) | Hardware inventory, unknowns, hardware boundary | Wiring, drivers, device setup |
 | [system_design.md](docs/system_design.md) | Runtime architecture, dependencies, lifecycle, planned folders | Understanding how pieces connect |
@@ -40,7 +53,7 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 | [implementation_guidelines.md](docs/implementation_guidelines.md) | Typing, validation, DRY and project-specific Twelve-Factor choices | Writing or reviewing code |
 | [serial_protocol.md](docs/serial_protocol.md) | Exact laptop ↔ Pico wire format and examples | Firmware, serial adapter, simulator |
 | [event_model.md](docs/event_model.md) | Durable events, pause timing, emotion selection, replay and streaks | Game rules, persistence, reports |
-| [hackathon_plan.md](docs/hackathon_plan.md) | File ownership, integration order, verification | Splitting work or integrating changes |
+| [hackathon_plan.md](docs/hackathon_plan.md) | Task-based coordination, integration order and verification | Picking up or integrating work |
 | [nice_to_haves.md](docs/nice_to_haves.md) | Ordered future ideas and extension points | Considering future scope |
 | [progression_design.md](docs/progression_design.md) | Next milestone: XP, coins, levels and optional activity bonuses | Reviewing or implementing progression |
 | [design_decisions.md](docs/design_decisions.md) | User preferences, resolved conflicts, assumptions, open questions | Reconsidering a decision |
