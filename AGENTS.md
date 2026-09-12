@@ -44,6 +44,10 @@ not preserve their original structure. Their priorities are modularity,
 maintainability, easy updates, and independent hackathon work with minimal merge
 conflicts. See [design_decisions.md](docs/design_decisions.md) for rationale and assumptions.
 
+Preserve portability: never hardcode `COM` names, `/dev` paths, OS checks or a
+specific Pico/display inside core, feature or application modules. Put host serial
+discovery in a laptop adapter and pins/drivers in Pico hardware adapters/config.
+
 ## Documentation map
 
 Supporting documents live in `docs/`; keep this entry point at the repository root.

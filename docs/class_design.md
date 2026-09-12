@@ -182,6 +182,8 @@ Configuration loads at startup; hot reload remains out of scope.
 | EventStore.append(event) → AppendResult | Valid uncommitted event | Transactional durable write; duplicate returns existing event, conflict/failure raises |
 | EventStore.read_after(seq=0) → Iterable[DomainEvent] | Exclusive local cursor | Committed events in increasing seq |
 | EventStore.close() → None | No arguments | Idempotent release |
+| DeviceEnumerator.list() → tuple[SerialCandidate, ...] | No arguments | Portable adapter returns port plus available USB identity metadata; no gameplay imports |
+| DeviceResolver.resolve(selector, candidates) → ResolveResult | Optional configured port/USB identity plus candidates | Exact unique match or explicit not-found/ambiguous result; never silently choose the first port |
 | DeviceLink.start(on_input) → None | Thread-safe enqueue callback | Start workers; never invoke game rules on the worker |
 | DeviceLink.publish(view, revision) → PublishStatus | Complete view and revision | Nonblocking latest-view queue; queued or disconnected |
 | DeviceLink.animate(cue) → PublishStatus | Animation request | Bounded best-effort queue; queued/dropped/disconnected |
@@ -196,11 +198,12 @@ exclusive writer lock for the database path; another game writer fails clearly.
 A report process uses its own read-only connection. ReportService(store, timezone)
 offers weekly(week_start, today) → WeeklyReport through the pure history query.
 
-SerialDeviceLink owns handshake, heartbeat and connection IDs. It emits connection
+SerialDeviceLink receives a resolved port and serial backend; it owns handshake,
+heartbeat and connection IDs but no OS-specific selection logic. It emits connection
 changes before new-session inputs; callbacks only enqueue. Reconnect causes the
-application to reset render revision/epoch and publish current state. Fake ports
-have the same signatures. Static checking targets laptop code; runtime validation
-still guards every external boundary.
+application to reset render revision/epoch and publish current state. Fake ports,
+enumerators and backends have the same signatures. Static checking targets laptop
+code; runtime validation still guards every external boundary.
 
 ## Firmware APIs
 

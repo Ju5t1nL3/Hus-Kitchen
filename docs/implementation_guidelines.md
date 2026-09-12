@@ -54,6 +54,19 @@ session and excluding paused time from the early-end grace calculation.
 MicroPython may use validated dictionaries and small classes; it does not need
 laptop dataclasses or the laptop's type-checker configuration.
 
+## Keep host and hardware details at the edges
+
+- Do not hardcode `COM3`, `/dev/tty*` or any detected port. Accept an optional
+  configured port and otherwise resolve one unique device from enumerated metadata.
+- Treat zero or multiple matching devices as explicit, actionable results. Do not
+  select the first device based on enumeration order.
+- Keep OS-specific serial behavior inside the serial adapter. Core, features and
+  app orchestration must behave identically on Windows, macOS and Linux.
+- Keep GPIO numbers and display-controller calls inside Pico configuration/drivers.
+  Laptop behavior depends only on protocol capabilities, not board identity.
+- Test discovery with fake Windows and POSIX port names. Hardware smoke tests remain
+  necessary because mocks cannot prove USB driver or MicroPython behavior.
+
 ## Use Twelve-Factor selectively
 
 [Twelve-Factor](https://12factor.net/) was written for software delivered as a

@@ -13,6 +13,11 @@ They communicate using the versioned JSON Lines protocol described in
 [`docs/serial_protocol.md`](docs/serial_protocol.md). They share protocol contracts,
 but never import code from each other.
 
+The expected demo host is an HP Windows laptop, but the application is designed
+to remain OS- and device-agnostic. Serial ports are discovered or configured at
+the adapter boundary; platform paths and board/display details never enter game
+rules. Initial laptop tooling has also been verified on macOS.
+
 Start with [`AGENTS.md`](AGENTS.md) for contributor rules and the documentation map.
 Read [`docs/overview.md`](docs/overview.md) for the short product explanation and
 [`docs/todo.md`](docs/todo.md) before claiming implementation work.

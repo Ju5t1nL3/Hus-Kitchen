@@ -58,7 +58,7 @@ References: [MVP behavior](features_and_goals.md), [events](event_model.md),
 | — | [ ] Todo | M11 | Implement validated configuration, action definitions and button bindings; remapping changes behavior and labels together. | M04, M05 | Simulate a third button without editing timer rules. |
 | — | [ ] Todo | M12 | Implement screen presenter for Home/setup/focus/paused/break offer/break; snapshots match the wire contract. | M06, M07, M11 | Large timer, small face, correct labels and control epochs. |
 | — | [ ] Todo | M13 | Implement laptop wire codec; fragmented, combined, invalid and oversized messages behave as specified. | M04, M05 | Validate declared button IDs and full views. |
-| — | [ ] Todo | M14 | Implement threaded USB link, bounded queues, heartbeat and reconnect; latest view restores and stale input is discarded. | M13 | Use a fake endpoint while hardware is unavailable. |
+| — | [ ] Todo | M14 | Implement portable serial discovery plus the threaded USB link, bounded queues, heartbeat and reconnect; latest view restores and stale input is discarded. | M13 | Optional configured port or unique metadata match; never hardcode/pick the first port. Test Windows and POSIX-style names with fakes. |
 
 ## Pico and artwork
 
@@ -80,9 +80,9 @@ References: [integration plan](hackathon_plan.md) and [acceptance checks](featur
 | --- | --- | --- | --- | --- | --- |
 | — | [ ] Todo | M18 | Wire laptop coordinator/scheduler and entry point: button → decision → saved event → view; due completion precedes controls. | M06–M09, M11–M14 | Build a minimal vertical slice early using fakes, then fill out the flow. |
 | — | [ ] Todo | M19 | Verify restart, system-sleep, storage-failure and shutdown handling; unfinished timers end neutrally and pending breaks survive. | M18 | Saved elapsed lower bounds and no replayed animations. |
-| — | [ ] Todo | M20 | Run full fake-device MVP scenarios and type checks; fix failures and record results. | M10, M18, M19 | Includes pause exclusion, stale control epoch and duplicate completion. |
+| — | [ ] Todo | M20 | Run full fake-device MVP scenarios and type checks; fix failures and record results. | M10, M18, M19 | Includes pause exclusion, stale control epoch, duplicate completion, and portable not-found/unique/ambiguous serial discovery. |
 | — | [ ] Todo | M21 | Run real-device acceptance checks; verify readable screens, feeding, timers, reconnect and measured response/refresh timing. | M17–M19 | Hardware evidence required; tuning values may remain open. |
-| — | [ ] Todo | M22 | Document actual setup/run/flash/report commands and demo steps; reconcile docs with implemented interfaces. | M10, M20, M21 | No invented commands or blanket completion of unverified tasks. |
+| — | [ ] Todo | M22 | Document actual setup/run/flash/report commands and demo steps; reconcile docs with implemented interfaces. | M10, M20, M21 | Document Windows deployment and portable port configuration/discovery; no invented commands or blanket completion of unverified tasks. |
 
 Existing hardware progress does not make an entire firmware task complete. Record
 verified substeps in Notes and check the row only when its full completion check

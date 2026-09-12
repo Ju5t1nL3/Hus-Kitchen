@@ -41,6 +41,26 @@ each other; the coordinator combines them. No generic plugin framework or separa
 web service is needed. Future food options belong in food definitions, not new
 copies of feeding logic.
 
+## Host and device portability
+
+The HP Windows laptop is the expected demo host, not an architectural dependency.
+Core, feature and application modules must contain no Windows/macOS/Linux branches,
+`COM` names, `/dev` paths, USB identifiers or board/display imports.
+
+`SerialDeviceLink` hides the host serial library. It accepts a `DeviceSelector`
+with an optional user-configured port and optional USB identity fields. If no port
+is configured, its adapter enumerates candidates using portable serial metadata.
+No matches and multiple matches return clear diagnostics; code must not silently
+pick the first port. Store port names in configuration or runtime state, never in
+gameplay events. Tests use a fake enumerator/backend and cover Windows-style and
+POSIX-style names without requiring either OS.
+
+Hardware variation is isolated on the other side of the wire: Pico pins live in
+hardware configuration and display/controller operations live behind
+`DisplayDriver`. A new compatible board or display may require a firmware adapter
+and configuration change, but must not require edits to laptop game rules or the
+versioned protocol.
+
 ## Planned folders
 
 The paths below are module boundaries, not assigned people or a requirement to
@@ -78,7 +98,7 @@ laptop/                           # CPython 3.14.6 uv project
       scheduling.py               # timer samples/deadlines, interruption handling
       presenter.py                # state/runtime -> screen snapshot
     adapters/
-      serial_link.py              # queued read/write, connection/heartbeat
+      serial_link.py              # portable discovery, queued I/O, connection/heartbeat
       wire_codec.py               # laptop message validation and encoding
       sqlite_event_store.py       # durable append/read and single-writer lock
       system_clock.py             # UTC and monotonic time, resume detection
