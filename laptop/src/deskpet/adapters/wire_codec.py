@@ -6,10 +6,11 @@ and heartbeat bookkeeping belong to SerialDeviceLink, not here.
 """
 
 import json
+import re
 from dataclasses import dataclass
 from typing import TypeIs, cast
 
-from deskpet.core.models import ButtonId, ClockReading, Gesture, Mood, Screen
+from deskpet.core.models import ButtonId, ClockReading, Gesture, Screen
 from deskpet.core.views import (
     AnimationCue,
     ButtonInput,
@@ -27,10 +28,8 @@ UI_VOCABULARY = "emotions_v1"
 MAX_LINE_BYTES = 2048
 
 _GESTURES = {g.value: g for g in Gesture}
-_SCREENS = {s.value: s for s in Screen}
-_MOODS = {m.value: m for m in Mood}
-_FEEDBACKS = {"unavailable", "storage_error"}
 _ANIMATION_NAMES = {"feed", "celebrate"}
+_CLOCK_PATTERN = re.compile(r"(?:[01]\d|2[0-3]):[0-5]\d")
 
 
 class EncodeError(ValueError):
@@ -68,7 +67,48 @@ type JsonValue = (
 type JsonObject = dict[str, JsonValue]
 
 
-def decode_line(raw: bytes, now: ClockReading) -> ParseResult:
+class LineDecoder:
+    """Incrementally frame arbitrary serial chunks into validated messages."""
+
+    def __init__(self) -> None:
+        self._buffer = bytearray()
+        self._discarding_oversized = False
+
+    def feed(self, chunk: bytes, now: ClockReading) -> tuple[ParseResult, ...]:
+        results: list[ParseResult] = []
+        for byte in chunk:
+            if self._discarding_oversized:
+                if byte == 0x0A:
+                    self._discarding_oversized = False
+                    results.append(Invalid("line_too_long"))
+                continue
+
+            self._buffer.append(byte)
+            if byte == 0x0A:
+                framed = bytes(self._buffer)
+                self._buffer.clear()
+                if len(framed) > MAX_LINE_BYTES:
+                    results.append(Invalid("line_too_long"))
+                    continue
+                line = framed[:-1]
+                if line.endswith(b"\r"):
+                    line = line[:-1]
+                results.append(decode_line(line, now))
+            elif len(self._buffer) >= MAX_LINE_BYTES:
+                self._buffer.clear()
+                self._discarding_oversized = True
+        return tuple(results)
+
+    def reset(self) -> None:
+        self._buffer.clear()
+        self._discarding_oversized = False
+
+
+def decode_line(
+    raw: bytes,
+    now: ClockReading,
+    declared_buttons: tuple[ButtonId, ...] | None = None,
+) -> ParseResult:
     """Decode one already-assembled, newline-stripped line.
 
     `now` is an explicit clock sample attached to a resulting ButtonInput --
@@ -98,7 +138,15 @@ def decode_line(raw: bytes, now: ClockReading) -> ParseResult:
     if msg_type == "ready":
         return _decode_ready(message)
     if msg_type == "button":
-        return _decode_button(message, now)
+        result = _decode_button(message, now)
+        if (
+            declared_buttons is not None
+            and isinstance(result, Parsed)
+            and isinstance(result.message, ButtonInput)
+            and result.message.button not in declared_buttons
+        ):
+            return Invalid("undeclared_button")
+        return result
     if msg_type == "pong":
         return _decode_pong(message)
     return Invalid("unknown_type")
@@ -177,13 +225,16 @@ def _decode_pong(message: dict[str, object]) -> ParseResult:
     return Parsed(Pong(connection_id=connection_id, nonce=nonce))
 
 
-def encode(message: HostMessage) -> bytes:
+def encode(
+    message: HostMessage,
+    declared_buttons: tuple[ButtonId, ...] | None = None,
+) -> bytes:
     if isinstance(message, HelloMessage):
         payload = _encode_hello(message)
     elif isinstance(message, PingMessage):
         payload = _encode_ping(message)
     elif isinstance(message, RenderMessage):
-        payload = _encode_render(message)
+        payload = _encode_render(message, declared_buttons)
     else:
         payload = _encode_animate(message)
 
@@ -206,7 +257,7 @@ def _encode_hello(message: HelloMessage) -> JsonObject:
 def _encode_ping(message: PingMessage) -> JsonObject:
     if not _valid_id(message.connection_id):
         raise EncodeError("invalid connection_id")
-    if message.nonce < 0:
+    if not _is_int(message.nonce) or message.nonce < 0:
         raise EncodeError("nonce must be nonnegative")
     return {
         "v": PROTOCOL_VERSION,
@@ -216,19 +267,17 @@ def _encode_ping(message: PingMessage) -> JsonObject:
     }
 
 
-def _encode_render(message: RenderMessage) -> JsonObject:
+def _encode_render(
+    message: RenderMessage,
+    declared_buttons: tuple[ButtonId, ...] | None,
+) -> JsonObject:
     if not _valid_id(message.connection_id):
         raise EncodeError("invalid connection_id")
-    if message.revision <= 0:
+    if not _is_positive_int(message.revision):
         raise EncodeError("revision must be positive")
 
     view = message.view
-    if view.screen not in _SCREENS.values():
-        raise EncodeError("invalid screen")
-    if view.mood not in _MOODS.values():
-        raise EncodeError("invalid mood")
-    if view.feedback is not None and view.feedback not in _FEEDBACKS:
-        raise EncodeError("invalid feedback")
+    _validate_view(view, declared_buttons)
 
     buttons: list[JsonValue] = [_encode_button_label(label) for label in view.buttons]
     encoded_view: JsonObject = {
@@ -253,8 +302,10 @@ def _encode_render(message: RenderMessage) -> JsonObject:
 
 
 def _encode_button_label(label: ButtonLabel) -> JsonObject:
-    if not (1 <= len(label.label) <= 12) or not label.label.isprintable():
+    if not _printable_ascii(label.label, 12):
         raise EncodeError("invalid button label")
+    if not _is_int(label.button) or not 1 <= label.button <= 255:
+        raise EncodeError("invalid button ID")
     return {"button": int(label.button), "label": label.label, "enabled": label.enabled}
 
 
@@ -266,10 +317,14 @@ def _encode_animate(message: AnimateMessage) -> JsonObject:
     name = cue.name.value
     if name not in _ANIMATION_NAMES:
         raise EncodeError("invalid animation name")
-    if cue.after_revision <= 0:
+    if not _is_positive_int(cue.after_revision):
         raise EncodeError("after_revision must be positive")
-    if not (1 <= len(cue.animation_id) <= 96):
+    if not _printable_ascii(cue.animation_id, 96):
         raise EncodeError("invalid animation_id length")
+    if name == "feed" and cue.food_sprite != "food_basic":
+        raise EncodeError("feed animation requires food_basic")
+    if name == "celebrate" and cue.food_sprite is not None:
+        raise EncodeError("celebrate animation cannot include food_sprite")
 
     return {
         "v": PROTOCOL_VERSION,
@@ -283,7 +338,51 @@ def _encode_animate(message: AnimateMessage) -> JsonObject:
 
 
 def _valid_id(value: object) -> TypeIs[str]:
-    return isinstance(value, str) and 1 <= len(value) <= 64 and value.isprintable()
+    return isinstance(value, str) and _printable_ascii(value, 64)
+
+
+def _printable_ascii(value: str, maximum: int) -> bool:
+    return 1 <= len(value) <= maximum and all(
+        0x20 <= ord(char) <= 0x7E for char in value
+    )
+
+
+def _validate_view(
+    view: RenderSnapshot, declared_buttons: tuple[ButtonId, ...] | None
+) -> None:
+    if not _is_positive_int(view.control_epoch):
+        raise EncodeError("control_epoch must be positive")
+    is_timer = view.screen in {Screen.FOCUS, Screen.BREAK}
+    if view.screen is Screen.HOME:
+        if view.clock_text is None or _CLOCK_PATTERN.fullmatch(view.clock_text) is None:
+            raise EncodeError("home requires a valid clock_text")
+    elif view.clock_text is not None:
+        raise EncodeError("clock_text is only valid on home")
+    if is_timer:
+        if not _is_int(view.timer_seconds) or not 0 <= view.timer_seconds <= 3_600:
+            raise EncodeError("timer screen requires valid timer_seconds")
+    elif view.timer_seconds is not None or view.paused:
+        raise EncodeError("non-timer screen cannot have timer state")
+    if view.screen is Screen.SETUP:
+        if (
+            not _is_int(view.focus_minutes)
+            or not 5 <= view.focus_minutes <= 60
+            or view.focus_minutes % 5 != 0
+        ):
+            raise EncodeError("setup requires valid focus_minutes")
+    elif view.focus_minutes is not None:
+        raise EncodeError("focus_minutes is only valid on setup")
+    if view.screen in {Screen.SETUP, Screen.BREAK_OFFER}:
+        if not _is_int(view.break_minutes) or not 1 <= view.break_minutes <= 60:
+            raise EncodeError("screen requires valid break_minutes")
+    elif view.break_minutes is not None:
+        raise EncodeError("break_minutes is invalid on this screen")
+
+    ids = tuple(label.button for label in view.buttons)
+    if not 1 <= len(ids) <= 8 or len(set(ids)) != len(ids):
+        raise EncodeError("view buttons must contain 1-8 unique IDs")
+    if declared_buttons is not None and ids != declared_buttons:
+        raise EncodeError("view buttons do not match advertised order")
 
 
 def _is_int(value: object) -> TypeIs[int]:

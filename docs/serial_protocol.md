@@ -45,7 +45,7 @@ ready.buttons contains 1–8 unique integer IDs in 1–255, in physical layout o
 The MVP advertises [1,2,3]. Adding an ID within these limits uses the same message
 shape and needs no protocol version change. Reject input from unadvertised IDs.
 Every render must include each advertised ID exactly once, even if unbound (label
-"—", enabled false). The firmware hardware table supplies each ID's layout slot;
+"-", enabled false). The firmware hardware table supplies each ID's layout slot;
 button count and actions are not inferred from a screen name. Home and the
 break-running screen bind only two of the three IDs and render the third
 unbound; every other screen binds all three.
@@ -94,14 +94,14 @@ Each message carries a complete view. Examples are independent screen fixtures;
 navigation does not have to follow their order.
 
 ```json
-{"v":2,"type":"render","connection_id":"link-001","revision":1,"view":{"screen":"home","control_epoch":1,"mood":"calm","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true},{"button":3,"label":"—","enabled":false}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":1,"view":{"screen":"home","control_epoch":1,"mood":"calm","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true},{"button":3,"label":"-","enabled":false}],"feedback":null}}
 {"v":2,"type":"render","connection_id":"link-001","revision":2,"view":{"screen":"setup","control_epoch":2,"mood":"calm","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":25,"break_minutes":5,"buttons":[{"button":1,"label":"Up","enabled":true},{"button":2,"label":"Set","enabled":true},{"button":3,"label":"Back","enabled":true}],"feedback":null}}
 {"v":2,"type":"render","connection_id":"link-001","revision":3,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":null,"timer_seconds":1499,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Pause","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
 {"v":2,"type":"render","connection_id":"link-001","revision":4,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Pause","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
 {"v":2,"type":"render","connection_id":"link-001","revision":5,"view":{"screen":"focus","control_epoch":4,"mood":"calm","clock_text":null,"timer_seconds":1470,"paused":true,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Resume","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
 {"v":2,"type":"render","connection_id":"link-001","revision":6,"view":{"screen":"break_offer","control_epoch":5,"mood":"happy","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":5,"buttons":[{"button":1,"label":"Break","enabled":true},{"button":2,"label":"Again","enabled":true},{"button":3,"label":"Home","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":7,"view":{"screen":"break","control_epoch":6,"mood":"resting","clock_text":null,"timer_seconds":300,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Again","enabled":true},{"button":2,"label":"Home","enabled":true},{"button":3,"label":"—","enabled":false}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":8,"view":{"screen":"home","control_epoch":7,"mood":"sad","clock_text":"14:35","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true},{"button":3,"label":"—","enabled":false}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":7,"view":{"screen":"break","control_epoch":6,"mood":"resting","clock_text":null,"timer_seconds":300,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Again","enabled":true},{"button":2,"label":"Home","enabled":true},{"button":3,"label":"-","enabled":false}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":8,"view":{"screen":"home","control_epoch":7,"mood":"sad","clock_text":"14:35","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true},{"button":3,"label":"-","enabled":false}],"feedback":null}}
 ```
 
 Revisions 3 and 4 are the same focus screen and control_epoch: revision 4 is

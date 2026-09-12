@@ -1,0 +1,3 @@
+# Wire-protocol fixtures are byte-exact and newline-delimited per spec;
+# Windows autocrlf must never rewrite their line endings.
+contracts/*.jsonl -text

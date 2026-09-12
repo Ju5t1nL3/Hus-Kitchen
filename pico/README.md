@@ -59,13 +59,25 @@ Record wiring compactly:
 
 | Logical component | Board pin/GPIO | Direction | Pull/polarity or bus role | Verified |
 | --- | --- | --- | --- | --- |
-| Button 1 | GPIO14 | Input | TBD | No |
-| Button 2 | GPIO15 | Input | TBD | No |
+| Button 1 (left) | GPIO10 | Input | Active-low, internal pull-up | Yes |
+| Button 2 (right) | GPIO11 | Input | Active-low, internal pull-up | Yes |
 | Display | TBD (SPI bus) | Output/bus | ST7735S, 128x160, SPI | No |
 
 This is a project-relevant inventory, not a board encyclopedia. Omit peripherals
 the desk pet will never use, but do not omit a capability on which the display,
 buttons, USB protocol, timing, assets or likely sound expansion depends.
+
+Buttons: confirmed on-device by scanning GPIO0-22/26-28 (excluding GPIO2,
+already driving a confirmed test LED) with internal pull-ups while pressing
+each button. Button 1 (left) is GPIO10, button 2 (right) is GPIO11; both are
+active-low with a clean high-low-high transition on press, so an internal
+pull-up needs no external resistor. (Docs previously said GPIO14/GPIO15;
+those pins never toggled on press and were corrected here.)
+
+End-to-end verified: `main.py`'s `ButtonScanner` (via `buttons.py` and the
+corrected `hardware_config.py`) reports a clean `press` gesture for each
+physical tap of both buttons, confirmed visually with the already-wired
+GPIO2 LED blinking on every detected gesture.
 
 ## 2. Choose and pin MicroPython
 

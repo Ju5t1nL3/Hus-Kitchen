@@ -214,7 +214,7 @@ class PresenterFixtureTests(unittest.TestCase):
             (
                 ButtonLabel(button=ButtonId(1), label="Feed", enabled=True),
                 ButtonLabel(button=ButtonId(2), label="Focus", enabled=True),
-                ButtonLabel(button=ButtonId(3), label="—", enabled=False),
+                ButtonLabel(button=ButtonId(3), label="-", enabled=False),
             ),
         )
         self.assertIsNone(snapshot.feedback)
@@ -397,7 +397,7 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertIsNone(snapshot.break_minutes)
         self.assertEqual(
             [label.label for label in snapshot.buttons],
-            ["Again", "Home", "—"],
+            ["Again", "Home", "-"],
         )
 
     def test_home_with_sad_reaction_matches_fixture(self) -> None:
@@ -422,7 +422,7 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertEqual(snapshot.mood, "sad")
         self.assertEqual(snapshot.clock_text, "14:35")
         self.assertEqual(
-            [label.label for label in snapshot.buttons], ["Feed", "Focus", "—"]
+            [label.label for label in snapshot.buttons], ["Feed", "Focus", "-"]
         )
 
 

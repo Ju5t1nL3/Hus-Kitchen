@@ -65,7 +65,7 @@ def build(
     now: ClockReading,
     config: PresenterConfig,
     bindings: ControlBindings,
-    actions: dict[ActionId, ActionDefinition],
+    actions: Mapping[ActionId, ActionDefinition],
     device_buttons: tuple[ButtonId, ...],
 ) -> RenderSnapshot:
     """Build the complete snapshot for the screen currently selected in runtime."""
