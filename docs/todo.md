@@ -51,7 +51,7 @@ References: [MVP behavior](features_and_goals.md), [events](event_model.md),
 | Owner | Status | ID | Task / completion check | Needs | Notes |
 | --- | --- | --- | --- | --- | --- |
 | justinle2006 | [x] Done | M06 | Implement focus/break rules: duration selection, break calculation, pause/resume, completion and active-time grace boundary. | M04, M05 | Added pure typed timer decisions and configurable validated policies. Ruff, strict Pyright and all 31 tests pass, including 59.999s/60s, paused End, deadline priority and neutral interruption/break endings. |
-| — | [ ] Todo | M07 | Implement one-food feeding and event-driven emotions; newest reaction expires correctly without hidden stats. | M04, M05 | Reaction durations stay configurable/provisional. |
+| justinle2006 | [x] Done | M07 | Implement one-food feeding and event-driven emotions; newest reaction expires correctly without hidden stats. | M04, M05 | Added pure feeding decisions and mood selection with configurable food reaction duration. Ruff, strict Pyright and all 42 tests pass. |
 | — | [ ] Todo | M08 | Implement pure replay.apply_event and rebuild using the same transition function; incremental and rebuilt state match; invalid history fails clearly. | M04, M05 | Preserve input state; no clock/config reads, I/O or animations inside transitions. |
 | — | [ ] Todo | M09 | Implement SQLite append/read, uniqueness, writer lock and storage errors; commits survive reopen and retries cannot duplicate outcomes. | M04, M05 | Test terminal and break-choice conflicts. |
 | — | [ ] Todo | M10 | Implement streak and weekly text recap; pauses/breaks excluded and cumulative samples not double counted. | M08, M09 | Dashboard and reward accounting are outside MVP. |
