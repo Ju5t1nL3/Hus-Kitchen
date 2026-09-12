@@ -70,7 +70,7 @@ create empty files. Individual work is claimed in [todo.md](todo.md).
 AGENTS.md                         # entry point
 README.md                         # repository overview and runtime boundaries
 docs/                             # current product/design/reference documents
-contracts/                        # runtime-neutral protocol fixtures (task M05)
+contracts/                        # runtime-neutral protocol and event fixtures
 laptop/                           # CPython 3.14.6 uv project
   pyproject.toml                  # laptop dependencies, Ruff and Pyright settings
   uv.lock                         # reproducible laptop dependency lock

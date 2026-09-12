@@ -41,7 +41,7 @@ References: [decisions](design_decisions.md), [hardware](components.md),
 | agent:laptop-bootstrap | [x] Done | M02 | Record laptop OS and Python version, then confirm USB device access and the supported environment. | User's choice | CPython 3.14.6; HP Windows is the expected host and successfully programmed/controlled the Pico over USB. Tooling also works on macOS 26.5.2. Code remains OS-agnostic; clean protocol traffic is tested in M14/M17. |
 | agent:laptop-bootstrap | [x] Done | M03 | Create laptop package/dependency setup and static-checker configuration; basic import/check command works. | M02 | Laptop-local uv project created. `uv sync`, package import, Ruff format/check, and strict Pyright passed; uv.lock pins Ruff 0.16.7 and Pyright 1.1.414. |
 | justinle2006 | [x] Done | M04 | Implement typed records, commands, event payloads and resource interfaces; type checks pass. | M03 | Added immutable core models, typed command/event/input/result unions, UI records and resource protocols. Ruff, strict Pyright and 7 contract tests pass. |
-| — | [ ] Todo | M05 | Add shared protocol/event examples and fake clock, device and store; both sides have agreed test inputs. | M04 | Include pause/end boundary and extra-button examples. |
+| justinle2006 | [x] Done | M05 | Add shared protocol/event examples and fake clock, device and store; both sides have agreed test inputs. | M04 | Added runtime-neutral JSONL protocol/event fixtures, exact 59.999s/60.000s outcomes, a third-button case and typed in-memory resources. Ruff, strict Pyright and all 17 tests pass. |
 
 ## Laptop behavior and persistence
 

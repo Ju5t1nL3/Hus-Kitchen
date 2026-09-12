@@ -28,7 +28,7 @@ Read [`docs/overview.md`](docs/overview.md) for the short product explanation an
 AGENTS.md              contributor and LLM entry point
 README.md              repository overview
 docs/                  product, architecture and task documents
-contracts/             runtime-neutral protocol fixtures (added with task M05)
+contracts/             runtime-neutral protocol and event fixtures
 laptop/                CPython application and laptop tooling
 pico/                  MicroPython firmware and hardware notes
 ```
