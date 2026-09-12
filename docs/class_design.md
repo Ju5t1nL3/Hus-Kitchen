@@ -1,167 +1,180 @@
 # MVP class and function contracts
 
-Status: proposed Python-style signatures, not existing code. Types in this file
-are API contracts; serialization is defined in [serial_protocol.md](serial_protocol.md)
-and [event_model.md](event_model.md). Use frozen dataclasses/typed unions on the
-laptop. Firmware may use validated dictionaries and small classes to suit memory.
+Proposed laptop interfaces for the current emotion-only MVP. Use immutable typed
+records, tagged unions and pure rule functions. Stateful resource classes are
+injected. The [event model](event_model.md) owns saved payload semantics; the
+[serial protocol](serial_protocol.md) owns wire fields and bounds.
 
-## Core records
+## Core types
 
-| Type | Fields / invariants |
+Define these in core rather than passing raw dictionaries through laptop modules:
+
+```python
+Screen = Literal["home", "setup", "focus", "break_offer", "break"]
+Mood = Literal["calm", "content", "happy", "sad", "focused", "resting"]
+SessionKind = Literal["focus", "break"]
+SessionStatus = Literal["running", "paused"]
+Gesture = Literal["press", "hold"]
+RejectionCode = Literal["unavailable", "invalid_duration", "invalid_food",
+                        "no_session", "wrong_session_state", "no_break_offer"]
+PublishStatus = Literal["queued", "dropped", "disconnected"]
+Feedback = Literal["unavailable", "storage_error"]
+```
+
+| Record | Fields / invariants |
 | --- | --- |
-| `PetStats` | `hunger`, `friendship`, `health: int`, each 0–100; hunger means fullness |
-| `FocusSession` | `session_id: str`, `duration_seconds: int`, `reward_coins: int`, `reward_friendship: int`, `report_timezone: str` |
-| `GameState` | `user_id: str`, `pet: PetStats`, `coins: int >= 0`, `owned_accessories: frozenset[str]`, `equipped_accessory: str \| None`, `active_session: FocusSession \| None`, `focus_dates: frozenset[date]`, `last_seq: int` |
-| `ClockReading` | `utc: aware datetime`, `monotonic_seconds: float`, `resumed: bool`; one clock sample |
-| `UiState` | mode, selected menu ID, feedback/expiry, temporary sad expiry, completion-display expiry, runtime deadline, decay remainder; connection status belongs here, not in `GameState` |
-| `InputMessage` | Union of validated `DeviceReady`, `ButtonInput`, `Pong`, `ConnectionChanged`, `Tick`, `Shutdown` |
-| `ButtonInput` | connection ID, boot ID, sequence, physical button ID, gesture; laptop receive time attached internally |
-| `EventDraft` | typed event name/payload, source, dedupe key; no `seq` or timestamp |
-| `DomainEvent` | draft fields plus ID, UTC timestamp, user/device IDs, schema version and committed `seq` |
-| `Decision` | `event: EventDraft \| None`, `rejection: Rejection \| None`; never both; neither means harmless no-op |
-| `Rejection` | code from `insufficient_coins`, `unavailable`, `already_active`, `no_active_session`, `invalid_item`; no exception for ordinary user mistakes |
-| `RenderSnapshot` | the complete `view` shape in the serial spec; no event or reward data |
-| `AnimationCue` | ID, name, required render revision; transport supplies connection ID |
-| `WeeklyReport` | week start, timezone, completion count, focus seconds, earned/spent coins, daily totals, current streak |
-| `Rules` | validated pet/focus/shop config records, including explicit prices/effects/thresholds |
+| FoodDefinition | id: str, sprite_id: str, content_seconds: positive int; MVP only basic/food_basic |
+| Reaction | mood restricted to content/happy/sad, expires_at: UTC datetime |
+| FocusTerms / BreakTerms / BreakOffer | Exact fields from the event model; durations in seconds |
+| Session | id: str, kind: SessionKind, matching typed terms, status: SessionStatus, committed_active_ms: int |
+| GameState | user_id: str, pet_id: str, active_session: Session or None, pending_break: BreakOffer or None, last_focus_minutes: int or None, latest_reaction: Reaction or None, focus_dates: frozenset[date], last_seq: int |
+| ClockReading | utc: aware datetime, monotonic_ms: int, resumed: bool |
+| RuntimeState | screen: Screen, selected_focus_minutes: int, run_anchor_mono_ms: int or None, previous_clock: ClockReading or None, control_epoch: int, connection_id/boot_id: str or None |
+| TimerSample | session_id: str, active_ms: int, remaining_seconds: int, due: bool; explicit trusted laptop sample |
+| ButtonInput | connection_id, boot_id, seq, control_epoch, button: Literal[1,2], action: Gesture; internal received clock sample |
+| RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration fields, paused, two ButtonLabels, feedback |
+| ButtonLabel | label: str, enabled: bool |
+| AnimationCue | animation_id: str, name: feed or celebrate, after_revision: int, food_sprite: str or None |
+| WeeklyReport | week_start: date, timezone: str, completed_focus_count/seconds, early_end_count/active_ms, interrupted_count/recorded_active_ms, break_count, feed_count, daily totals, current_streak |
 
-Owned accessories are immutable sets; there is no general inventory hierarchy in
-MVP. `FocusSession` stores promised terms, not a mutable countdown. Streak is a
-query over completion dates, not an independently editable counter.
+Source of truth for active time is the saved cumulative sample plus the temporary
+running anchor. GameState stores neither a constantly mutating countdown nor an
+emotion score. Invariants prohibit simultaneous active_session and pending_break.
+After history replay, RuntimeState is reconstructed according to recovery policy.
 
-## Commands and routing
+## Typed unions and results
 
-| Command | Input fields | Owner / outcome |
+- InputMessage = DeviceReady | ButtonInput | Pong | ConnectionChanged | Tick | Shutdown.
+  DeviceReady/Pong carry the wire fields; ConnectionChanged carries connection ID
+  and connected flag; Tick carries a ClockReading; Shutdown carries no game data.
+- ControlIntent: zero-field variants FeedDefault, OpenSetup, CycleDuration,
+  ConfirmFocus, EndCurrent, PauseCurrent, ResumeCurrent, SkipBreak, StartBreak,
+  BackHome. controls selects one; application supplies IDs and current values.
+- DomainCommand: FeedPet(food_id, operation_key), StartFocus(session_id, minutes),
+  StartBreak(session_id, parent_focus_id), PauseSession(session_id, operation_key),
+  ResumeSession(session_id, operation_key), EndSession(session_id, reason),
+  CompleteSession(session_id), SkipBreak(parent_focus_id). End input reason is user
+  or a defined system interruption; the feature resolves grace/early/break reason.
+- EventDraft: tagged union of per-event records. Each variant fixes its event name
+  and typed payload; session variants additionally fix focus/break and matching
+  terms. Include source and dedupe_key. Do not allow arbitrary name/payload pairs.
+- UncommittedEvent adds UUID, version, UTC and origin fields to the draft.
+  DomainEvent adds committed seq. Payload fields are defined in the event model.
+- Decision = Accepted(event: EventDraft) | Rejected(code: RejectionCode) | NoOp.
+- ParseResult = Parsed(message: DeviceMessage) | Invalid(code: str).
+- ScheduleResult = Normal(sample: TimerSample or None, next_wake_mono_ms: int)
+  | Interrupted(session_id: str or None, reason: Literal["suspend"]).
+- PresentationResult = (screen: Screen, cues: tuple[CueRequest, ...]).
+  CueRequest contains name and optional food sprite; the application attaches
+  event ID and target render revision when publishing.
+- AppendResult = (inserted: bool, event: DomainEvent).
+
+These are record definitions to implement, not loosely typed tuple/dict shortcuts.
+Where a fixed enum is specified, use that type rather than an unrestricted string.
+
+## Feature functions
+
+| API | Inputs → output | Contract |
 | --- | --- | --- |
-| `OpenMenu`, `NextMenuItem`, `BackToClock` | Optional initial selected ID | UI only; no event |
-| `StartFocus` | Application-generated `session_id` | Focus feature; start event with configured terms |
-| `CancelFocus` | active session ID and reason | Focus feature; neutral cancellation |
-| `CompleteFocus` | active session ID | Scheduler only; completion with pinned rewards |
-| `FeedPet` | `food_id`, operation key | Pet feature; validated stat effects + payment in one event |
-| `PerformTrick` | trick ID, operation key | Pet feature; recorded trick, no repeatable coin reward |
-| `ApplyDecay` | accepted awake seconds, operation key | Scheduler only; resolved stat effects |
-| `BuyAccessory` | accessory ID, operation key | Shop feature; payment + ownership in one event |
-| `EquipAccessory` | owned accessory ID or null, operation key | Shop feature; equipped selection |
+| feeding.decide(state, command, food_definitions, now_utc) → Decision | State, FeedPet, immutable ID→definition mapping, explicit time | Validate food and idle availability; one free feed event with resolved reaction |
+| timers.break_minutes(focus_minutes, policy) → int | Selected duration and validated break policy | Pure proportional calculation; no Pico involvement |
+| timers.decide(state, command, sample, rules, now) → Decision | Immutable state, timer command, TimerSample or None, validated rules and clock reading | Validate transition, pin terms on start, classify early end, build one event |
+| emotions.select(state, now_utc) → Mood | Event-derived state and explicit UTC | Latest unexpired reaction, then activity default; no I/O or event append |
+| replay.reduce(state, event) → GameState | GameState or None, committed event | Initialization then validated transition; advance last_seq |
+| replay.rebuild(events) → GameState or None | Ordered committed history | Pure fold; empty log returns None, invalid/unsupported history raises ReplayError |
+| history.current_streak(dates, today) → int | Qualifying dates and explicit today | Consecutive dates ending today or yesterday |
+| history.summarize(events, week_start, timezone, today) → WeeklyReport | User's history and explicit reporting dates | Separate completed focus, early/interrupted time, breaks and feeds |
 
-`CompleteFocus` and `ApplyDecay` cannot originate from a device or future external
-adapter. The application validates internal command provenance and deadline due
-status. Public inputs cannot supply their own reward amounts. The fixed dispatch
-table selects the appropriate feature; ordinary button input is never broadcast
-to every feature to interpret independently.
+timers.decide requires a matching trusted sample for pause/end/completion and for
+resume validation. Start/skip use None. A paused resume sample equals saved active
+time. Recovery supplies last persisted active time for a session whose anchor is
+unavailable. Completion requires running and due; only the scheduler can request it.
+Feeding is allowed only with no active session or pending break; app also restricts
+it to Home. Pure functions cannot produce random IDs or inspect clocks implicitly.
 
-## Pure game APIs
+The application creates pet_created on an empty log using configured pet identity.
+The small replay module owns the fixed event dispatch; split reducers by feature
+only if its size warrants it. No economy/health/inventory services are needed.
 
-| Function | Inputs → output | Contract |
-| --- | --- | --- |
-| `pet.decide(state, command, rules) -> Decision` | Current immutable state, pet command, pet/shop food rules | Feed/trick/decay checks; exact clamped effects; no time reads or I/O |
-| `focus.decide(state, command, rules, now) -> Decision` | State, focus command, focus rules, explicit clock reading | Start/cancel/complete transitions; use active session's pinned terms on completion |
-| `shop.decide(state, command, rules) -> Decision` | State, shop command, shop rules | Validate item, funds, ownership; no-op/reject repeat purchases/equips |
-| `pet.apply(state, event) -> GameState` | Pet-owned committed event | Apply only stored facts; reject malformed transition |
-| `focus.apply(state, event) -> GameState` | Focus-owned committed event | Update session, reward and dates atomically |
-| `shop.apply(state, event) -> GameState` | Shop-owned committed event | Update coins/ownership/equipped selection |
-| `replay.reduce(state, event) -> GameState` | `GameState \| None`, committed event | Dispatch by event type; initialization owns `None` case; update `last_seq` |
-| `replay.rebuild(events) -> GameState \| None` | Ordered iterable of committed events | Pure fold; empty log returns None; unknown/invalid history raises `ReplayError` |
-| `history.current_streak(dates, today) -> int` | Qualifying dates, explicit local today | Today/yesterday rule in event model; no hidden clock |
-| `history.summarize(events, week_start, timezone, today) -> WeeklyReport` | User's history, local date/timezone and today | Query only; history may include earlier dates needed for streak |
-
-`pet_created` initialization is handled by `replay.reduce`; a small pure
-`make_initial_event(rules, identity) -> EventDraft` constructs its proposed values.
-Rule functions share value records, not mutable service singletons. An event
-type has exactly one reducer owner, even if it changes multiple fields.
-
-## Laptop application and presentation
-
-| API | Inputs → output | Side effects / responsibility |
-| --- | --- | --- |
-| `Application(store, device, clock, config)` | Injected ports/config → coordinator | Holds game/UI state and input queue; constructor does not start workers |
-| `Application.start() -> None` | No arguments | Validate/load/replay, neutral restart recovery, start device adapter |
-| `Application.run() -> None` | No arguments | Queue loop with deadline timeout until shutdown; only state writer |
-| `Application.handle(input, now) -> None` | Typed input + clock sample | Process due work, validate connection, route/commit/reduce/present |
-| `Application.stop() -> None` | No arguments | Neutral shutdown cancellation, stop/join workers, close resources; idempotent |
-| `controls.resolve(button, ui, state, controls_config) -> UiAction \| CommandIntent \| None` | Raw validated gesture and explicit context | Maps gesture to intention; no I/O, session-ID generation or mutations |
-| `controls.apply_ui(ui, action) -> UiState` | UI state + navigation action | Pure selection/mode changes; no game effects |
-| `scheduling.advance(ui, state, previous, now, config) -> ScheduleResult` | Time samples and current state | Produces updated timing state and due command intents in defined order; interruption before completion |
-| `presenter.build(state, ui, now, config) -> RenderSnapshot` | Game/UI state + explicit time + display rules | Mood precedence, timer text values, stage, menu price/enabled, hidden stats |
-| `presenter.on_commit(event, ui, now, config) -> PresentationResult` | Newly committed event only | Updated UI plus cue names; pure; never called by replay |
-| `make_envelope(draft, identity, now, event_id) -> UncommittedEvent` | Explicit draft/identity/time/UUID | Validate and stamp envelope; application generates UUID outside pure rules |
-
-`CommandIntent` contains semantic action and relevant item/session identity;
-the application supplies operation keys and generated session IDs before dispatch.
-`ScheduleResult` contains new temporary timing state and ordered command intents,
-not precomputed event effects. Re-evaluate each intent against the latest committed
-state, especially after decay changes stats. A rejected due command does not
-generate duplicate completion attempts forever; refresh deadlines from current state.
-
-`PresentationResult` updates only ephemeral UI and identifies optional live cues.
-On completion, retain a zero-second focus view at progress stage 8 for the
-configured brief completion interval (proposed two seconds), then show the clock.
-There is already no active durable session during that view. A hold dismisses the
-completion view without generating a cancellation; short presses remain ignored.
-After restart/reconnect, do not restart expired presentation effects.
-
-Use `ceil(max(0, deadline - now.monotonic_seconds))` for a running countdown and
-`min(8, floor(8 * elapsed / duration))` for progress. Both are laptop calculations.
-The presenter receives enough explicit state to handle completed-focus display
-without inventing a second active session.
-
-## Resource ports and implementations
-
-Declare small structural interfaces (`typing.Protocol`) in `core/ports.py`.
-
-| Port/API | Inputs → output | Contract |
-| --- | --- | --- |
-| `Clock.read() -> ClockReading` | No input → sample | Implemented by `SystemClock` and `FakeClock`; isolate OS differences |
-| `EventStore.append(event) -> AppendResult` | Valid uncommitted event → `inserted: bool`, committed event | Commit before returning; duplicate returns existing event; conflict/storage failure raises typed error |
-| `EventStore.read_after(seq=0) -> Iterable[DomainEvent]` | Exclusive sequence cursor → committed ordered rows | Stable ordered read; no rewrite of history |
-| `EventStore.close() -> None` | No input | Release connection; idempotent |
-| `DeviceLink.start(on_input) -> None` | Thread-safe callback accepting `InputMessage` | Start workers; callback only enqueues, never runs rules |
-| `DeviceLink.publish(snapshot, revision) -> PublishStatus` | Complete view + app revision → `queued` or `disconnected` | Nonblocking; newest snapshot supersedes older unsent snapshots |
-| `DeviceLink.animate(cue) -> PublishStatus` | Cue → `queued`, `dropped`, or `disconnected` | Bounded, best-effort; no game-state consequence |
-| `DeviceLink.stop() -> None` | No input | Stop/join workers, close port; bounded shutdown wait |
-| `wire_codec.decode_line(bytes) -> ParseResult` | One bounded line → typed device message or parse diagnostic | Pure parse/shape validation; connection/sequence checks belong to link |
-| `wire_codec.encode(message) -> bytes` | Typed outbound message → complete newline-terminated bytes | Pure validation/serialization; raises `EncodeError` if invalid/oversized |
-| `config_loader.load(path) -> AppConfig` | YAML path → validated nested config | File I/O; errors identify field and cause; no partially valid config |
-| `text_report.format(report) -> str` | `WeeklyReport` → printable text | Pure formatter; CLI owns stdout/file writing |
-
-`SqliteEventStore(path, writable=True)` owns SQL, schema setup and transaction
-behavior. Opening writable mode acquires an exclusive application lock associated
-with that database path and fails clearly if another game process holds it;
-release it on close. Use an OS-managed lock that is released on process death,
-not only a stale PID file. Read-only report connections do not need that lock.
-One application thread owns the writable connection. `ReportService(store, timezone)` provides
-`weekly(week_start, today) -> WeeklyReport` by reading events and calling the pure
-history query. A separate report CLI process opens its own read connection; never
-share a SQLite connection between arbitrary threads.
-
-`SerialDeviceLink` owns connection IDs, handshake/heartbeat, message validation,
-byte buffers and sequence tracking. It emits `ConnectionChanged` before inputs
-for a new connection. The application resets its render revision on each new
-connection, and re-publishes its current snapshot after matching ready. Serial
-workers must not hold a lock while calling into the application queue.
-
-Ordinary invalid actions use `Decision.rejection`; corrupt history, persistence
-failure and broken configuration use explicit exceptions with actionable context.
-Connection loss is an input/status, not a reason to crash the game. No API returns
-an ambiguous boolean where callers need to distinguish duplicate/rejected/failed.
-
-## Firmware classes and functions
+## Application and UI APIs
 
 | API | Inputs → output | Responsibility |
 | --- | --- | --- |
-| `ButtonScanner(pins, debounce_ms, hold_ms)` | Hardware inputs/config → scanner | Own per-button raw/stable state and gesture timing |
-| `ButtonScanner.poll(now_ms) -> list[ButtonGesture]` | Wrap-safe ticks → zero or more `{button, action}` | Read pins; debounce; one press OR hold per gesture |
-| `ButtonScanner.reset_until_release() -> None` | No input | Suppress already-held buttons across connection resets |
-| `Protocol.feed(chunk) -> list[HostMessage]` | Available bytes → zero/multiple validated messages | Bounded assembly/parse; incomplete suffix retained |
-| `Protocol.accept(message, now_ms) -> DeviceAction \| None` | Parsed message/time → hello/render/animation/ping action | Enforce connection/revision rules; no game decisions |
-| `Protocol.encode_ready/button/pong(...) -> bytes` | Fields specified in serial spec → framed bytes | Only outbound protocol messages; no debug printing |
-| `Renderer.set_view(view) -> None` | Valid complete snapshot | Replace desired view; mark affected regions dirty |
-| `Renderer.enqueue_animation(cue) -> None` | Valid cue | Bounded recent-ID/animation tracking; drop stale cues |
-| `Renderer.set_connected(value) -> None` | Boolean link state | Show/hide neutral connection overlay; clear transient cues on disconnect |
-| `Renderer.tick(now_ms) -> None` | Current firmware ticks | Advance visual frames and repaint bounded work; no timer/stat calculations |
-| `DisplayDriver.draw_region(rect, pixels) -> None` | Display bounds + pixel buffer | Hardware-specific drawing only; implementation may chunk large writes |
-| `FirmwareApp.step(now_ms) -> None` | One loop timestamp | Read available USB, dispatch messages, poll buttons, flush bounded output, draw one work slice |
+| Application(store, device, clock, config) | Injected ports/config → coordinator | Own GameState, RuntimeState, input queue and render revision; no constructor I/O |
+| start() → None | No input | Validate/replay, record neutral restart ending if needed, start USB workers |
+| run() → None | No input | Queue loop with scheduled timeouts; only game-state writer |
+| handle(input, now) → None | Typed input and time | Check interruption/due completion, reject stale controls, decide/commit/reduce/present |
+| stop() → None | No input | Neutral end, stop/join workers, close resources; idempotent |
+| controls.resolve(button, runtime, state) → ControlIntent or None | Valid physical gesture and current context | Fixed two-button mapping from MVP goals; no I/O |
+| controls.navigate(runtime, intent, state, config) → RuntimeState | Navigation intent, explicit state/config | Home/setup selection; wrap allowed minutes; no durable mutation |
+| scheduling.sample(session, anchor_mono_ms, now_mono_ms) → TimerSample | Session and live clock anchor | Accumulated active time and ceiling remaining seconds; paused sessions need no anchor |
+| scheduling.advance(state, runtime, now, config) → ScheduleResult | State/runtime/time | Detect interruption before evaluating deadline; next wake includes second tick/reaction expiry |
+| presenter.build(state, runtime, sample, now, config) → RenderSnapshot | Explicit facts, sample, time and display/focus configuration | Calls pure emotion selector; computes setup break preview and supplies labels |
+| presenter.on_commit(event, runtime, food_definitions) → PresentationResult | Newly committed event + current UI + food assets | Feed stays home; focus completion opens offer; break terminal/early focus goes home |
 
-Pin electrical levels never leave `ButtonScanner`; physical gesture IDs do.
-Renderer may format seconds as text, choose animation frames, and clip drawing;
-it cannot derive mood, progress stage, costs, or menu selection. Keep driver and
-sprite asset edits independent from laptop business rules.
+OpenSetup selects last confirmed duration or the configured default. ConfirmFocus
+creates a session ID and uses the current selected minutes. CycleDuration changes
+only setup state. BackHome from setup creates no event; Home on a break offer must
+commit SkipBreak to consume it.
+
+After commit the application updates run_anchor_mono_ms: start/resume establishes
+an anchor from the accepted sample time; pause/end/completion clears it. No anchor
+changes on failed writes. After pause, saved elapsed time is the next segment's base.
+
+Render control_epoch increments when navigation or pause/resume changes meanings,
+including automatic completion. Input epoch is checked after due work, so an old
+Pause cannot start a break. Changes only to mood/time/selected minutes need no new
+epoch. Increment render revision for every new snapshot.
+
+Application updates previous_clock on every wake, including interruptions, and
+re-establishes scheduling from the resulting state. PresentationResult determines
+navigation after every event: session_started selects its timer screen, pause/
+resume keeps that screen, break_skipped returns Home, and pet_created selects Home.
+
+## Resource interfaces
+
+| Port/API | Inputs → output | Contract |
+| --- | --- | --- |
+| Clock.read() → ClockReading | No arguments | SystemClock or FakeClock supplies UTC/monotonic/resume data |
+| EventStore.append(event) → AppendResult | Valid uncommitted event | Transactional durable write; duplicate returns existing event, conflict/failure raises |
+| EventStore.read_after(seq=0) → Iterable[DomainEvent] | Exclusive local cursor | Committed events in increasing seq |
+| EventStore.close() → None | No arguments | Idempotent release |
+| DeviceLink.start(on_input) → None | Thread-safe enqueue callback | Start workers; never invoke game rules on the worker |
+| DeviceLink.publish(view, revision) → PublishStatus | Complete view and revision | Nonblocking latest-view queue; queued or disconnected |
+| DeviceLink.animate(cue) → PublishStatus | Animation request | Bounded best-effort queue; queued/dropped/disconnected |
+| DeviceLink.stop() → None | No arguments | Bounded worker shutdown and port close |
+| wire_codec.decode_line(bytes) → ParseResult | One bounded line | Pure shape validation; link checks connection/sequence; app rechecks epoch |
+| wire_codec.encode(message) → bytes | Typed host message | Validated newline-terminated JSON; EncodeError for invalid/oversized input |
+| config_loader.load(path) → AppConfig | YAML path | I/O and field-specific validation errors |
+| text_report.format(report) → str | WeeklyReport | Pure text formatting |
+
+SqliteEventStore(path, writable=True) owns schema/SQL and acquires an OS-managed
+exclusive writer lock for the database path; another game writer fails clearly.
+A report process uses its own read-only connection. ReportService(store, timezone)
+offers weekly(week_start, today) → WeeklyReport through the pure history query.
+
+SerialDeviceLink owns handshake, heartbeat and connection IDs. It emits connection
+changes before new-session inputs; callbacks only enqueue. Reconnect causes the
+application to reset render revision/epoch and publish current state. Fake ports
+have the same signatures. Static checking targets laptop code; runtime validation
+still guards every external boundary.
+
+## Firmware APIs
+
+| API | Inputs → output | Responsibility |
+| --- | --- | --- |
+| ButtonScanner(pins, debounce_ms, hold_ms) | GPIO/config → scanner | Per-button debounce and gesture state |
+| poll(now_ms, control_epoch) → list[ButtonGesture] | Wrap-safe ticks and displayed epoch | Read pins; latch epoch at stable down; emit button/action/epoch once |
+| reset_until_release() → None | No input | Suppress already-held buttons across resets |
+| Protocol.feed(chunk) → list[HostMessage] | Available bytes | Bounded nonblocking line assembly and validation |
+| Protocol.accept(message, now_ms) → DeviceAction or None | Parsed message/time | Connection/revision/epoch validation; hello/render/animate/ping action |
+| Protocol.encode_ready/button/pong(...) → bytes | Exact wire fields | Framed outbound messages, no semantic game commands |
+| Renderer.set_view(view) → None | Valid complete view | Atomic desired-view swap and dirty-region marking |
+| Renderer.enqueue_animation(cue) → None | Valid cue | Bounded, compatible visual playback only |
+| Renderer.set_connected(value) → None | Boolean | Connection overlay and stale-animation clearing |
+| Renderer.tick(now_ms) → None | Firmware ticks | Bounded drawing/animation work; no game countdown |
+| DisplayDriver.draw_region(rect, pixels) → None | Bounds and pixel buffer | Hardware-specific drawing; chunk if needed |
+| FirmwareApp.step(now_ms) → None | Loop time | Poll USB/buttons, flush bounded output, update display |
+
+Firmware uses validated dictionaries/small classes suited to MicroPython. It never
+imports laptop records, infers a mood, calculates a break, or changes a session.

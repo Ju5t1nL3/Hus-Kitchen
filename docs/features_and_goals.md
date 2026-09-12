@@ -1,91 +1,118 @@
 # Product goals and MVP
 
-Tracks: Game & Gamification; Work and Productivity.
+Build a small, expressive desk pet that helps you focus without checking your
+phone. Keep the code modular, maintainable and easy to divide among teammates.
+This is the current small-screen design; it replaces the earlier stats/shop MVP.
+All behavior below is planned, not implemented.
 
-Build a gamified productivity companion that stays on the desk, connects to a
-laptop, and makes checking a phone less tempting. The user also wants code that is
-modular, maintainable, easy to update, and divisible among hackathon teammates.
+## Screens and two-button controls
 
-Status: original feature intent preserved, with proposed scope limits and defaults
-made explicit. Numerical tuning belongs in configuration at implementation time;
-values here are proposals, not measured product decisions.
+The two physical buttons sit below the screen. Draw their current labels above
+them: button 1 on the left, button 2 on the right. They are not touchscreen buttons.
 
-## MVP scope
-
-| Feature | Required behavior | Smallest useful scope |
-| --- | --- | --- |
-| Pet + clock | Large pet and laptop-provided local clock in idle view | One pet with happy, sad, sick and focused poses |
-| Focus timer | Start, show countdown, complete, or cancel a Pomodoro | Configured duration, initially 25 minutes; no pause/break scheduler |
-| Pet care | Fullness, friendship and health influence appearance | Stats 0–100, recoverable neglect, basic feeding and one trick |
-| Coins + purchases | Completed focus earns coins; buy food and decoration | Free basic food, one premium food, one purchasable/equippable accessory |
-| Controls | Physical buttons select actions through laptop logic | Two-button baseline; optional third-button shortcut |
-| Focus progress | Legible numerical timer plus pixel-art progression | Nine stages (0–8) of one metaphor, e.g. sandwich eating |
-| History | Durable activity history, daily streak and weekly totals | SQLite events and laptop CLI/text recap; dashboard deferred |
-| Resilience | Restart reconstructs state; USB reconnect restores screen | Clear disconnected view; no lost or duplicate completion rewards |
-
-Decorating and buying food are included, but a large shop, arbitrary task tracker,
-multiple pets, XP system, and graphical laptop dashboard are not MVP. Coins come
-from completed Pomodoros initially; productivity integrations come later.
-
-## Interaction defaults
-
-The laptop maps gestures to commands. Firmware sends physical gestures only.
-Short press is emitted on release; a hold emits once after its threshold and
-suppresses the release press. This prevents a hold from also buying food.
-
-| Context | Button 1 PRESS | Button 2 PRESS | Either button HOLD |
+| Screen | What is visible | Left press | Right press |
 | --- | --- | --- | --- |
-| Clock | Open menu at `start_focus` | Open menu at `stats` | No action |
-| Menu | Cycle through entries | Activate selected entry | Return to clock |
-| Pomodoro | No action | No action | Cancel session and return to clock |
+| Home | Large central pet; clock at top right | Feed | Focus: open setup |
+| Setup | Selected focus minutes; smaller calculated break duration | Up: next duration | Confirm: start focus |
+| Focus, running | Large central countdown; small expressive face at top right | End | Pause |
+| Focus, paused | Frozen countdown; “Paused”; small face at top right | End | Resume |
+| Break offer | Happy pet; “Focus complete”; proposed break minutes | Home: skip break | Start break |
+| Break, running | Large countdown; “Break”; small face at top right | End | Pause |
+| Break, paused | Frozen countdown; “Break paused”; small face | End | Resume |
 
-If present, button 3 PRESS returns from menu to clock and does nothing elsewhere;
-button 3 HOLD cancels focus. Mappings are laptop configuration. A `stats` menu
-entry displays the three stats and streak; activating it returns to clock.
+A hold on either setup button returns home, without starting a session. Holds on
+other screens do nothing in MVP. Firmware emits one press OR one hold per gesture,
+never both. No third button is required. Labels should fit the actual screen;
+the state machine and actions stay on the laptop.
 
-Menu order: `start_focus`, `stats`, `feed_basic`, `feed_premium`, `trick`,
-`buy_accessory`, `toggle_accessory`, `back`. The laptop supplies the selected
-entry's enabled flag and cost. Disabled actions show feedback without changing
-durable state. Only `stats` reveals stat bars/numbers. Firmware chooses layouts
-from supplied view fields, not inferred game conditions.
+## Duration and break rules
 
-## Pet and session rules
+- The selector is in **minutes**: 5 → 10 → … → 60 → 5. First use starts at 25;
+  later uses start at the last confirmed duration. Just cycling does not save it.
+- The laptop computes the break before confirmation. Proposed product rule:
+  `break_minutes = max(1, floor(focus_minutes / 5 + 0.5))`. Every allowed MVP
+  duration divides exactly by five: 5→1, 25→5, 60→12.
+- This is our proportional break rule, not a claim that Pomodoro requires it.
+  Keep allowed durations, defaults and break ratio in laptop configuration.
+- Completing focus records completion once, plays a brief celebration and opens
+  the break offer. A break begins only when the user presses Start break.
+- Ending focus early returns home with no break offer. Completing or ending a
+  break returns home. There is no automatic next focus session or long-break cycle.
+- Pause freezes remaining time and contributes no focused time. Resume continues
+  from that remaining time. Pausing or skipping/ending a break has no penalty.
 
-- `hunger` is retained as the stat name but means fullness: 100 = well fed,
-  0 = hungry. Use a clear “Fullness” label in the UI.
-- Stats stay within 0–100 and coins never become negative. Free basic food must
-  restore enough fullness/health to avoid a zero-coin recovery dead end.
-- Time-based decay happens only while the application is awake and running.
-  No catch-up penalty after closing the app or suspending the laptop.
-- Explicit focus cancellation may show a temporary sad pose; it does not remove
-  coins or impose lasting stat damage. Restart/suspend recovery is neutral.
-- Completing a session awards its configured coins and friendship once and
-  earns one qualifying day for streak purposes. Briefly display zero seconds and
-  the final progress stage during celebration (proposed two seconds), then return
-  to clock. A hold can dismiss that completed view without cancelling anything.
-- USB disconnect alone does not cancel focus; the laptop continues to run.
-  Application restart or detected system sleep cancels active focus without
-  rewards. Resumable sessions are deferred.
-- Appearance priority: sick, then temporary sad feedback, then focused, then
-  hunger-related sad, then happy. Sick remains visible during focus.
+## Early ending and emotions
 
-## Acceptance criteria
+End always works immediately, including while paused. Use actual accumulated
+focus time, excluding pauses: below 60 seconds is an accidental-start grace exit;
+at exactly 60 seconds or later, an early exit produces brief sadness. Completion
+wins if the timer is already due when an End/Pause input is handled.
 
-1. Boot the Pico and laptop: the clock/pet appears without manual state setup.
-2. Start a short configured demo session: a legible timer and progressing pixel
-   art appear; stats remain hidden.
-3. Complete it: coins increase exactly once, a celebration plays, and the clock
-   returns. Restart cannot replay the celebration or grant another reward.
-4. Feed, perform a trick, purchase/equip an accessory, and inspect stats using
-   two buttons. Unaffordable or repeated purchases cannot create negative coins.
-5. Cancel focus or neglect the pet: it remains recoverable; zero coins cannot
-   permanently prevent care.
-6. Restart with the same database: pet, coins, purchases and history reconstruct.
-   A text report shows weekly completions, focus minutes and streak.
-7. Unplug/replug USB: the full current view is restored; stale input is discarded.
-8. Exercise core rules using a fake clock/device without connected hardware.
+The pet reacts to recorded events, with no hidden hunger, health or friendship
+meters. Proposed configurable reaction durations:
 
-Measure responsiveness on hardware. Target under 50 ms from a recognized
-debounced gesture to the start of the resulting screen update; record gesture
-recognition and full LCD refresh separately. A hard 50 ms bound from initial
-physical contact is not assumed before driver and hardware tests.
+| Event or situation | Appearance |
+| --- | --- |
+| Feed | Content for 20 seconds; play feeding animation |
+| Focus completes | Happy for 30 seconds; play celebration |
+| User ends unfinished focus after grace | Sad for 30 seconds |
+| Grace exit, pause, break skip/end, system interruption | No new sadness |
+| No unexpired reaction, focus running | Focused |
+| No unexpired reaction, break running | Resting |
+| Otherwise | Calm |
+
+The latest unexpired feed/completion/early-end reaction wins, ordered by event
+sequence. Once the newest reaction expires, use the current activity's default
+above; do not revive an older reaction. The small
+face during a timer can therefore show an emotion too. No accumulating punishment,
+death, offline neglect, or permanent damage. See [event_model.md](event_model.md)
+for how reactions are stored and replayed.
+
+## Feeding and assets
+
+Home's Feed action immediately offers one free food, `basic`. No shop, cost,
+quantity, cooldown, or food-selection screen in MVP. Every accepted press records
+one feeding; animation requests can coalesce under rapid presses. Feeding again
+refreshes the content reaction rather than accumulating a hidden stat.
+
+Define food data separately from feeding logic so another food can be added later.
+Required sprites: one pet's full-body poses, matching small faces for the six moods,
+one food sprite (`food_basic`), a feeding animation, and a celebration.
+Artwork production remains implementation work; these docs do not provide assets.
+
+## History and recovery
+
+Keep a local event time series for feeding and session start/pause/resume/end/
+completion. Daily streaks and a weekly text recap remain laptop-only; no report
+menu or stat bars on the Pico. Completed focus earns a streak day; an early-ended
+session is logged separately and never counts as completed.
+
+USB reconnect restores the current screen while the laptop keeps running. App
+restart or detected system sleep ends any unfinished focus/break neutrally; manual
+pause/resume is supported, but resume across app restarts is deferred. A saved
+pending break offer survives restart. A fresh installation starts on Home.
+
+## Out of MVP
+
+Health/hunger/friendship stats, coins, shops, premium food, accessories, tricks and
+pixel-art progress are deferred, including their background mechanics. The large
+countdown takes priority over extra progress art. See [nice_to_haves.md](nice_to_haves.md).
+
+## Acceptance checks
+
+1. Home shows a large pet, top-right clock and Feed/Focus labels on the real LCD.
+2. Feed displays the food sprite/animation and a content reaction, without costs.
+3. Setup cycles 5–60 minutes, wraps, shows the derived break and confirms correctly.
+4. Pause/resume preserves remaining time; paused time cannot consume the grace period.
+5. End at 59.999 focused seconds is neutral; End at 60 seconds is briefly sad.
+6. Completion is saved once; the break starts only on confirmation. Ending or
+   skipping it is neutral, and its minutes never count as focus.
+7. Emotions expire and can change through later events; no permanent negative state.
+8. Restart/reconnect preserves history without duplicate completions or replayed
+   animations. Pending breaks and interrupted sessions follow the policy above.
+9. Test rules using a fake device/clock, then measure actual LCD/button behavior.
+
+Target under 50 ms from a recognized debounced gesture to the start of its screen
+update. Measure gesture recognition and full redraw separately; hardware performance
+has not been verified. Accelerate the fake clock for tests instead of changing the
+production selector to seconds.

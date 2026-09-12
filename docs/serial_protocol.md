@@ -1,187 +1,140 @@
-# Laptop ↔ Pico protocol v1
+# Laptop ↔ Pico protocol v2
 
-Status: proposed contract; supersedes the unimplemented positional text commands
-in the original AGENTS file. Both implementations must follow this document and
-the same JSON fixtures. No laptop Python package needs to run on MicroPython.
+Proposed JSON Lines contract for the emotion-only, two-button MVP. It replaces
+the earlier unimplemented stats/shop v1. Require `v: 2` and UI `emotions_v1`
+on both ends; do not mix examples from the former plan.
 
-## Framing and validation
+## Framing and connection
 
-- USB carries UTF-8 JSON objects, one per `\n`-terminated line. Examples below
-  are literal individual messages; every line must end in a newline on the wire.
-- Maximum encoded line: 2,048 bytes including newline. Reject oversized lines by
-  discarding through the next newline, then resume parsing. Do not keep growing a
-  receive buffer. Accept optional `\r` before `\n`.
-- Every message has `v: 1` and a `type` string. Validate required fields, enum
-  values, ranges, and JSON types (a boolean is not an integer). No NaN/infinity.
-- Connection and boot IDs are nonempty printable ASCII strings up to 64 characters
-  (except the null boot-ready connection ID). Animation IDs allow up to 96.
-  Ping/pong nonces are nonnegative integers. Button lists contain unique IDs and
-  must advertise the baseline buttons 1 and 2, optionally 3.
-- Invalid JSON, incomplete messages, unknown message types and invalid values
-  produce no game action. Unknown extra object fields may be ignored.
-- Unsupported protocol version or UI vocabulary prevents gameplay handshake.
-  Show a local firmware/laptop compatibility diagnostic; do not guess a schema.
-- A malformed render does not partially update the display. Keep the previous
-  valid view. Discard incomplete lines on disconnect. Only the laptop decides
-  game outcomes; protocol validation on the Pico is permitted device behavior.
-- Poll/read available bytes into a bounded line buffer. Do not let a partial line
-  block firmware buttons. Laptop serial reads run in a dedicated worker; firmware
-  runs a cooperative nonblocking loop. Serial port/baud selection is adapter
-  configuration, not part of the message format.
-- Application logging must not share this protocol stream.
+Each UTF-8 JSON object ends with newline. Maximum line size is 2,048 bytes including
+newline; accept optional carriage return before it. Assemble available bytes
+without blocking buttons. Discard oversized input through the next newline.
+Validate types, required fields, enums and ranges; booleans are not integers.
 
-## Pico → laptop: exactly three message types
+Ignore unknown message types/extra fields; invalid known messages have no effect.
+Unsupported version/UI prevents handshake. A render applies only after the whole
+view validates. No REPL/debug printing may share the protocol stream.
 
-### `ready`
+Connection/boot IDs are printable ASCII strings of 1–64 characters. The laptop
+generates a new connection UUID whenever opening/retrying a connection. Boot ID
+is an opaque Pico boot token; it is not a player identity. Sequence numbers,
+revisions, epochs and nonces are integers as specified below.
 
-On boot, the Pico announces itself with a null connection ID. The laptop sends a
-`hello` whenever it opens/reopens a port, including when it missed the boot line.
-The Pico answers each hello with the supplied connection ID.
+## Pico → laptop: only ready, button, pong
 
 ```json
-{"v":1,"type":"ready","connection_id":null,"boot_id":"boot-a1","buttons":[1,2],"ui":"pet_v1"}
-{"v":1,"type":"ready","connection_id":"link-001","boot_id":"boot-a1","buttons":[1,2],"ui":"pet_v1"}
+{"v":2,"type":"ready","connection_id":null,"boot_id":"boot-a1","buttons":[1,2],"ui":"emotions_v1"}
+{"v":2,"type":"ready","connection_id":"link-001","boot_id":"boot-a1","buttons":[1,2],"ui":"emotions_v1"}
+{"v":2,"type":"button","connection_id":"link-001","boot_id":"boot-a1","seq":1,"control_epoch":1,"button":1,"action":"press"}
+{"v":2,"type":"pong","connection_id":"link-001","nonce":7}
 ```
 
-`boot_id` is an opaque identifier regenerated at firmware boot and retained for
-that boot. Its random-generation details depend on the board; correctness relies
-on the laptop-generated unique connection ID, not boot-ID uniqueness alone.
-`buttons` lists implemented physical IDs: `[1,2]` or `[1,2,3]`. `ui: pet_v1`
-advertises the required mood/menu/animation/asset vocabulary below.
+| Message | Required behavior |
+| --- | --- |
+| ready | Announce once at boot with null connection ID; reply to each hello with its ID. Advertise exactly buttons [1,2] and UI emotions_v1. |
+| button | Physical button 1 or 2; action press or hold; positive seq increasing within connection; positive control_epoch from the displayed view when the gesture began. |
+| pong | Echo a valid current-session ping's nonnegative nonce. This checks liveness, not successful drawing or timer completion. |
 
-### `button`
+Proposed debounce is 20 ms and hold threshold 600 ms, configured on Pico. A short
+press emits once on stable release. Hold emits once at threshold, suppressing the
+release press and further repeats. Use wrap-safe firmware tick comparisons.
+
+Capture control_epoch when the button becomes stably down. This is presentation
+metadata: Pico still does not know what the button means. If the laptop changes
+screens while a gesture is in progress, the old epoch prevents that gesture from
+activating a new action. The laptop validates epoch again at dispatch, after due
+timer work, not only when parsing.
+
+The laptop accepts button messages only after matching ready, with matching boot/
+connection IDs, seq greater than last accepted seq, and current control_epoch.
+Gaps are allowed; duplicates/stale input are discarded, not recreated. Advance the
+transport sequence watermark even when an otherwise valid input has an old epoch.
+Pico does not retry button messages. Suppress gestures until the first valid view,
+and require release of already-held buttons after boot/connection reset.
+
+**Pico never sends semantic Feed/End/Pause commands, chosen focus durations, mood
+decisions, elapsed time, calculated breaks, or completion events.** Laptop controls
+resolve the physical press against the current screen.
+
+## Laptop → Pico: connection messages
 
 ```json
-{"v":1,"type":"button","connection_id":"link-001","boot_id":"boot-a1","seq":1,"button":1,"action":"press"}
-{"v":1,"type":"button","connection_id":"link-001","boot_id":"boot-a1","seq":2,"button":2,"action":"hold"}
+{"v":2,"type":"hello","connection_id":"link-001"}
+{"v":2,"type":"ping","connection_id":"link-001","nonce":7}
+```
+
+A hello clears previous views/cues and resets button sequence, revision and epoch
+tracking; Pico replies ready and keeps its connection overlay until the first
+valid render. Other messages must match that accepted connection ID.
+
+Baseline heartbeat: laptop pings every 2 seconds, times out after 6 seconds without
+matching pong; Pico times out after 6 seconds without valid current-session host
+traffic. Timing changes must remain compatible at both ends. Timeout shows
+“Connect laptop,” hides the stale countdown and suppresses gestures/animations
+until a fresh hello. The laptop's timer keeps running if only USB was disconnected.
+
+## Laptop → Pico: render
+
+Each message carries a complete view. Examples are independent screen fixtures;
+navigation does not have to follow their order.
+
+```json
+{"v":2,"type":"render","connection_id":"link-001","revision":1,"view":{"screen":"home","control_epoch":1,"mood":"calm","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"Feed","enabled":true},{"label":"Focus","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":2,"view":{"screen":"setup","control_epoch":2,"mood":"calm","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":25,"break_minutes":5,"buttons":[{"label":"Up","enabled":true},{"label":"Confirm","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":3,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":null,"timer_seconds":1499,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"End","enabled":true},{"label":"Pause","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":4,"view":{"screen":"focus","control_epoch":4,"mood":"calm","clock_text":null,"timer_seconds":1470,"paused":true,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"End","enabled":true},{"label":"Resume","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":5,"view":{"screen":"break_offer","control_epoch":5,"mood":"happy","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":5,"buttons":[{"label":"Home","enabled":true},{"label":"Start break","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":6,"view":{"screen":"break","control_epoch":6,"mood":"resting","clock_text":null,"timer_seconds":300,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"End","enabled":true},{"label":"Pause","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":7,"view":{"screen":"home","control_epoch":7,"mood":"sad","clock_text":"14:35","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"Feed","enabled":true},{"label":"Focus","enabled":true}],"feedback":null}}
 ```
 
 | Field | Contract |
 | --- | --- |
-| `connection_id` | Current non-null ID supplied by laptop hello |
-| `boot_id` | Same as the matched ready response |
-| `seq` | Positive integer, increases for each emitted button event; resets to 1 after a new hello |
-| `button` | Physical ID advertised in `ready`, not a semantic menu action |
-| `action` | Exactly `press` or `hold` |
+| revision | Positive increasing per connection; ignore duplicate/older snapshots; gaps allowed |
+| screen | home, setup, focus, break_offer, break |
+| control_epoch | Positive, nondecreasing across accepted snapshots; changes when button meanings change, not each countdown tick |
+| mood | calm, content, happy, sad, focused, resting; laptop chooses |
+| clock_text | Valid 24-hour HH:MM on home; null elsewhere |
+| timer_seconds | Integer 0–3,600 on focus/break; null elsewhere; never decrement locally |
+| paused | Boolean; false outside focus/break |
+| focus_minutes | Integer multiple of 5 from 5–60 on setup; null elsewhere |
+| break_minutes | Integer 1–60 on setup/break_offer; null elsewhere |
+| buttons | Exactly two {label, enabled} objects, left then right; printable ASCII label 1–12 characters and boolean enabled |
+| feedback | null, unavailable, or storage_error |
 
-Proposed hardware settings: 20 ms debounce and 600 ms hold threshold, configurable
-in firmware. A short press emits once when stably released. A hold emits once
-when its threshold is reached, with no press on release and no repeated holds.
-Use wrap-safe MicroPython tick comparisons. On boot/new hello/disconnection,
-require currently held buttons to be released before accepting a fresh gesture.
+All keys are required, with null for absent content. Reject inconsistent fields
+and decreasing epochs. Swapping the validated desired view is atomic in RAM;
+physical LCD painting can take multiple slices. Firmware draws the selected screen
+layout, small face on timers and large pet at home, without interpreting actions.
+It may format seconds as MM:SS; remaining time is always laptop-supplied.
 
-The laptop accepts only messages matching the current connection and boot, after
-a matching ready. Reject `seq <= last_accepted_seq`; gaps are allowed, never
-fabricated into missing actions. The Pico does not retry button messages. A lost
-gesture during disconnect requires a new press; it must not become a delayed
-purchase after reconnect. Queued inputs retain their connection ID so the
-application can reject them even if they were parsed before a disconnect.
+Storage_error displays an overlay hiding a potentially stale countdown. Disabled
+buttons are styling; raw gestures may still be reported and the laptop rejects
+gameplay while storage is unavailable. There are no stat, wallet, food-price,
+accessory or progress-stage fields.
 
-### `pong`
+Publish on connection, navigation, accepted actions, and visible clock/timer/mood
+changes. Coalesce to the newest unsent view. Reset revision/epoch for a fresh
+connection; no old view or queued input survives it.
 
-```json
-{"v":1,"type":"pong","connection_id":"link-001","nonce":7}
-```
-
-Echo the nonce of a valid current-session ping. It reports transport liveness,
-not a successfully drawn frame, a button acknowledgement, or focus completion.
-
-**The Pico never sends hunger, health, coins, clock time, elapsed focus time,
-`feed`, `buy`, `focus_complete`, rewards, or event-log entries.** A gesture is the
-only gameplay input. The laptop knows the current menu and resolves its meaning.
-
-## Laptop → Pico
-
-### Connection and heartbeat
+## Laptop → Pico: animate
 
 ```json
-{"v":1,"type":"hello","connection_id":"link-001"}
-{"v":1,"type":"ping","connection_id":"link-001","nonce":7}
+{"v":2,"type":"animate","connection_id":"link-001","animation_id":"event-uuid:feed","after_revision":8,"name":"feed","food_sprite":"food_basic"}
+{"v":2,"type":"animate","connection_id":"link-001","animation_id":"event-uuid:celebrate","after_revision":9,"name":"celebrate","food_sprite":null}
 ```
 
-`hello` establishes a fresh opaque laptop-generated ID (UUID in implementation).
-On each hello the Pico clears pending animations, resets message/button sequence
-tracking, discards old UI session data and responds with ready. Only apply other
-messages matching the accepted ID. Handshake retries use a fresh ID, so a
-delayed earlier response cannot reset the current laptop's input sequence.
-Keep the connection overlay visible until the first valid render in that session.
+Required fields: name is feed or celebrate; food_sprite is food_basic for feed
+and null for celebrate. Animation ID is printable ASCII, 1–96 characters, derived
+from the committed event ID and cue name. after_revision is a positive revision
+already applied, or surpassed, before playing. Drop an early cue; do not wait
+blocking for a missing frame. The host sends an adequate snapshot first.
 
-The laptop proposes ping every 2 seconds and a 6-second timeout. Pico uses a
-6-second stale-input timeout for the v1 baseline; changing timing must keep both
-ends compatible. Any valid current-session laptop message refreshes its watchdog.
-On timeout show a neutral “Connect laptop” overlay and hide the stale countdown;
-suppress gestures/animations until a fresh hello. This is connection UI, not a
-change to pet mood or focus state. The laptop declares a failed heartbeat if no
-matching pong arrives within the configured timeout and reconnects with a new ID.
+Playback is best effort: keep a bounded queue/recent-ID cache (proposed 32 IDs),
+drop stale cues under load, and never resend after restart/reconnect. Navigation
+supersedes incompatible animations: feeding belongs on home and celebration on
+break_offer. Cues never block button/USB polling or change the timer/screen.
 
-### `render`: complete screen snapshot
-
-```json
-{"v":1,"type":"render","connection_id":"link-001","revision":1,"view":{"mode":"clock","mood":"happy","clock_text":"14:32","timer_seconds":null,"progress_stage":null,"stats":null,"coins":null,"menu":null,"accessory":null,"feedback":null}}
-{"v":1,"type":"render","connection_id":"link-001","revision":2,"view":{"mode":"menu","mood":"happy","clock_text":"14:32","timer_seconds":null,"progress_stage":null,"stats":null,"coins":20,"menu":{"id":"feed_premium","label":"Premium food","cost":5,"enabled":true},"accessory":null,"feedback":null}}
-{"v":1,"type":"render","connection_id":"link-001","revision":3,"view":{"mode":"pomodoro","mood":"focused","clock_text":"14:32","timer_seconds":1499,"progress_stage":0,"stats":null,"coins":null,"menu":null,"accessory":"accessory_01","feedback":null}}
-{"v":1,"type":"render","connection_id":"link-001","revision":4,"view":{"mode":"menu","mood":"sad","clock_text":"14:33","timer_seconds":null,"progress_stage":null,"stats":{"hunger":20,"friendship":65,"health":90,"streak":3},"coins":20,"menu":{"id":"stats","label":"Pet stats","cost":null,"enabled":true},"accessory":null,"feedback":null}}
-```
-
-| Field | Type / limits | Meaning |
-| --- | --- | --- |
-| `revision` | Positive increasing integer per connection | Ignore stale/duplicate revisions; gaps are allowed |
-| `mode` | `clock`, `menu`, `pomodoro` | Draw this layout |
-| `mood` | `happy`, `sad`, `sick`, `focused` | Laptop-selected pose; sick takes precedence over focus pose |
-| `clock_text` | Exactly `HH:MM`, valid 24-hour time | Draw literally; no local timezone/clock calculations |
-| `timer_seconds` | Integer 0–86,400 or null | Required non-null only in pomodoro; format as minutes/seconds, do not decrement locally |
-| `progress_stage` | Integer 0–8 or null | Non-null only in pomodoro; draw selected art, do not calculate progress |
-| `stats` | Object with integer `hunger`, `friendship`, `health` 0–100 and nonnegative integer `streak`, or null | Non-null only in menu with selected `stats`; null means hide |
-| `coins` | Nonnegative integer or null | Non-null in menu only; no arithmetic on firmware |
-| `menu` | `{id, label, cost, enabled}` or null | Non-null in menu only |
-| `menu.id` | One of IDs in MVP goals | Presentation identity; never acted on locally |
-| `menu.label` | Printable ASCII, 1–24 characters | Laptop-provided display label; bounded for font/layout |
-| `menu.cost` | Nonnegative integer or null | Show price only when supplied; basic food may show zero |
-| `menu.enabled` | Boolean | Draw enabled/disabled styling; still send physical button presses |
-| `accessory` | `accessory_01` or null | Asset to draw; ownership already checked on laptop |
-| `feedback` | `fed`, `trick`, `purchased`, `equipped`, `removed`, `insufficient_coins`, `unavailable`, `cancelled`, `storage_error`, or null | Transient text/icon, cleared by a later snapshot |
-
-All view keys are required, using null for absent content. Reject inconsistent
-combinations rather than retain prior field values. Validate the entire object,
-then swap the desired view atomically in RAM. LCD painting may still take time;
-this contract does not promise a hardware double buffer or instantaneous redraw.
-The stats menu requires a non-null stats object; every other menu entry requires
-null stats. The completion view uses pomodoro mode, zero seconds and stage 8 even
-though the laptop has already committed completion and cleared its active session.
-
-Snapshots are sent on connection, after accepted actions/UI changes, and when a
-visible clock/timer/progress value changes. A full snapshot is small enough for
-MVP; avoid diff protocols until measured bandwidth justifies one.
-
-### `animate`: transient presentation cue
-
-```json
-{"v":1,"type":"animate","connection_id":"link-001","animation_id":"event-uuid:feed","after_revision":5,"name":"feed"}
-```
-
-`name` is `feed`, `coin_rain`, `trick`, or `wake_up`. `animation_id` derives from
-the committed event ID plus cue name; it is not another gameplay event.
-`after_revision` requires an applied snapshot at least this new. The laptop writer
-sends an adequate snapshot before the cue; if it coalesces to a newer snapshot,
-that newer revision satisfies the prerequisite. Drop an early cue rather than
-blocking firmware waiting for a missing snapshot.
-
-Use a small recent-ID cache (proposed 32 entries) to suppress immediate duplicates;
-this is not permanent deduplication. Playback is best effort, never retried after
-reconnect/restart. New render snapshots remain authoritative during animation.
-Animations cannot obscure the sick pose or starve button/serial polling. When
-overloaded, discard older cues and retain the newest screen state.
-
-## Example end-to-end action
-
-1. Laptop sends hello; Pico answers ready with that ID.
-2. Laptop renders the clock. Pico button 1 press arrives; laptop opens the menu.
-3. Pico button 2 press arrives while `start_focus` is selected. Laptop persists
-   `focus_started`, creates its runtime deadline, and renders the focus view.
-4. Laptop reaches the deadline, persists `focus_completed` including rewards,
-   renders the completed view, and issues `coin_rain`.
-5. After the configured brief completion display, the laptop sends the clock view.
-
-No firmware change is needed to adjust food prices, focus rewards, button
-mappings, mood thresholds, or decay. New asset/menu vocabularies or incompatible
-message shapes require coordinated UI/protocol version changes and fixtures.
+Changing food appearance is an asset change; adding new asset IDs requires updating
+the agreed UI vocabulary. Changing timer, grace or reaction rules needs no firmware
+game logic. Coordinate future incompatible wire revisions with both owners.

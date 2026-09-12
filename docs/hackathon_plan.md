@@ -1,105 +1,81 @@
 # Hackathon ownership and implementation plan
 
-Goal: let teammates implement independently against stable contracts. No folder
-layout guarantees zero conflicts, but clear ownership prevents routine collisions.
-Four areas below are suggested roles, not an assumption about team size or a
-request to launch autonomous agents. One person can own several areas.
+Agree on contracts, then build in separately owned files. Four areas are suggested
+roles, not a required team size or permission to launch autonomous agents.
 
 ## Ownership
 
-| Area | Owns files | Depends on | Independent demo |
-| --- | --- | --- | --- |
-| A — game rules | `features/pet.py`, `focus.py`, `shop.py`, `replay.py`, `tests/domain/` | Core types and event schema | Feed, complete focus and replay a sample history without hardware |
-| B — persistence and history | `adapters/sqlite_event_store.py`, `features/history.py`, `adapters/text_report.py`, `tests/storage/` | Event envelope and store port | Append/reopen/deduplicate events; print weekly recap |
-| C — firmware and art | All `pico/`, `tests/firmware/` | Wire spec + fixtures, hardware inventory | Draw fixture screens and emit debounced gestures over USB |
-| D — app and laptop transport | `app/`, serial/clock/config/fake adapters, `tests/app/`, `main.py` | Core ports, feature signatures and wire spec | Drive fake device from a scripted button sequence |
+| Area | Owns | Independent demo |
+| --- | --- | --- |
+| A — rules | features/timers.py, feeding.py, emotions.py, replay.py; tests/domain rule/replay files | Start/pause/resume/end focus, derive a break and select emotions without hardware |
+| B — storage/history | adapters/sqlite_event_store.py, features/history.py, adapters/text_report.py; tests/storage and history tests | Replay recorded sessions, enforce unique completion and print recap |
+| C — Pico/art | pico/ and tests/firmware/ | Draw each screen/face/food fixture and report clean gestures |
+| D — app/USB | app/, serial/clock/config/fake adapters, main.py and tests/app/ | Script two-button navigation against a fake device |
 
-One designated integration owner (initially D) owns shared changes to `core/`,
-`config.yaml`, `pyproject.toml`, dependency lockfiles, shared test setup,
-`tests/contracts/`, AGENTS, and cross-cutting design documents. Owners propose
-contract changes to that person before callers/callees diverge. Avoid each teammate
-adding dependencies, menu entries or fixtures to the same central file independently.
+One integration owner (initially D) owns shared core records, config, dependency/
+checker settings, shared test fixtures and cross-cutting docs. Feature-specific
+tests have separate owners, even inside tests/domain. Avoid a shared utils.py or
+test_everything.py that every teammate must edit.
 
-Feature-specific test files and docs can be split further if two people need to
-work in the same area. Avoid a single shared `test_everything.py` or `utils.py`.
+## Agree before splitting branches
 
-## Freeze the first contracts together
+Freeze typed command/event/result records, protocol v2/UI emotions_v1, and the
+screen controls. Use [class design](class_design.md) and
+[implementation guidelines](implementation_guidelines.md). The integration owner
+creates the minimum shared definitions and static-checker setup before branches
+diverge. No generic framework or unused future modules are required.
 
-Before parallel implementation, agree on the current signatures, event names,
-protocol v1 and UI vocabulary. The integration owner creates a small compilable
-core contract skeleton and commits shared fixtures before feature branches split.
-This is the only necessary shared bootstrap; do not build a framework first.
+Shared examples should include:
 
-Include concrete shared record/union definitions and a configured laptop static
-type checker in that bootstrap, following the
-[implementation guidelines](implementation_guidelines.md).
+- Hello/ready, physical press/hold with control_epoch, heartbeat, each screen,
+  paused focus/break, feed/celebration cues, malformed/stale input.
+- A golden history: create → feed → focus start → pause → resume → complete →
+  break start → end; expected projection, emotions and report.
+- Separate grace/early-end histories and expected effects, including paused time.
+- Fake device, clock and event store with the real ports' signatures.
 
-Required initial fixture set:
+Pico and laptop share contracts/examples, not a Python package that imports
+laptop libraries into MicroPython.
 
-- Boot ready, hello/ready exchange, press, hold, pong, clock/menu/stats/focus views,
-  completion frame, animation, malformed input and unknown-version messages.
-- Golden event sequence: initialize → start → complete → feed → buy → equip,
-  with expected final state and expected report. Include explicit timestamp,
-  timezone, session terms and resolved effects.
-- Fake clock/device/store implementing the same public ports as real adapters.
+## Build order
 
-MicroPython and laptop implementations share fixtures/specification, not a forced
-shared package that pulls CPython dependencies into firmware. Fixture changes are
-reviewed as API changes by both owners.
+1. Bootstrap shared contracts, choose hardware/driver, and draw home/setup/timer
+   examples. Start the real USB handshake and fake-device path.
+2. Connect one end-to-end focus start → countdown → saved completion → break offer.
+3. A finishes pause/resume/end, feeding and emotions; B finishes reports/recovery;
+   C supplies small faces, food/animations and remaining screens; D connects
+   controls, breaks, screen epochs and reconnect handling.
+4. Run acceptance scenarios on the actual device, then tune readability/reactions.
+5. Only after MVP works, select a backlog feature if time permits.
 
-## Delivery sequence
+Accelerate a fake clock to exercise long sessions quickly. A test harness can
+advance time while retaining the real 5–60-minute choices and grace calculation;
+do not add an undocumented seconds-mode shortcut to production firmware.
 
-1. **Bootstrap contracts:** create packaging/config skeleton and the minimum types,
-   fixtures and fake ports. Choose exact hardware driver during bring-up.
-2. **First vertical slice:** Pico/fake button → app → `focus_started` in SQLite →
-   focus render. Complete a short demo session → exactly one reward → celebration.
-3. **Independent expansion:** A finishes care/shop/replay; B completes reports and
-   persistence recovery; C finishes art/menu/driver; D finishes controls, reconnect
-   and suspend/deadline behavior. Integrate small changes frequently.
-4. **MVP hardening:** run the acceptance scenarios below and tune configuration/art.
-5. **Only then extend:** select one backlog feature if time permits, preferably a
-   GitHub input adapter that reuses the commit/reward/presentation path.
+## Integration practices
 
-Do not make a firmware teammate wait for real gameplay data: recorded valid views
-are enough. Do not make a rules teammate wait for a device: typed commands and
-fake clocks are enough. Do not make reports depend on Pico connectivity.
+- Assign file ownership, use one branch/worktree per area if useful, and integrate
+  small working changes early. This plan does not create branches automatically.
+- Coordinate shared type/config/dispatch edits through the integration owner.
+- Avoid sweeping renames/reformatting during parallel work.
+- A contract change updates producer, consumer, examples and owning docs together.
+- Fake hardware lets rules/app work proceed before wiring; recorded views let
+  firmware/art proceed before game logic is complete.
+- Folder boundaries reduce merge conflicts but do not replace communication.
 
-## Branch and merge practices
+## Essential verification
 
-- Agree on named ownership and use one branch/worktree per area if useful. These
-  docs do not create branches or assign teammates automatically.
-- Avoid broad reformatting and file renames while parallel work is in flight.
-- Keep `main.py` a composition root so features do not all need to edit it.
-- The integration owner makes dispatch/config additions once, after interfaces
-  are agreed, or queues those edits in small sequential commits.
-- Update from the integration branch frequently and merge a working vertical slice
-  early. A type/interface mismatch is an integration issue even without git conflicts.
-- A contract change includes producer, consumer, fixture and documentation changes.
-  Coordinate a single landing point rather than shipping half of a wire change.
-
-## Verification gates
-
-These are implementation acceptance checks, not tests already run in this repo.
-Prefer targeted behavioral checks; do not write tests that merely mirror methods.
-
-| Boundary | Essential checks |
+| Boundary | Checks |
 | --- | --- |
-| Feature rules | Bounds, unaffordable/repeated purchase, free recovery, no duplicate session completion |
-| Replay/storage | Rebuilt state equals incremental state; config edits do not change past effects; commit-before-display crash; duplicate terminal key; unknown/corrupt event stops startup |
-| Time/history | Deadline/cancel tie; midnight and timezone credit; today/yesterday streak; suspend gap before completion; no offline decay |
-| Protocol | Fragmented/combined lines, oversize discard, malformed types, stale connection/sequence/revision, reconnect to already-booted Pico |
-| Firmware | Bounce, short press vs hold exclusivity, held button on reconnect, rendering during USB traffic, nonblocking animations |
-| Application | Fake button → event → render; USB disconnect does not stop focus; storage failure cannot grant reward; completion display expires |
-| Hardware demo | Cold boot, real button responsiveness, readable countdown, always-visible sick pose, unplug/replug, measured LCD refresh |
+| Controls/UI | Every two-button action, setup wrap/default/remembering, paused labels, no automatic break start |
+| Timer | Multiple pause/resume segments, paused End, 59.999s vs 60s grace, deadline wins over End/Pause, break completion/end neutral |
+| Emotion/feeding | One free food, correct assets, newest reaction wins, expiry does not revive older reactions, no hidden stats |
+| Replay/storage | Incremental/rebuilt state match; duplicate/conflicting terminal and break-choice keys; pinned terms after config change; commit-before-render crash |
+| History | No pause/break time credited as focus; cumulative samples not double counted; completion dates and today/yesterday streak |
+| Recovery | Running/paused session interrupted neutrally; pending break restored; unsaved elapsed labeled unknown; no replayed animations |
+| Wire/firmware | Fragmented/oversize/invalid JSON, stale seq/connection/epoch/revision, exclusive press/hold, nonblocking drawing and input |
+| App/hardware | Old Pause cannot become Start break; disconnect doesn't stop timer; storage error freezes gameplay; readable screen and measured latency |
 
-Use a short configured demo duration; never modify firmware or hardcode a shortcut
-that bypasses completion rules. Document the measured gesture recognition, laptop
-processing and LCD repaint times separately before claiming the latency target.
-
-## MVP done
-
-All acceptance criteria in [features_and_goals.md](features_and_goals.md) pass,
-the team can run the laptop/firmware from documented commands, hardware choices
-are recorded, and the canonical docs match actual interfaces. Add setup/run
-instructions once implementation provides real commands; do not invent working
-commands in advance.
+These are planned checks, not executed implementation tests. MVP is done when the
+[product acceptance criteria](features_and_goals.md) pass, setup/run instructions
+describe real commands, and hardware details and actual interfaces match the docs.

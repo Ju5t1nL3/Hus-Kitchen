@@ -1,80 +1,74 @@
 # Desk pet: the simple explanation
 
-Read this first to understand the plan. The other documents provide details for
-whoever implements each part. This is a proposed design; the code is not built yet.
+This is the current plan, not built code. Start here; the other docs are references
+for implementing specific parts.
 
-## What are we building?
+## What does it do?
 
-A little desk pet with a screen and buttons, connected to your laptop by USB.
-It shows a clock, helps you do Pomodoros, and earns coins when you finish one.
-You can feed it, make it do a trick, and buy a small decoration. It also keeps
-your daily streak and a weekly activity summary. The pet never dies.
+When you first plug it in, you see a big pet, a clock at the top right, and two
+button labels: **Feed** and **Focus**.
+
+Feed gives it one kind of food and plays a cute animation. Focus opens a screen
+where the left button cycles through 5, 10, 15 … 60 minutes and back to 5.
+The right button confirms. The first selection is 25 minutes; later it remembers
+your last confirmed choice.
+
+The countdown fills most of the screen, with a small pet face at the top right.
+The buttons become **End** and **Pause/Resume**. Pausing freezes the timer.
+
+Ending before one minute of actual focus is treated as an accidental start.
+Ending later still works, but the pet looks sad briefly. Time spent paused does
+not count toward that minute.
+
+When focus finishes, the pet celebrates and offers a break. The break is one-fifth
+of the focus time: 25 minutes of focus gives 5 minutes of rest. You choose whether
+to start it. Finishing or ending the break takes you home without a penalty.
 
 ## What runs where?
 
-The laptop makes the decisions: timer, coins, food, mood, purchases and history.
-The Pico handles the physical device: reading buttons and drawing the screen.
-
-For example, the Pico reports “button 2 was pressed.” The laptop knows that the
-food menu is open, checks whether you can afford the food, saves the purchase,
-and tells the Pico what to display next.
-
-The USB messages carry these meanings:
-
-| Direction | What gets sent |
+| Part | Job |
 | --- | --- |
-| Pico → laptop | “I'm ready,” “this button was pressed/held,” and replies to connection checks |
-| Laptop → Pico | Connection setup/checks, a complete description of the screen, and animation requests |
+| Laptop | Timer, pause/resume, break calculation, emotions and saved history |
+| Pico | Read physical buttons and draw the screen the laptop requests |
 
-The actual messages are small JSON objects. You only need the
-[exact message specification](serial_protocol.md) when implementing USB communication.
+The Pico says “button 1 was pressed.” The laptop knows whether that means Feed,
+Up, End or Home on the current screen. The laptop then sends the updated screen
+description. The Pico never decides that a session is complete or that the pet
+should be sad.
 
-## How do we split the code?
+## How does the pet feel?
 
-There are four main jobs. These can be assigned to different teammates:
+The laptop keeps a diary of feeding and focus events. A recent feeding makes it
+content; a completed focus makes it happy; ending focus after the grace period
+makes it briefly sad. The latest applicable reaction wins and fades after a short
+time. Otherwise the pet looks calm, focused or resting according to what you do.
 
-| Job | Responsibility | Example |
-| --- | --- | --- |
-| Game rules | Decide what actions do | Finishing focus earns coins; buying food spends them |
-| Saving and history | Remember what happened and produce summaries | Restore the pet after restarting the app |
-| Pico and artwork | Buttons, screen, sprites and animations | Draw the hungry pose the laptop selected |
-| App and communication | Connect the other parts and manage the current screen | Turn a button press into the selected menu action |
+There are no health bars, hidden hunger meters, coins or shop in this MVP.
+It never dies. Daily streaks and a weekly text summary use the same saved diary
+and stay on the laptop.
 
-They agree on what information each function receives and returns before building
-separately. One integration owner handles shared definitions and configuration.
-That reduces teammates editing the same files, though it cannot eliminate every
-merge conflict. The [team plan](hackathon_plan.md) maps these jobs to files.
+## How do we divide the work?
 
-## What happens when a Pomodoro finishes?
+| Teammate's area | Builds |
+| --- | --- |
+| Game rules | Timer transitions, feeding and emotion selection |
+| Saving and history | Local database, restart recovery and summaries |
+| Pico and artwork | Buttons, display, pet/face/food sprites and animations |
+| App and communication | Screen controls and the USB connection between everything |
 
-1. The laptop notices that its timer has finished.
-2. It saves “session completed” together with the earned reward.
-3. It updates the pet's coins and streak.
-4. It tells the Pico to show completion and play a celebration.
-5. After a brief celebration, it tells the Pico to show the clock again.
-
-Saving first means a restart can recover the reward without granting it twice.
-
-Think of the saved history as a receipt book and the current pet stats as the
-balance calculated from those receipts. SQLite is simply the local database file
-that holds them. The currently selected menu is temporary and need not be saved.
-
-## Why does this make updates easier?
-
-Changing food prices belongs in configuration. Changing feeding behavior belongs
-in the game rules. Changing the pet's appearance belongs in Pico artwork.
-Replacing the screen mainly affects its hardware driver.
-
-A future GitHub integration can tell the laptop about a commit and reuse the
-existing saving/reward/animation flow. We don't need to build that integration now.
+Agree on the shared messages and function inputs/outputs first, then work in
+separate files. One integration owner coordinates shared definitions. Details are
+in the [team plan](hackathon_plan.md).
 
 ## What should we build first?
 
-Make one button start a short focus session, show its timer, and save one reward
-when it finishes. Then add feeding, the shop, history and the remaining artwork.
-Use a simulated device while hardware is being prepared.
+Make the home/setup/timer screens work, then connect one complete focus session
+to a saved completion and a break offer. Add pause/end behavior, feeding and
+emotions, and test with the real device. A simulated device lets laptop work begin
+before the hardware is ready.
 
-You can stop reading here for the big picture. For the next level of detail, use
-[MVP behavior](features_and_goals.md) or the [team plan](hackathon_plan.md).
-The class, event and protocol documents are implementation references; nobody
-needs to memorize them all. The full document index is in [AGENTS.md](../AGENTS.md).
+Food definitions, emotion rules and sprite drawing are separate, so adding another
+food or changing the artwork later does not require rewriting the timer.
+
+For exact behavior, read [MVP goals](features_and_goals.md). The full document map
+is in [AGENTS.md](../AGENTS.md); you do not need to read every specification at once.

@@ -6,12 +6,13 @@ For the plain-language project explanation, read [the overview](overview.md).
 
 ## Keep each rule in one place
 
-Put feeding rules in the pet feature, timer rules in focus, and purchase rules in
-shop. Pass resources into classes so tests can substitute a fake clock or device.
+Put food handling in feeding, focus/break transitions in timers, and expression
+selection in emotions. Pass resources into classes so tests can substitute a fake
+clock or device.
 Use small functions for calculations and classes for resources that need to stay
 open, such as the USB connection.
 
-DRY means keeping one authoritative definition of a rule or fact. Food prices
+DRY means keeping one authoritative definition of a rule or fact. Reaction durations
 belong in configuration; protocol limits belong with the protocol. Avoid a giant
 global constants file. Do not create an abstraction just because two short pieces
 of code happen to look similar. Laptop and firmware may have separate protocol
@@ -24,10 +25,10 @@ implementations, checked against the same examples.
 - Use enums or literal types for fixed choices such as mode, gesture and rejection
   code. Use a typed union of distinct records for commands and event payloads, so
   a completion event cannot accidentally carry a feeding payload.
-- Before parallel implementation, finish the concrete types for `UiState`,
-  `CommandIntent`, `ScheduleResult`, `PresentationResult` and `ParseResult` in the
-  [class design](class_design.md). Keep exact definitions there and in their
-  eventual owning code, rather than copying them into this guide.
+- Before parallel implementation, implement the concrete records/unions for
+  `RuntimeState`, `ControlIntent`, `ScheduleResult`, `PresentationResult` and
+  `ParseResult` from the [class design](class_design.md). Keep definitions there and
+  in their eventual owning code, rather than copying them into this guide.
 - Prefer immutable records and collections for shared game data. Ordinary user
   mistakes return a rejection; storage failures and corrupt history raise explicit
   errors. Follow the existing API contracts.
@@ -38,7 +39,8 @@ implementations, checked against the same examples.
 
 Type annotations do not validate incoming data. Validate YAML configuration, stored
 events, and USB messages when reading them, then pass validated records inward.
-Feature functions still enforce business rules, such as sufficient coins.
+Feature functions still enforce business rules, such as resuming only a paused
+session and excluding paused time from the early-end grace calculation.
 MicroPython may use validated dictionaries and small classes; it does not need
 laptop dataclasses or the laptop's type-checker configuration.
 

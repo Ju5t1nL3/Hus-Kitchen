@@ -1,77 +1,80 @@
-# Design decisions, user preferences, and open questions
+# Decisions, preferences and open questions
 
-Status: proposed MVP baseline, prepared 2026-09-12 from the four original Markdown
-files. No application code exists yet. No hardware tests or external hardware-spec
-verification have been performed.
+Status: planning only. The small-screen emotion-first design below supersedes the
+earlier stats/shop proposal. No implementation or hardware verification is claimed.
 
-## User intent to retain across sessions
+## User preferences to preserve
 
-- Make code modular, easily maintainable, and easily updatable.
-- Split hackathon work into independently owned sections to minimize merge conflicts.
-- Define system design and class/function contracts, especially Pico → laptop data.
-- Account for likely future features without prematurely building them.
-- Store goals, findings, decisions and plans in Markdown, with AGENTS as entry point.
-- Keep a short, plain-language [overview](overview.md) for the user and newcomers;
-  detailed implementation contracts should remain separately accessible references.
-- Preserve implementation preferences as actionable guidance: explicit types,
-  boundary validation, centralized rule ownership and selective Twelve-Factor
-  application. See [implementation guidelines](implementation_guidelines.md).
-- Existing Markdown may be cleaned up. The user explicitly clarified that the old
-  AGENTS design is editable and should be improved rather than treated as fixed.
+- Modular, maintainable, easily updated code with independent hackathon ownership.
+- Explicit function inputs/outputs and a precise Pico ↔ laptop contract.
+- Short plain-language [overview](overview.md); detailed specs are references.
+- Root AGENTS as the entry point; supporting Markdown in docs/.
+- Typed laptop code, boundary validation, shared rule ownership and selective
+  Twelve-Factor application; see [implementation guidelines](implementation_guidelines.md).
+- Existing plans may be improved. Future ideas should inform boundaries without
+  requiring their implementation now.
 
-## Decisions and reasons
+## Current product decisions
 
-| Decision | Reason / consequence |
+| Decision | Why |
 | --- | --- |
-| One laptop process, separate Pico firmware | Simple deployment; no services/network needed for MVP. |
-| Feature modules inside a small layered application | Pet/focus/shop/report changes stay localized; infrastructure is replaceable. |
-| Pure rules/reducers, classes for resources | Small dependencies and tests; avoids an all-purpose pet/controller. |
-| One state owner, queued serial input | Avoids shared-state locks while keeping buttons responsive. |
-| SQLite append-only domain events | Atomic writes and reward uniqueness; simpler crash handling than rewriting a JSON array. |
-| Durable state separate from UI/render state | Menus, connectivity and animation do not pollute history. |
-| Store resolved effects and reward terms in events | History does not change when config prices or rewards change. |
-| Versioned JSON Lines over USB | Complete snapshots and explicit schemas replace expanding positional text commands. |
-| Full snapshots, separate transient cues | Simple reconnect and consistent screen fields. |
-| Two-button baseline | Works with minimum listed hardware; third button is optional. |
-| Text recap in MVP, dashboard later | Resolves weekly logs appearing in both feature lists. |
-| Small shop and progress art in MVP | Preserves purchases/decorations and focus UI goals at limited scope. |
-| No offline decay; cancel interrupted focus neutrally | Simple recovery and no guilt for sleep/restarts. Resume can come later. |
-| One configured local user/device initially | Stable origin IDs now; NFC and co-op remain separate features. |
+| Home: big pet, top-right clock, Feed/Focus buttons | Fits the small display and keeps actions obvious. |
+| Two physical buttons with screen-specific labels | No touchscreen or third button dependency. |
+| One free food with a separate definition and sprite | Small MVP with room for more foods later. |
+| 5–60-minute focus in five-minute steps; default 25, remember last confirmation | Simple adjustable duration. “5s” is interpreted as five-minute increments, as discussed with the user. |
+| Break = one-fifth of focus, rounded to whole minutes, minimum one | Transparent proposed product rule; not a universal Pomodoro requirement. |
+| Offer a break after completion; do not auto-start | User controls when rest starts; no unattended countdown. |
+| Large countdown, small expressive face at top right | Prioritizes readability; removes progress art from MVP. |
+| End and Pause/Resume during focus and break | Supports accidental starts and interruptions. |
+| Grace below 60 seconds of actual focus; brief sadness after that | Pauses do not consume grace; no lasting punishment. |
+| Emotions from saved events and explicit time | Predictable content/happy/sad reactions without hidden numerical stats. |
+| Laptop-only streak/weekly text report | Keeps useful history without cluttering the Pico. |
 
-## Findings corrected from the original notes
+Reaction durations (content 20s, happiness 30s, sadness 30s), setup hold-to-back,
+and neutral break ending are documented defaults that can be tuned. The exact
+screen/control behavior is owned by [MVP goals](features_and_goals.md).
 
-- “Pico / Pi Zero W” was ambiguous; assume Pico pending confirmation.
-- LCD versus OLED and exact hardware details remain open; domain code is independent.
-- Old render commands lacked clock text, menu content, progress, version handshake,
-  and atomic screen updates. The new protocol replaces that proposal; there is
-  no implemented legacy protocol to migrate.
-- Replay was underspecified for decay/config changes. Initialization, elapsed-time
-  effects, pinned rewards, deterministic ordering and replay are now specified.
-- Blocking `readline()` on firmware could starve buttons. Assemble bounded lines
-  from available bytes instead.
-- Serial input wakes the application immediately rather than waiting for a tick.
-- Future “server on the Pi” belongs on the laptop for this architecture.
-- Original co-op punishment and look-away penalties conflict with low-stress goals.
-  Those ideas remain recorded but require a new product decision.
+## Architecture decisions retained or revised
 
-## Assumptions and unresolved choices
+| Decision | Consequence |
+| --- | --- |
+| Laptop owns rules; Pico draws/reports physical gestures | Firmware has no timer, mood or feeding decisions. |
+| One state writer with queued USB input/output | Responsive controls without concurrent mutable game state. |
+| Pure feature functions and injected resource classes | Test without hardware; keep adapters replaceable. |
+| SQLite append-only events | Replay history and enforce one session terminal outcome. |
+| Separate GameState, RuntimeState and RenderSnapshot | Saved facts do not depend on a current screen or live clock anchor. |
+| Pin timing/reaction terms and resolved expiries in events | Configuration changes do not rewrite existing outcomes. |
+| Unified timer feature with focus/break kind | Pause/resume arithmetic is implemented once. |
+| Explicit control_epoch in button reports | An old End/Pause cannot activate the new screen after completion. |
+| Protocol v2/UI emotions_v1 and event schema v2 | Replaces incompatible, unimplemented stats/shop examples. No migration code is needed yet; incompatible data must not silently load. |
+| Neutral end on restart/suspend; restore pending break offers | Supports manual pause/resume while deferring reliable restart-resume. |
+| No offline stat decay or emotion penalties | Breaks from the application do not damage the pet. |
 
-These do not block software design/simulation. Resolve hardware before wiring and
-tuning before the demo.
+## Superseded requirements
 
-| Question | Working assumption | Consequence if changed |
-| --- | --- | --- |
-| Exact board/display/wiring? | Pico + 1.8-inch LCD + two buttons | Change firmware config/driver; platform change may affect transport. |
-| Laptop OS/Python version? | Team chooses one supported development OS | Confirm serial permissions, suspend behavior and dependencies. |
-| USB channel/display throughput? | App owns bidirectional stream; redraw supports target | Validate on device and document measured latency. |
-| Team size/names? | Four ownership areas, not four required people | Combine areas; preserve shared-file ownership. |
-| Coins/decay/care effects/feedback duration? | Tune config; care remains accessible | Events preserve old applied effects; new rules affect new actions. |
-| Art/accessory identity? | One pet, one accessory, nine progress stages | Add assets; change schema only if fields/semantics change. |
-| Focus/break behavior? | 25-minute focus; no pause/automatic break | Extend focus events and interaction contract if needed. |
+Health/hunger/friendship, coins, a shop, premium food, accessories, tricks and
+pixel-art timer progress are outside the current MVP, including background
+mechanics. The old fixed-duration/no-pause focus flow is also superseded.
+The [backlog](nice_to_haves.md) retains future ideas without keeping them as
+active requirements. References to those concepts elsewhere should clearly be
+historical or deferred.
 
-## Documentation maintenance
+Original hardware notes alternated Pico/Pi Zero and LCD/OLED; those choices were
+not verified. The plan assumes Pico with the listed LCD behind a replaceable driver.
+A future web listener belongs on the laptop. Original webcam/co-op punishment
+ideas still need product reconsideration before implementation.
 
-AGENTS is navigation and concise guidance, not a duplicate specification. Product
-behavior belongs in features/goals; wire details in serial protocol; signatures in
-class design. Record reasons here and update the canonical specifications so
-readers see one current answer. Do not leave contradictory alternatives active.
+## Open choices
+
+| Question | Working assumption |
+| --- | --- |
+| Exact board, display, pins and USB ownership? | Pico + 1.8-inch LCD + two buttons; confirm before wiring. |
+| Laptop OS and Python version? | Team selects and verifies serial and system-sleep behavior. |
+| Sprite style/dimensions and actual redraw speed? | Full pet, small faces, food/animations; size to confirmed LCD and measure. |
+| Team members? | Four ownership areas; combine them if the team is smaller. |
+| Tuning? | Values in MVP goals/config proposal; maintain neutral breaks and brief reactions. |
+
+The record of user intent belongs here, behavior in MVP goals, APIs in class
+design, and wire/storage details in their own specs. Update affected documents
+together when a decision changes. Do not require readers to reconcile contradictory
+versions or read every technical detail to understand the product.

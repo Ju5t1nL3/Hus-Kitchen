@@ -1,140 +1,151 @@
-# Durable events and replay
+# Events, timers and emotions
 
-SQLite is the MVP source of truth. `GameState` is an in-memory projection rebuilt
-from the log. A persisted snapshot cache is unnecessary for this scale; if added,
-it must be discardable and tagged with projection version and last sequence.
+The laptop stores an append-only SQLite event history. `GameState` is rebuilt from
+it; screen selection and live timer clock anchors are separate temporary state.
+This is the revised emotion-only schema, version 2. The former stats/shop schema
+was a plan, not implemented data; do not accept it silently as the new schema.
 
-## Event envelope
+## Envelope and storage
 
-| Field | Type | Meaning |
+| Field | Type / purpose |
+| --- | --- |
+| `seq` | SQLite-assigned positive integer; replay in this order |
+| `event_id` | UUID generated before append |
+| `schema_version` | Integer 2 |
+| `type` | One of the event types below |
+| `occurred_at` | Laptop UTC ISO-8601 timestamp |
+| `user_id`, `device_id` | Stable local player and origin installation IDs |
+| `source` | `system` or `local_controls`; session lifecycle always uses system |
+| `dedupe_key` | Semantic operation identity within user/source scope |
+| `payload` | Validated typed event data |
+
+Use a unique event ID and unique `(user_id, source, dedupe_key)`. Append one event
+per transaction and return only after commit. A retry returns the existing event
+with `inserted=False`; mismatched type/payload is a conflict. Ignore freshly
+generated timestamp/ID differences when comparing otherwise identical retries.
+
+The one application writer holds an OS-managed lock for the database path;
+read-only report connections are separate. A failed append cannot update gameplay
+or trigger an animation. Unknown versions/types or corrupt history stop writable
+startup with an actionable error, not a silently reset database.
+
+## Shared records
+
+- `Reaction`: `mood: content|happy|sad`, `expires_at: UTC timestamp`. Resolved
+  at the event decision; never extend its expiry during replay.
+- `FocusTerms`: selected `duration_seconds`, calculated `break_seconds`,
+  `grace_active_ms`, `sad_seconds`, `happy_seconds`, `report_timezone`.
+  Pin these at focus start so later config edits cannot change that session.
+- `BreakTerms`: `duration_seconds`, `parent_focus_id`, `report_timezone`.
+- `BreakOffer`: `parent_focus_id`, `duration_seconds`, `report_timezone`.
+  Saved by successful focus completion, consumed by break start or skip.
+- `active_ms`: cumulative active time in this session, excluding all pauses.
+  Integer milliseconds preserve the exact one-minute boundary.
+
+## Event payloads
+
+| Event | Required payload | Meaning |
 | --- | --- | --- |
-| `seq` | positive integer | SQLite-assigned local ordering; never use timestamp sort for replay |
-| `event_id` | UUID string | Globally unique event identity, generated before append |
-| `schema_version` | integer, initially 1 | Version of event envelope/payload contract |
-| `type` | string enum | Domain event type below |
-| `occurred_at` | UTC ISO-8601 string | Laptop timestamp; not a Pico clock |
-| `user_id` | stable local string | Configured player identity |
-| `device_id` | stable local string | Origin installation identity; distinct from transient Pico boot ID |
-| `source` | string enum | `system` or `local_controls` in MVP; future adapters add values |
-| `dedupe_key` | nonempty string | Unique semantic operation key within user/source scope |
-| `payload` | typed JSON object | Resolved facts and effects, not an instruction to recalculate current rules |
+| `pet_created` | `pet_id` | Initialize identity once; no numerical care stats |
+| `pet_fed` | `food_id`, `reaction` (content) | Record free feeding and resolved expression expiry |
+| `session_started` | `session_id`, `kind: focus\|break`, kind-specific `terms` | Start running at zero active time; focus updates last confirmed duration; break consumes matching offer |
+| `session_paused` | `session_id`, `kind`, `active_ms` | Save cumulative progress and mark paused |
+| `session_resumed` | `session_id`, `kind`, `active_ms` | Mark running; active_ms must equal preceding pause |
+| `session_completed` | `session_id`, `kind`, `active_ms`, `credit_date`, `break_offer`, `reaction` | Clear session; focus supplies local date, offer and happy reaction; break supplies null for those three fields |
+| `session_ended` | `session_id`, `kind`, `active_ms`, `reason`, `reaction` | End without completion; only user_early focus supplies a sad reaction, otherwise null |
+| `break_skipped` | `parent_focus_id` | Consume an offered break without a session or mood effect |
 
-Use an `events` table with unique `event_id` and unique
-`(user_id, source, dedupe_key)`, plus integer primary-key sequence. Append one
-event per transaction. A duplicate returns the existing row with `inserted=False`;
-if its semantic payload/type differ, raise a conflict rather than accepting it.
-Generated event ID/timestamp differences on a retry do not by themselves mean a
-conflict. Only committed rows become visible to consumers.
+End reasons: `user_grace` for focus below its grace threshold; `user_early` for
+unfinished focus at/above it; `user_break` for ending a break; or
+`app_restart|app_shutdown|suspend|storage_recovery` for neutral interruptions.
 
-Log accepted domain changes, not every GPIO edge, ping, screen refresh or failed
-menu action. Those are transient diagnostics. Preserve original events; schema
-migrations/upcasters adapt old payloads for replay without rewriting history.
+Semantic keys:
 
-## MVP payloads
+- Initialization: `pet-created`.
+- Feeding: source local_controls, `button:<connection_id>:<button_seq>`.
+- Session start: source system, `session-start:<session_id>`.
+- Pause/resume: source system, `button:<connection_id>:<button_seq>`.
+- End OR completion: source system, `session-terminal:<session_id>`.
+- Break start OR skip: source system, `break-choice:<parent_focus_id>`; this
+  overrides the ordinary session-start key for a break.
 
-`effects` is a resolved integer record:
-`{hunger_delta, friendship_delta, health_delta, coins_delta}`. Clamp stat deltas
-when making the decision so the stored effects are exactly what was applied.
-Reducers validate resulting ranges and never consult current configuration.
+The shared terminal/choice keys prohibit conflicting outcomes. Generate session
+IDs and operation keys on the laptop and retain them across an append retry.
+A duplicate append never causes another reaction notification or animation.
 
-| Event | Required payload | Durable effect |
-| --- | --- | --- |
-| `pet_created` | `initial_stats`, `initial_coins`, `owned_accessories: []`, `equipped_accessory: null` | Initialize once; dedupe key `pet-created` |
-| `pet_time_elapsed` | `awake_seconds`, `effects` | Apply resolved online decay; no wall-clock inference on replay |
-| `pet_fed` | `food_id: basic\|premium`, `effects` | Apply feeding and any payment atomically |
-| `pet_trick_performed` | `trick_id`, `effects` | Record the action; proposed effects are zero to avoid unlimited reward farming |
-| `focus_started` | `session_id`, `duration_seconds`, `reward_coins`, `reward_friendship`, `report_timezone` | Set active session with pinned terms |
-| `focus_completed` | `session_id`, `duration_seconds`, `credit_date: YYYY-MM-DD`, `report_timezone`, `effects` | Clear active session; apply reward; add qualifying date |
-| `focus_cancelled` | `session_id`, `reason: user\|app_restart\|app_shutdown\|suspend\|storage_recovery` | Clear active session; no negative effects |
-| `accessory_purchased` | `accessory_id`, `effects` | Debit coins and add ownership; equip separately |
-| `accessory_equipped` | `accessory_id: string\|null` | Equip an owned item, or remove accessory |
+## Timer calculation and pause/resume
 
-These are game events, distinct from protocol messages. A Pico button never
-specifies `pet_fed`, coins, effects, or whether a Pomodoro is complete.
+The clock provides UTC and monotonic milliseconds. For a running timer:
+`active_ms = min(duration_ms, committed_active_ms + now_mono - run_anchor_mono)`.
+For a paused timer: `active_ms = committed_active_ms`.
+Remaining display seconds are `ceil((duration_ms - active_ms) / 1000)`.
 
-Stable keys: `focus-start:<session_id>` for start and
-`focus-terminal:<session_id>` for either completion or cancellation, both with
-source `system`, so conflicting terminal outcomes cannot both commit. Button
-care/shop/trick commands use source `local_controls` and key
-`button:<connection_id>:<seq>`. Online decay uses a generated operation UUID
-retained across a retry. Session IDs are generated by the application, never Pico.
-Initialization, decay and session lifecycle use source `system`, even when a
-button triggered the lifecycle decision.
+Start/resume establish a temporary monotonic anchor. Pause samples elapsed active
+time and stores it before freezing the UI. Resume stores a resume event before
+establishing the next anchor. Neither pauses nor pause durations count as focus.
+End while paused uses the saved active time. Do not write events every second.
 
-## Deterministic reducer rules
+The scheduler alone can issue completion, and only for a running timer at its
+deadline. It processes due completion before buttons: an End/Pause arriving at
+the deadline cannot replace a completion. A screen-control token prevents that
+old button from then activating a different action on the new break-offer screen.
 
-- Begin from `None`; the first event must be a valid `pet_created`.
-- Apply every committed event once, in increasing `seq`; reject mismatched user
-  streams, invalid versions, invalid transitions and out-of-range effects.
-- Focus start requires no active session; completion/cancellation requires the
-  matching session. Validate completion duration/terms against its start event.
-- Applying events performs no I/O, time reads, random generation or configuration
-  lookups. Never replay serial effects or live animation callbacks.
-- Increment `last_seq` after each successful application. The local log is one
-  configured user's stream in MVP; reject changing user ID on a populated DB.
-- An event is immutable history. Fix mistakes through explicit compensating
-  events/versioned migrations when needed, never by silently editing old rows.
+Detect an OS resume, a large loop gap (proposed over five seconds with normal
+one-second wakeups), or a large UTC/monotonic discrepancy before completion.
+End any running or paused session neutrally; do not credit the interrupted gap.
+Long process stalls or clock adjustments may conservatively trigger the same
+policy. Validate this on the selected laptop OS.
 
-If the process dies after commit but before reducing/sending a screen, replay
-restores the new state. Missing a transient animation is acceptable; granting an
-extra reward is not. Commands that do nothing return a rejection/no-op instead of
-appending misleading purchase or equip events.
+On restart there is no trusted running anchor. End the unfinished session using
+only its last persisted active_ms; unsaved time since its last start/resume is
+unknown and excluded. Manual End/grace classification uses an accurate live
+sample; system interruption reasons never produce sadness. Graceful shutdown can
+sample active time before its neutral end. Breaks follow the same recovery policy.
 
-## Time, decay, and interrupted focus
+## Replay and emotion selection
 
-The clock port returns both UTC and monotonic time. A session's runtime monotonic
-deadline is temporary application state; its ID, duration and reward terms are
-durable. Store terms at start so changing configuration before recovery cannot
-change what that session was promised.
+Replay starts at None, requires one pet_created, and applies events by increasing
+seq. Validate session identity/kind and transitions: pause requires running,
+resume requires paused, terminal events require that session to exist. Active
+time cannot decrease or exceed duration; completion equals duration; user ends
+and pause samples must be below duration. Break start/skip requires a matching
+pending offer, with duration, parent ID and timezone equal to that saved offer.
+Only one session or break offer can exist at a time. Focus start requires neither.
 
-On each application wake, first compare elapsed monotonic time, elapsed UTC time,
-and any available OS-resume signal. A gap beyond configured `max_awake_gap_seconds`
-(proposed 5 seconds with a one-second normal wake interval), or a large discrepancy
-between elapsed clocks, is treated conservatively as an interruption. Cancel the
-active session and discard that interval's decay before checking for completion.
-This catches clocks that include suspend and clocks that pause during suspend;
-large wall-clock adjustments or long process stalls may also cancel a session.
-Document this tradeoff and verify the clock adapter on the chosen laptop OS.
+Reducers never read clocks/config or perform I/O. They retain the current session,
+last confirmed focus duration, pending break, latest reaction candidate and
+qualifying focus dates. A null reaction does not erase a previous candidate.
 
-Within accepted awake intervals, accumulate monotonic elapsed time. Consume whole
-configured decay intervals and retain the fractional remainder in memory. Generate
-effects using the current rules and state, including any interval-by-interval
-threshold crossings; do not approximate a multi-interval health transition with
-only the starting hunger value. Persist resolved effects in one decay event.
-Discard the remainder on restart/interruption; no offline catch-up is applied.
+`emotions.select(state, now_utc)` uses the latest reaction if unexpired, otherwise
+focused for running focus, resting for running break, or calm. Paused sessions
+default to calm. When a newer reaction expires, do not revive an older one.
+This makes the emotion a simple query over recorded facts and current time;
+the projection avoids rescanning the entire history on every redraw.
 
-Process already-due work before queued controls. At a deadline tie, completion
-wins over cancellation. If decay and completion are due together, apply decay
-first, then compute/clamp completion effects. Each event commits before the next
-decision. Cancelled/interrupted sessions do not count as completed focus minutes.
+Reaction expiry is calculated when the event is accepted, using pinned session
+terms or the current food definition. Old reactions keep their original expiry
+after config changes/restarts; restarting never replays their animations.
+There is no decay log, offline penalty, emotion score or hidden pet-stat model.
 
-## Streaks and weekly recap
+## Streak and weekly text recap
 
-Use the configured IANA timezone captured at session start. On completion, persist
-the local completion date as `credit_date`. A session spanning midnight credits
-the day it finishes; multiple completions on one date count as one streak day.
-Existing credit dates do not shift when the user later changes timezone.
+Only completed focus sessions add a qualifying date. Store that completion date
+using the timezone pinned at focus start, including when a session spans midnight.
+Existing credit dates do not shift when timezone configuration changes.
 
-`current_streak(qualifying_dates, today)` counts consecutive days ending today if
-today qualifies, otherwise ending yesterday. It returns zero if neither qualifies.
-This prevents a streak disappearing every morning before a person can focus.
-`today` is explicitly supplied by the caller, never read within the query.
+Current streak counts consecutive dates ending today, or yesterday if today has
+not qualified; otherwise zero. Pass today explicitly to the pure query.
 
-Weekly recap takes a local `week_start` date (normally Monday) and uses the seven
-dates in `[week_start, week_start + 7 days)`. Count completed sessions and sum
-their recorded focus seconds; count coins earned from positive coin effects and
-coins spent from negative effects. Exclude initialization balances. For events
-without `credit_date`, classify their UTC timestamp using the requested report
-timezone. Display that timezone and explain that completion credit dates retain
-their historical timezone policy.
+Weekly reports cover seven local dates from week_start (normally Monday), with
+completed focus count and minutes, early-ended focus count and active minutes,
+interrupted focus count and recorded active minutes, break count, feed count, and
+current streak. Break count includes both completed and ended break sessions.
+Paused and break time never count as focus; incomplete sessions do not count as completed.
+Attribute completed focus to credit_date and other events by occurred_at in the
+requested report timezone. Count each session only from its terminal event;
+never sum cumulative pause/resume samples. Interrupted active time is a lower
+bound because unsaved running time can be lost; label it accordingly.
 
-Retain completion-date sets in the in-memory projection for cheap streak display;
-compute detailed recaps from log queries. Neither history queries nor dashboards
-may mutate the game or re-award coins.
-
-## Future evolution
-
-Add new event types with explicit reducers and schema migrations. Unknown durable
-event types must stop replay rather than silently produce an incomplete state.
-Stable IDs/origin tags aid eventual synchronization, but local `seq` is not global
-ordering. Co-op needs a separate projection and explicit identity/conflict rules.
+Queries are read-only. A future dashboard or integration reuses them rather than
+mutating history. Version future schema changes explicitly; local seq and origin
+tags alone are not a co-op synchronization/conflict policy.
