@@ -7,6 +7,7 @@ and heartbeat bookkeeping belong to SerialDeviceLink, not here.
 
 import json
 from dataclasses import dataclass
+from typing import TypeIs, cast
 
 from deskpet.core.models import ButtonId, ClockReading, Gesture, Mood, Screen
 from deskpet.core.views import (
@@ -15,8 +16,8 @@ from deskpet.core.views import (
     ButtonLabel,
     DeviceReady,
     Invalid,
-    ParseResult,
     Parsed,
+    ParseResult,
     Pong,
     RenderSnapshot,
 )
@@ -61,6 +62,10 @@ class AnimateMessage:
 
 
 HostMessage = HelloMessage | PingMessage | RenderMessage | AnimateMessage
+type JsonValue = (
+    None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
+)
+type JsonObject = dict[str, JsonValue]
 
 
 def decode_line(raw: bytes, now: ClockReading) -> ParseResult:
@@ -70,7 +75,7 @@ def decode_line(raw: bytes, now: ClockReading) -> ParseResult:
     this stays pure (no implicit clock read, no I/O), it just cannot invent
     a receipt time for a wire message that carries none.
     """
-    if len(raw) > MAX_LINE_BYTES:
+    if len(raw) + 1 > MAX_LINE_BYTES:
         return Invalid("line_too_long")
 
     try:
@@ -79,12 +84,13 @@ def decode_line(raw: bytes, now: ClockReading) -> ParseResult:
         return Invalid("bad_utf8")
 
     try:
-        message = json.loads(text)
-    except (json.JSONDecodeError, ValueError):
+        decoded: object = json.loads(text)
+    except json.JSONDecodeError, ValueError:
         return Invalid("bad_json")
 
-    if not isinstance(message, dict):
+    if not isinstance(decoded, dict):
         return Invalid("not_object")
+    message = cast(dict[str, object], decoded)
     if message.get("v") != PROTOCOL_VERSION:
         return Invalid("bad_version")
 
@@ -98,7 +104,7 @@ def decode_line(raw: bytes, now: ClockReading) -> ParseResult:
     return Invalid("unknown_type")
 
 
-def _decode_ready(message: dict) -> ParseResult:
+def _decode_ready(message: dict[str, object]) -> ParseResult:
     connection_id = message.get("connection_id")
     if connection_id is not None and not _valid_id(connection_id):
         return Invalid("bad_connection_id")
@@ -119,12 +125,12 @@ def _decode_ready(message: dict) -> ParseResult:
             connection_id=connection_id,
             boot_id=boot_id,
             buttons=tuple(ButtonId(b) for b in buttons),
-            ui=message["ui"],
+            ui=UI_VOCABULARY,
         )
     )
 
 
-def _decode_button(message: dict, now: ClockReading) -> ParseResult:
+def _decode_button(message: dict[str, object], now: ClockReading) -> ParseResult:
     connection_id = message.get("connection_id")
     boot_id = message.get("boot_id")
     if not _valid_id(connection_id) or not _valid_id(boot_id):
@@ -143,7 +149,7 @@ def _decode_button(message: dict, now: ClockReading) -> ParseResult:
         return Invalid("bad_button")
 
     action = message.get("action")
-    if action not in _GESTURES:
+    if not isinstance(action, str) or action not in _GESTURES:
         return Invalid("bad_action")
 
     return Parsed(
@@ -159,7 +165,7 @@ def _decode_button(message: dict, now: ClockReading) -> ParseResult:
     )
 
 
-def _decode_pong(message: dict) -> ParseResult:
+def _decode_pong(message: dict[str, object]) -> ParseResult:
     connection_id = message.get("connection_id")
     if not _valid_id(connection_id):
         return Invalid("bad_connection_id")
@@ -178,24 +184,26 @@ def encode(message: HostMessage) -> bytes:
         payload = _encode_ping(message)
     elif isinstance(message, RenderMessage):
         payload = _encode_render(message)
-    elif isinstance(message, AnimateMessage):
-        payload = _encode_animate(message)
     else:
-        raise EncodeError(f"unsupported host message type: {type(message)!r}")
+        payload = _encode_animate(message)
 
-    encoded = (json.dumps(payload) + "\n").encode("utf-8")
+    encoded = (json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8")
     if len(encoded) > MAX_LINE_BYTES:
         raise EncodeError("encoded message exceeds MAX_LINE_BYTES")
     return encoded
 
 
-def _encode_hello(message: HelloMessage) -> dict:
+def _encode_hello(message: HelloMessage) -> JsonObject:
     if not _valid_id(message.connection_id):
         raise EncodeError("invalid connection_id")
-    return {"v": PROTOCOL_VERSION, "type": "hello", "connection_id": message.connection_id}
+    return {
+        "v": PROTOCOL_VERSION,
+        "type": "hello",
+        "connection_id": message.connection_id,
+    }
 
 
-def _encode_ping(message: PingMessage) -> dict:
+def _encode_ping(message: PingMessage) -> JsonObject:
     if not _valid_id(message.connection_id):
         raise EncodeError("invalid connection_id")
     if message.nonce < 0:
@@ -208,7 +216,7 @@ def _encode_ping(message: PingMessage) -> dict:
     }
 
 
-def _encode_render(message: RenderMessage) -> dict:
+def _encode_render(message: RenderMessage) -> JsonObject:
     if not _valid_id(message.connection_id):
         raise EncodeError("invalid connection_id")
     if message.revision <= 0:
@@ -222,33 +230,35 @@ def _encode_render(message: RenderMessage) -> dict:
     if view.feedback is not None and view.feedback not in _FEEDBACKS:
         raise EncodeError("invalid feedback")
 
+    buttons: list[JsonValue] = [_encode_button_label(label) for label in view.buttons]
+    encoded_view: JsonObject = {
+        "screen": view.screen.value,
+        "control_epoch": view.control_epoch,
+        "mood": view.mood.value,
+        "clock_text": view.clock_text,
+        "timer_seconds": view.timer_seconds,
+        "paused": view.paused,
+        "focus_minutes": view.focus_minutes,
+        "break_minutes": view.break_minutes,
+        "buttons": buttons,
+        "feedback": view.feedback.value if view.feedback is not None else None,
+    }
     return {
         "v": PROTOCOL_VERSION,
         "type": "render",
         "connection_id": message.connection_id,
         "revision": message.revision,
-        "view": {
-            "screen": view.screen.value,
-            "control_epoch": view.control_epoch,
-            "mood": view.mood.value,
-            "clock_text": view.clock_text,
-            "timer_seconds": view.timer_seconds,
-            "paused": view.paused,
-            "focus_minutes": view.focus_minutes,
-            "break_minutes": view.break_minutes,
-            "buttons": [_encode_button_label(b) for b in view.buttons],
-            "feedback": view.feedback,
-        },
+        "view": encoded_view,
     }
 
 
-def _encode_button_label(label: ButtonLabel) -> dict:
+def _encode_button_label(label: ButtonLabel) -> JsonObject:
     if not (1 <= len(label.label) <= 12) or not label.label.isprintable():
         raise EncodeError("invalid button label")
     return {"button": int(label.button), "label": label.label, "enabled": label.enabled}
 
 
-def _encode_animate(message: AnimateMessage) -> dict:
+def _encode_animate(message: AnimateMessage) -> JsonObject:
     if not _valid_id(message.connection_id):
         raise EncodeError("invalid connection_id")
 
@@ -272,21 +282,24 @@ def _encode_animate(message: AnimateMessage) -> dict:
     }
 
 
-def _valid_id(value: object) -> bool:
+def _valid_id(value: object) -> TypeIs[str]:
     return isinstance(value, str) and 1 <= len(value) <= 64 and value.isprintable()
 
 
-def _is_int(value: object) -> bool:
+def _is_int(value: object) -> TypeIs[int]:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def _is_positive_int(value: object) -> bool:
+def _is_positive_int(value: object) -> TypeIs[int]:
     return _is_int(value) and value > 0
 
 
-def _valid_button_list(buttons: object) -> bool:
-    if not isinstance(buttons, list) or not (1 <= len(buttons) <= 8):
+def _valid_button_list(buttons: object) -> TypeIs[list[int]]:
+    if not isinstance(buttons, list):
         return False
-    if not all(_is_int(b) and 1 <= b <= 255 for b in buttons):
+    values = cast(list[object], buttons)
+    if not 1 <= len(values) <= 8:
         return False
-    return len(set(buttons)) == len(buttons)
+    if not all(_is_int(button) and 1 <= button <= 255 for button in values):
+        return False
+    return len(set(cast(list[int], values))) == len(values)

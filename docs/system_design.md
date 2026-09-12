@@ -33,6 +33,7 @@ same commit-before-presentation path when a focus or break timer finishes.
 | features | Timer transitions, food validation, emotion selection, replay/history | Core; no USB/SQL/GPIO imports |
 | app | Screen controls, scheduling, state ownership and presentation | Core and feature APIs |
 | adapters | SQLite, USB, system clock, YAML and text output | Core contracts |
+| devtools | Virtual Pico UI, in-memory byte transport and bounded wire trace | Core contracts and production wire codec |
 | pico | Hardware input, protocol validation, drawing and sprites | MicroPython and local firmware modules |
 | laptop/main.py | Construct dependencies and start/stop the laptop app | Laptop modules |
 
@@ -60,6 +61,19 @@ hardware configuration and display/controller operations live behind
 `DisplayDriver`. A new compatible board or display may require a firmware adapter
 and configuration change, but must not require edits to laptop game rules or the
 versioned protocol.
+
+## Runtime profiles
+
+The composition root accepts an explicit `dev` or `hardware` profile. Both build
+the same application, features, reducer, presenter and wire codec. `dev` supplies
+the virtual Pico, safe temporary storage and optional fake clock; `hardware`
+supplies serial USB, the user's SQLite database and system clock. Profile checks
+stay at composition/adapter boundaries and never appear in feature rules.
+
+The [development modes design](development_modes.md) defines the clickable device,
+wire trace and safety boundaries. Its clicks and renders cross the real JSON codec
+through an in-memory byte transport, allowing laptop/Pico integration debugging
+without a physical board.
 
 ## Planned folders
 
@@ -105,6 +119,11 @@ laptop/                           # CPython 3.14.6 uv project
       config_loader.py            # YAML -> typed configuration
       text_report.py              # read-only report formatting
       fakes.py                    # fake store/device/clock
+    devtools/
+      virtual_pico.py             # simulated device state and button messages
+      transport.py                # in-memory encoded-byte connection
+      trace.py                    # bounded bidirectional protocol diagnostics
+      ui.py                       # clickable local virtual-device view
   tests/                          # laptop unit/integration tests
 pico/
   README.md                       # firmware/hardware setup and flashing notes

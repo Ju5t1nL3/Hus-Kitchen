@@ -22,6 +22,10 @@ Start with [`AGENTS.md`](AGENTS.md) for contributor rules and the documentation 
 Read [`docs/overview.md`](docs/overview.md) for the short product explanation and
 [`docs/todo.md`](docs/todo.md) before claiming implementation work.
 
+The planned [`dev` profile](docs/development_modes.md) provides a clickable virtual
+Pico and bidirectional JSON trace. The `hardware` profile runs the same application
+and rules against the real USB device and persistent database.
+
 ## Repository layout
 
 ```text

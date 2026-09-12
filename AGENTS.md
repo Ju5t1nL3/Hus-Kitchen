@@ -62,6 +62,7 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 | [class_design.md](docs/class_design.md) | Types, class/function inputs and outputs, error contracts | Implementing or calling an interface |
 | [implementation_guidelines.md](docs/implementation_guidelines.md) | Typing, validation, DRY and project-specific Twelve-Factor choices | Writing or reviewing code |
 | [serial_protocol.md](docs/serial_protocol.md) | Exact laptop ↔ Pico wire format and examples | Firmware, serial adapter, simulator |
+| [development_modes.md](docs/development_modes.md) | Dev/hardware profiles, clickable virtual Pico and wire trace | Building or using the simulator/composition root |
 | [event_model.md](docs/event_model.md) | Durable events, pause timing, emotion selection, replay and streaks | Game rules, persistence, reports |
 | [hackathon_plan.md](docs/hackathon_plan.md) | Task-based coordination, integration order and verification | Picking up or integrating work |
 | [nice_to_haves.md](docs/nice_to_haves.md) | Ordered future ideas and extension points | Considering future scope |
@@ -111,6 +112,9 @@ User instructions override the plan; document material deviations.
   cannot guarantee nobody edits the same file.
 - Build a working vertical slice before optional integrations. Do not create
   placeholder frameworks or empty implementations for every future idea.
+- Keep `dev` and `hardware` as composition profiles over the same rules and codec.
+  Simulator clicks must traverse encoded/decoded JSON rather than call game rules
+  directly; diagnostic traces are not durable gameplay events.
 
 ## Product principles
 
