@@ -38,7 +38,6 @@ References: [decisions](design_decisions.md), [hardware](components.md),
 | Owner | Status | ID | Task / completion check | Needs | Notes |
 | --- | --- | --- | --- | --- | --- |
 | agent:task-board | [x] Done | M00 | Publish this MVP board and contributor claim/update rules; links and workflow agree. | — | Verified 77 local links, table formatting and 23 task IDs; removed preset assignments and updated setup/open-choice notes. |
-| — | [ ] Todo | M01 | Inspect and document existing board setup: exact board/display, wiring, firmware, driver and USB status; identify only unfinished bring-up work. | Existing hardware | Some setup is already reported; do not restart it or assume it is verified. |
 | agent:laptop-bootstrap | [ ] Blocked | M02 | Record laptop OS and Python version, then confirm serial access and the supported environment. | User's choice | CPython 3.14.6 and macOS 26.5.2 recorded. Blocked only on confirming USB serial access with the actual device and deciding whether other OSes are supported. |
 | agent:laptop-bootstrap | [x] Done | M03 | Create laptop package/dependency setup and static-checker configuration; basic import/check command works. | M02 | Laptop-local uv project created. `uv sync`, package import, Ruff format/check, and strict Pyright passed; uv.lock pins Ruff 0.16.7 and Pyright 1.1.414. |
 | — | [ ] Todo | M04 | Implement typed records, commands, event payloads and resource interfaces; type checks pass. | M03 | Follow existing API/event/wire specs; no future reward or sensor types. |
@@ -68,6 +67,7 @@ Inspect the actual setup before replacing or repeating work already done.
 
 | Owner | Status | ID | Task / completion check | Needs | Notes |
 | --- | --- | --- | --- | --- | --- |
+| — | [ ] Todo | M01 | Record the existing hardware setup in `pico/README.md`: exact board/display, GPIO wiring, button polarity/pulls, installed MicroPython version, display driver and USB communication method; list any unfinished bring-up work. | Existing hardware | Keep this short and factual. Reuse what is already breadboarded; do not rebuild working hardware just to complete the task. |
 | — | [ ] Todo | M15 | Complete/verify hardware configuration and generic button scanning; clean press-or-hold events carry declared IDs/epochs. | M01, M05 | Reuse existing wiring/code where present; verify debounce and held-button reset. |
 | — | [ ] Todo | M16 | Create/verify LCD layouts and sprites: full pet, six small-face moods, food, feeding and celebration; drawing remains responsive. | M01, M05 | Match confirmed display dimensions; reuse existing assets/driver. |
 | — | [ ] Todo | M17 | Integrate firmware codec/main loop, buttons and rendering; handshake, disconnect overlay and recorded views work on Pico. | M15, M16 | No laptop game logic on firmware; no debug output in protocol stream. |
