@@ -17,6 +17,12 @@ earlier stats/shop proposal. No implementation or hardware verification is claim
 - Health/hunger/friendship are permanently removed; do not retain them as future work.
 - After MVP, prioritize XP/coins and level bonuses, then optional keyboard/head
   bonuses. Preserve the exact [future-feature order](nice_to_haves.md).
+- Four team members are confirmed, but possibly only two will work on software.
+  Do not assign roles in advance: contributors pick tasks from [todo.md](todo.md),
+  record their handle and update progress/completion there.
+- Some board setup is already reported. Inspect and document it before repeating
+  work. The user will initiate the laptop OS/Python decision; tuning and reward/
+  XP-strip layout choices remain open.
 
 ## Current product decisions
 
@@ -69,15 +75,15 @@ A future web listener belongs on the laptop. Head tracking is now a priority
 bonus source, replacing its former low-priority treatment. Original care-stat
 penalties are discarded; co-op shared loss remains a separate product decision.
 
-## Open choices
+## Setup status and open choices
 
 | Question | Working assumption |
 | --- | --- |
-| Exact board, display, pins and USB ownership? | Pico + 1.8-inch LCD + two buttons; confirm before wiring. |
-| Laptop OS and Python version? | Team selects and verifies serial and system-sleep behavior. |
+| Existing board setup? | Some setup is already reported. Inventory exact board/display, pins, firmware and USB behavior; reuse completed work and identify gaps. Details are not yet recorded here. |
+| Laptop OS and Python version? | Open; the user will initiate this choice. Do not infer a project-wide target from the current machine. |
 | Sprite style/dimensions and actual redraw speed? | Full pet, small faces, food/animations; size to confirmed LCD and measure. |
-| Team members? | Four ownership areas; combine them if the team is smaller. |
-| Tuning? | Values in MVP goals/config proposal; maintain neutral breaks and brief reactions. |
+| Team size and task assignment? | Four people confirmed; possibly two on software. No assignments in advance; claim individual tasks on the board. |
+| Tuning? | Open-ended. Existing values are provisional, not final decisions. Maintain configurable rules and the agreed low-stress behavior. |
 | Reward rates, level thresholds and sensor bonus caps? | Sources are agreed; amounts and whether sensor bonuses also affect XP remain open. |
 | XP/coin strip placement? | At the top; resolve space alongside clock/small face during the progression milestone. |
 

@@ -48,18 +48,20 @@ Coins and XP arrive immediately after this MVP.
 It never dies. Daily streaks and a weekly text summary use the same saved diary
 and stay on the laptop.
 
-## How do we divide the work?
+## How do we pick up work?
 
-| Teammate's area | Builds |
+| Software area | Includes |
 | --- | --- |
 | Game rules | Timer transitions, feeding and emotion selection |
 | Saving and history | Local database, restart recovery and summaries |
 | Pico and artwork | Buttons, display, pet/face/food sprites and animations |
 | App and communication | Screen controls and the USB connection between everything |
 
-Agree on the shared messages and function inputs/outputs first, then work in
-separate files. One integration owner coordinates shared definitions. Details are
-in the [team plan](hackathon_plan.md).
+There are four people on the team, but possibly only two working on software.
+These are parts of the code, not assigned roles. Pick any available task in
+[todo.md](todo.md), add your GitHub handle, mark it Doing, and check it off when
+verified. Coordinate shared files with other task claimants; the
+[team plan](hackathon_plan.md) explains integration.
 
 ## What should we build first?
 

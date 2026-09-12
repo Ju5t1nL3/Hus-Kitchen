@@ -32,6 +32,8 @@ do not preassign people to modules or assume a permanent integration owner.
 This repository currently contains planning documents, not an implementation.
 The architecture, APIs, protocol, and directory tree are the proposed MVP baseline.
 Do not describe planned modules or checks as already implemented.
+The user reports some board setup is already done; inspect and record it before
+repeating hardware work. Laptop OS/Python selection remains for the user to initiate.
 
 The user explicitly asked to improve this file and the previous architecture,
 not preserve their original structure. Their priorities are modularity,

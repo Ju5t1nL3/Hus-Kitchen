@@ -43,7 +43,8 @@ copies of feeding logic.
 
 ## Planned folders
 
-The paths below are an ownership map, not a requirement to create empty files.
+The paths below are module boundaries, not assigned people or a requirement to
+create empty files. Individual work is claimed in [todo.md](todo.md).
 
 ```text
 AGENTS.md                         # entry point

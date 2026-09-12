@@ -1,29 +1,29 @@
-# Hackathon ownership and implementation plan
+# Hackathon coordination and implementation plan
 
-Agree on contracts, then build in separately owned files. Four areas are suggested
-roles, not a required team size or permission to launch autonomous agents.
+There are four team members; possibly only two will work on software. Nobody is
+assigned a role or module in advance. Pick an available task from
+[todo.md](todo.md), claim it, and keep its status current.
 
-## Ownership
+## Task-based coordination
 
-| Area | Owns | Independent demo |
-| --- | --- | --- |
-| A — rules | features/timers.py, feeding.py, emotions.py, replay.py; tests/domain rule/replay files | Start/pause/resume/end focus, derive a break and select emotions without hardware |
-| B — storage/history | adapters/sqlite_event_store.py, features/history.py, adapters/text_report.py; tests/storage and history tests | Replay recorded sessions, enforce unique completion and print recap |
-| C — Pico/art | pico/ and tests/firmware/ | Draw each screen/face/food fixture and report clean gestures |
-| D — app/USB | app/, serial/clock/config/fake adapters, main.py and tests/app/ | Script two-button navigation against a fake device |
+Ownership lasts for the claimed task, not an entire folder. Its claimant coordinates
+shared-file edits with anyone working on related tasks. Record affected shared
+files and handoffs in the board's Notes column; do not silently take another claim.
 
-One integration owner (initially D) owns shared core records, config, dependency/
-checker settings, shared test fixtures and cross-cutting docs. Feature-specific
-tests have separate owners, even inside tests/domain. Avoid a shared utils.py or
-test_everything.py that every teammate must edit.
+Core records, config, dependency/checker settings and shared fixtures need particular
+coordination. Agree on one writer for each overlapping change at that time, without
+assigning a permanent integration role. Keep feature tests in separate files rather
+than a shared test_everything.py. The board owns statuses; this document owns the
+integration sequence and verification guidance.
 
 ## Agree before splitting branches
 
 Freeze typed command/event/result records, protocol v2/UI emotions_v1, and the
 screen controls. Use [class design](class_design.md) and
-[implementation guidelines](implementation_guidelines.md). The integration owner
-creates the minimum shared definitions and static-checker setup before branches
-diverge. No generic framework or unused future modules are required.
+[implementation guidelines](implementation_guidelines.md). Whoever claims the
+bootstrap/contracts tasks creates the minimum shared definitions and checker setup,
+coordinating interfaces with their consumers. No generic framework or unused
+future modules are required.
 
 Shared examples should include:
 
@@ -39,12 +39,14 @@ laptop libraries into MicroPython.
 
 ## Build order
 
-1. Bootstrap shared contracts, choose hardware/driver, and draw home/setup/timer
-   examples. Start the real USB handshake and fake-device path.
+1. Inspect and document the board setup already done; reuse working wiring,
+   firmware and assets. The user will initiate the laptop OS/Python choice.
+   Bootstrap shared contracts and draw home/setup/timer examples; start USB and
+   fake-device paths as their inputs become available.
 2. Connect one end-to-end focus start → countdown → saved completion → break offer.
-3. A finishes pause/resume/end, feeding and emotions; B finishes reports/recovery;
-   C supplies small faces, food/animations and remaining screens; D connects
-   controls, breaks, screen epochs and reconnect handling.
+3. Pick remaining tasks for pause/resume/end, feeding/emotions, reports/recovery,
+   artwork/screens, controls, breaks and reconnect. Independent work can proceed
+   against fakes; the board records who is doing each piece.
 4. Run acceptance scenarios on the actual device, then tune readability/reactions.
 5. Only after MVP works, select a backlog feature if time permits.
    The next planned milestone is [XP/coins/levels](progression_design.md), followed
@@ -56,9 +58,9 @@ do not add an undocumented seconds-mode shortcut to production firmware.
 
 ## Integration practices
 
-- Assign file ownership, use one branch/worktree per area if useful, and integrate
-  small working changes early. This plan does not create branches automatically.
-- Coordinate shared type/config/dispatch edits through the integration owner.
+- Claim tasks before editing, use a branch/worktree per task if useful, and
+  integrate small working changes early. No automatic branches or role assignments.
+- Coordinate shared type/config/dispatch edits with current task claimants.
 - Avoid sweeping renames/reformatting during parallel work.
 - A contract change updates producer, consumer, examples and owning docs together.
 - Fake hardware lets rules/app work proceed before wiring; recorded views let

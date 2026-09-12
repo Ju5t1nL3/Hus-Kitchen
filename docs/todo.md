@@ -37,7 +37,7 @@ References: [decisions](design_decisions.md), [hardware](components.md),
 
 | Owner | Status | ID | Task / completion check | Needs | Notes |
 | --- | --- | --- | --- | --- | --- |
-| agent:task-board | [ ] Doing | M00 | Publish this MVP board and contributor claim/update rules; links and workflow agree. | — | Documentation setup in progress. |
+| agent:task-board | [x] Done | M00 | Publish this MVP board and contributor claim/update rules; links and workflow agree. | — | Verified 77 local links, table formatting and 23 task IDs; removed preset assignments and updated setup/open-choice notes. |
 | — | [ ] Todo | M01 | Inspect and document existing board setup: exact board/display, wiring, firmware, driver and USB status; identify only unfinished bring-up work. | Existing hardware | Some setup is already reported; do not restart it or assume it is verified. |
 | — | [ ] Todo | M02 | Record laptop OS and Python version, then confirm serial access and the supported environment. | User's choice | User will initiate this decision; do not choose on their behalf. |
 | — | [ ] Todo | M03 | Create laptop package/dependency setup and static-checker configuration; basic import/check command works. | M02 | Coordinate shared pyproject/config files with other claimants. |

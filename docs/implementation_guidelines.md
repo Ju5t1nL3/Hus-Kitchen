@@ -37,8 +37,8 @@ recipe rather than creating a generic plugin framework.
 - Prefer immutable records and collections for shared game data. Ordinary user
   mistakes return a rejection; storage failures and corrupt history raise explicit
   errors. Follow the existing API contracts.
-- The integration owner selects one static type checker and commits its settings
-  with the initial laptop scaffold. Require strict checking of first-party laptop
+- Whoever claims the laptop-bootstrap task selects one static type checker and
+  commits its settings with the initial scaffold. Require strict checking of first-party laptop
   code before merging. Isolate untyped library calls in adapters; keep necessary
   exceptions narrow and explained. Do not bypass errors with widespread `Any`.
 

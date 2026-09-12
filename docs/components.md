@@ -1,6 +1,8 @@
 # Components and hardware boundary
 
-Status: inventory from the original notes; exact models and wiring are unconfirmed.
+Status: the user reports some board setup is already done. The exact completed
+steps, models and wiring are not yet recorded in these docs. Inspect and document
+that setup under M01 in [todo.md](todo.md) before repeating or replacing work.
 
 | Component | MVP role | Confirmation needed |
 | --- | --- | --- |
@@ -13,7 +15,8 @@ Status: inventory from the original notes; exact models and wiring are unconfirm
 
 The original “Pico / Pi Zero W” list was ambiguous. This plan assumes Pico;
 Pi Zero would be a deliberate platform change. LCD versus OLED also needs hardware
-confirmation. No hardware has been inspected or tested.
+confirmation in these docs. This documentation pass has not independently inspected
+or tested the hardware; it does not imply the team has done no setup or testing.
 
 ## Display and assets
 
@@ -39,8 +42,9 @@ choose an emotion, interpret an action or track a hidden pet stat.
 
 ## Bring-up
 
-Confirm electrical requirements and pinouts before wiring. Record the board and
-driver here and put pins/orientation/debounce in `pico/hardware_config.py`.
+First inventory working wiring, firmware, drivers and assets. Record verified
+details here; confirm electrical requirements before any new wiring. Put confirmed
+pins/orientation/debounce in `pico/hardware_config.py`.
 Do not guess pins from these notes.
 
 The application must own its USB stream: REPL, boot banners, IDE traffic and debug
