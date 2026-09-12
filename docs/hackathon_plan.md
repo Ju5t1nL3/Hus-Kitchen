@@ -30,6 +30,10 @@ protocol v1 and UI vocabulary. The integration owner creates a small compilable
 core contract skeleton and commits shared fixtures before feature branches split.
 This is the only necessary shared bootstrap; do not build a framework first.
 
+Include concrete shared record/union definitions and a configured laptop static
+type checker in that bootstrap, following the
+[implementation guidelines](implementation_guidelines.md).
+
 Required initial fixture set:
 
 - Boot ready, hello/ready exchange, press, hold, pong, clock/menu/stats/focus views,

@@ -30,6 +30,7 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 | [components.md](docs/components.md) | Hardware inventory, unknowns, hardware boundary | Wiring, drivers, device setup |
 | [system_design.md](docs/system_design.md) | Runtime architecture, dependencies, lifecycle, planned folders | Understanding how pieces connect |
 | [class_design.md](docs/class_design.md) | Types, class/function inputs and outputs, error contracts | Implementing or calling an interface |
+| [implementation_guidelines.md](docs/implementation_guidelines.md) | Typing, validation, DRY and project-specific Twelve-Factor choices | Writing or reviewing code |
 | [serial_protocol.md](docs/serial_protocol.md) | Exact laptop ↔ Pico wire format and examples | Firmware, serial adapter, simulator |
 | [event_model.md](docs/event_model.md) | Durable events, replay, rewards, streaks, time semantics | Game rules, persistence, reports |
 | [hackathon_plan.md](docs/hackathon_plan.md) | File ownership, integration order, verification | Splitting work or integrating changes |
@@ -44,6 +45,9 @@ User instructions override the plan; document material deviations.
 
 ## Engineering guidance
 
+- Follow [implementation guidelines](docs/implementation_guidelines.md): check
+  laptop types, validate external data, and apply Twelve-Factor only where it fits
+  this local device. Keep methodology details in that guide.
 - Keep business rules on the laptop. Firmware may debounce, validate messages,
   animate, and detect a lost connection, but cannot award coins, advance a focus
   session, calculate hunger, interpret menu actions, or persist game state.
