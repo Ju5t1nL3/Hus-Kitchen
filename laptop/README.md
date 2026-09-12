@@ -36,6 +36,10 @@ There is no runnable application entry point yet. The test command above is acti
 add real run/report commands as their tasks are completed instead of documenting
 placeholders as working software.
 
+The planned [development and hardware profiles](../docs/development_modes.md) use
+one application and wire codec. Development supplies a clickable virtual Pico and
+safe temporary storage; hardware supplies the USB adapter and local SQLite store.
+
 ## Planned layout
 
 ```text

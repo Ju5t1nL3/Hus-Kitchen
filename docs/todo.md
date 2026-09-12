@@ -60,6 +60,14 @@ References: [MVP behavior](features_and_goals.md), [events](event_model.md),
 | — | [ ] Todo | M13 | Implement laptop wire codec; fragmented, combined, invalid and oversized messages behave as specified. | M04, M05 | Validate declared button IDs/full views; emit compact JSON with `separators=(",", ":")` and one terminating newline. |
 | — | [ ] Todo | M14 | Implement portable serial discovery plus the threaded USB link, bounded queues, heartbeat and reconnect; latest view restores and stale input is discarded. | M13 | Optional configured port or unique metadata match; never hardcode/pick the first port. Test Windows and POSIX-style names with fakes. |
 
+## Developer simulator
+
+Reference: [development and hardware modes](development_modes.md).
+
+| Owner | Status | ID | Task / completion check | Needs | Notes |
+| --- | --- | --- | --- | --- | --- |
+| — | [ ] Todo | M23 | Implement explicit `dev`/`hardware` composition profiles and a clickable virtual Pico with screen, dynamic buttons, fake-time controls and bounded bidirectional JSON trace; a full focus/break flow and invalid/reconnect cases traverse the production codec. | M11–M14, M18 | Same rules/presenter/codec in both profiles. Dev storage is temporary by default; browser UI binds loopback only. No direct button-to-feature calls or gameplay events for diagnostics. |
+
 ## Pico and artwork
 
 References: [components](components.md) and [serial protocol](serial_protocol.md).
@@ -82,7 +90,7 @@ References: [integration plan](hackathon_plan.md) and [acceptance checks](featur
 | — | [ ] Todo | M19 | Verify restart, system-sleep, storage-failure and shutdown handling; unfinished timers end neutrally and pending breaks survive. | M18 | Saved elapsed lower bounds and no replayed animations. |
 | — | [ ] Todo | M20 | Run full fake-device MVP scenarios and type checks; fix failures and record results. | M10, M18, M19 | Includes pause exclusion, stale control epoch, duplicate completion, and portable not-found/unique/ambiguous serial discovery. |
 | — | [ ] Todo | M21 | Run real-device acceptance checks; verify readable screens, feeding, timers and reconnect; fill the Pico performance table and identify the measured bottleneck. | M17–M19 | Record line size, decode/validation time, display time, memory change/GC spikes and button-to-render latency. Optimize or change JSON only from this evidence. |
-| — | [ ] Todo | M22 | Document actual setup/run/flash/report commands and demo steps; reconcile docs with implemented interfaces. | M10, M20, M21 | Document Windows deployment and portable port configuration/discovery; no invented commands or blanket completion of unverified tasks. |
+| — | [ ] Todo | M22 | Document actual setup/run/flash/report commands and demo steps; reconcile docs with implemented interfaces. | M10, M20, M21, M23 | Document dev/hardware profile commands, Windows deployment and portable port discovery; no invented commands or blanket completion of unverified tasks. |
 
 Existing hardware progress does not make an entire firmware task complete. Record
 verified substeps in Notes and check the row only when its full completion check

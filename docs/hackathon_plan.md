@@ -33,6 +33,8 @@ Shared examples should include:
   break start → end; expected projection, emotions and report.
 - Separate grace/early-end histories and expected effects, including paused time.
 - Fake device, clock and event store with the real ports' signatures.
+- A clickable virtual Pico that sends/receives through the real JSON codec and
+  displays a bounded bidirectional trace.
 
 Pico and laptop share contracts/examples, not a Python package that imports
 laptop libraries into MicroPython.
@@ -42,7 +44,8 @@ laptop libraries into MicroPython.
 1. Inspect and document the board setup already done; reuse working wiring,
    firmware and assets. The laptop uses CPython 3.14.6 with tooling under `laptop/`.
    Bootstrap shared contracts and draw home/setup/timer examples; start USB and
-   fake-device paths as their inputs become available.
+   fake-device paths as their inputs become available. Add the clickable simulator
+   after the codec and presenter exist; it must reuse them.
 2. Connect one end-to-end focus start → countdown → saved completion → break offer.
 3. Pick remaining tasks for pause/resume/end, feeding/emotions, reports/recovery,
    artwork/screens, controls, breaks and reconnect. Independent work can proceed

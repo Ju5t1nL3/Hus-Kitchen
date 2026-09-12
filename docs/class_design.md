@@ -193,6 +193,12 @@ Configuration loads at startup; hot reload remains out of scope.
 | config_loader.load(path) → AppConfig | YAML path | I/O and field-specific validation errors |
 | text_report.format(report) → str | WeeklyReport | Pure text formatting |
 
+Development composition and simulator APIs are specified in
+[development_modes.md](development_modes.md). `SimulatorTransport` implements the
+same byte-oriented boundary used below the device link; it does not implement a
+second semantic application path. `TraceSink` observes encoded/decoded traffic
+without changing acceptance results or writing domain events.
+
 SqliteEventStore(path, writable=True) owns schema/SQL and acquires an OS-managed
 exclusive writer lock for the database path; another game writer fails clearly.
 A report process uses its own read-only connection. ReportService(store, timezone)
