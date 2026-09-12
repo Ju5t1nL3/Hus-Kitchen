@@ -31,9 +31,11 @@ Feedback = Literal["unavailable", "storage_error"]
 | ClockReading | utc: aware datetime, monotonic_ms: int, resumed: bool |
 | RuntimeState | screen: Screen, selected_focus_minutes: int, run_anchor_mono_ms: int or None, previous_clock: ClockReading or None, control_epoch: int, connection_id/boot_id: str or None |
 | TimerSample | session_id: str, active_ms: int, remaining_seconds: int, due: bool; explicit trusted laptop sample |
-| ButtonInput | connection_id, boot_id, seq, control_epoch, button: Literal[1,2], action: Gesture; internal received clock sample |
-| RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration fields, paused, two ButtonLabels, feedback |
-| ButtonLabel | label: str, enabled: bool |
+| ButtonInput | connection_id, boot_id, seq, control_epoch, button: ButtonId (positive int advertised by device), action: Gesture; internal received clock sample |
+| RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration fields, paused, tuple of ButtonLabels, feedback |
+| ButtonLabel | button: ButtonId, label: str, enabled: bool |
+| ActionDefinition | id: typed ActionId, label: str, intent: ControlIntent, available: pure predicate on GameState |
+| ControlBindings | Mapping from (context, ButtonId, Gesture) to ActionId; context distinguishes running/paused screens |
 | AnimationCue | animation_id: str, name: feed or celebrate, after_revision: int, food_sprite: str or None |
 | WeeklyReport | week_start: date, timezone: str, completed_focus_count/seconds, early_end_count/active_ms, interrupted_count/recorded_active_ms, break_count, feed_count, daily totals, current_streak |
 
@@ -94,7 +96,8 @@ it to Home. Pure functions cannot produce random IDs or inspect clocks implicitl
 
 The application creates pet_created on an empty log using configured pet identity.
 The small replay module owns the fixed event dispatch; split reducers by feature
-only if its size warrants it. No economy/health/inventory services are needed.
+only if its size warrants it. Progression modules are added after MVP as described
+in [progression design](progression_design.md); no numerical care model is planned.
 
 ## Application and UI APIs
 
@@ -105,11 +108,12 @@ only if its size warrants it. No economy/health/inventory services are needed.
 | run() → None | No input | Queue loop with scheduled timeouts; only game-state writer |
 | handle(input, now) → None | Typed input and time | Check interruption/due completion, reject stale controls, decide/commit/reduce/present |
 | stop() → None | No input | Neutral end, stop/join workers, close resources; idempotent |
-| controls.resolve(button, runtime, state) → ControlIntent or None | Valid physical gesture and current context | Fixed two-button mapping from MVP goals; no I/O |
+| controls.resolve(button, runtime, state, bindings, actions) → ControlIntent or None | Valid gesture/context, bindings and action definitions | Look up mapping and check availability; no per-button game rules |
+| controls.labels(runtime, state, device_buttons, bindings, actions) → tuple[ButtonLabel, ...] | Same context/bindings/definitions plus advertised physical order | Derive matching labels/enabled states for the presenter |
 | controls.navigate(runtime, intent, state, config) → RuntimeState | Navigation intent, explicit state/config | Home/setup selection; wrap allowed minutes; no durable mutation |
 | scheduling.sample(session, anchor_mono_ms, now_mono_ms) → TimerSample | Session and live clock anchor | Accumulated active time and ceiling remaining seconds; paused sessions need no anchor |
 | scheduling.advance(state, runtime, now, config) → ScheduleResult | State/runtime/time | Detect interruption before evaluating deadline; next wake includes second tick/reaction expiry |
-| presenter.build(state, runtime, sample, now, config) → RenderSnapshot | Explicit facts, sample, time and display/focus configuration | Calls pure emotion selector; computes setup break preview and supplies labels |
+| presenter.build(state, runtime, sample, now, config, actions, device_buttons) → RenderSnapshot | Explicit facts, time, configuration and actions | Uses controls.labels, emotion selector and setup break preview |
 | presenter.on_commit(event, runtime, food_definitions) → PresentationResult | Newly committed event + current UI + food assets | Feed stays home; focus completion opens offer; break terminal/early focus goes home |
 
 OpenSetup selects last confirmed duration or the configured default. ConfirmFocus
@@ -130,6 +134,45 @@ Application updates previous_clock on every wake, including interruptions, and
 re-establishes scheduling from the resulting state. PresentationResult determines
 navigation after every event: session_started selects its timer screen, pause/
 resume keeps that screen, break_skipped returns Home, and pet_created selects Home.
+
+## Adding or changing buttons
+
+Use one small action-definition dictionary in app/controls.py, plus declarative
+bindings under controls in config.yaml. Contexts are home, setup, focus_running,
+focus_paused, break_offer, break_running and break_paused. ActionId is a closed
+literal/enum matching the defined ControlIntents, not an executable string.
+Example binding subset (not a complete configuration):
+
+```yaml
+controls:
+  bindings:
+    home:
+      "1.press": feed_default
+      "2.press": open_setup
+    focus_running:
+      "1.press": end_current
+      "2.press": pause_current
+```
+
+- Remap an existing action: edit its binding; controls.labels derives the new
+  label from the same ActionDefinition. No timer, USB or firmware logic edits.
+- Change behavior: edit its owning feature/handler. Keep the physical mapping
+  stable unless the user-facing action also changes.
+- Add an action: add its typed intent, action definition and application handler,
+  then bind it. Reuse existing domain commands where possible.
+- Add a physical button: add its ID/GPIO/layout slot to hardware_config.py,
+  advertise it in ready, and bind an action. Scanner and codecs iterate declared
+  IDs; no button-1/button-2 branches. Extra labels need usable screen space.
+
+One handler dictionary maps intents to command construction/navigation; no dynamic
+plugin loader or large nested button switch. Unbound buttons show a disabled dash
+and do nothing. Use the press action for the primary label; if only hold is bound,
+show a short hold hint from its definition. Setup's hold-to-back remains documented.
+
+Validate bindings at startup/handshake: reject unknown actions, duplicate
+(context, button, gesture) entries, unadvertised IDs and layouts that do not fit.
+Preserve a route out of each screen. Mapping changes require a new control epoch.
+Configuration loads at startup; hot reload remains out of scope.
 
 ## Resource interfaces
 

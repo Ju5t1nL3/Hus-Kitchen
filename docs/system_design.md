@@ -67,7 +67,7 @@ src/deskpet/
     history.py                    # streak and weekly queries
   app/
     application.py                # the single state owner
-    controls.py                   # current screen + physical button -> intent
+    controls.py                   # action definitions, configurable bindings and labels
     scheduling.py                 # timer samples/deadlines, interruption handling
     presenter.py                  # state/runtime -> screen snapshot
   adapters/
@@ -103,7 +103,8 @@ data/                             # ignored local database
 - RuntimeState: live monotonic anchor, selected setup duration, current screen and
   control epoch, connection state and animation bookkeeping. Not replayed.
 - RenderSnapshot: exactly what the Pico should draw: screen, mood, time values,
-  paused flag and two button labels. No business-rule parameters.
+  paused flag and an ID-tagged list of button labels (two in the default build).
+  No business-rule parameters.
 
 Reactions expire through an explicit clock query; focus duration changes only
 through timer rules. A screen refresh changes neither the history nor a session.
@@ -153,7 +154,7 @@ its own discard/handshake policy.
 
 ## Configuration
 
-Use namespaced sections: identity, focus, feeding, ui and device. Defaults include
+Use namespaced sections: identity, focus, feeding, controls, ui and device. Defaults include
 allowed_focus_minutes [5,10,...,60], default_focus_minutes 25, break_ratio 0.2,
 minimum_break_minutes 1, grace_active_seconds 60, happy_seconds 30 and sad_seconds 30.
 Feeding has default_food_id basic and a definitions mapping containing basic's
@@ -162,5 +163,16 @@ sprite_id food_basic and content_seconds 20. One free food is the entire MVP.
 Validate that the default is allowed, durations fit protocol limits, reaction
 durations are positive, and referenced food/assets exist. Store resolved focus/
 break/reaction terms in events. Configuration loads at startup; hot reload is
-deferred. UI labels/layout are presenter responsibilities, not tunable game rules.
-Hardware settings stay on Pico. Protocol constants are versioned contracts.
+deferred. The controls section maps screen context/button/gesture to action IDs.
+Action definitions supply labels and availability to input handling and presentation;
+layout stays in rendering. Hardware ID/pin/layout entries stay on Pico.
+See the [button extension recipe](class_design.md). Protocol constants are versioned contracts.
+
+## First post-MVP extension
+
+Add progression and optional keyboard/camera adapters through existing ports and
+event processing. XP/coins and level-up bonuses belong on the laptop; Pico receives
+display values for a top strip. Keyboard/head inputs have independent on/off settings.
+[Progression design](progression_design.md) owns calculation, persisted policies/
+summaries and retry behavior. Do not add these to MVP state or event schemas early.
+There is no future health/hunger/friendship subsystem.

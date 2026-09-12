@@ -1,37 +1,40 @@
-# Future features and extension boundaries
+# Post-MVP plan and ordered future ideas
 
-This backlog does not expand the current small-screen MVP. The present product is
-one food, focus/break timers, pause/resume and event-driven expressions.
+The next milestone is **an XP bar and coin total at the top of the screen**.
+Each completed focus session grants XP and coins; crossing a level grants bonus
+coins. Keyboard activity and head tracking will add optional coin bonuses.
+See [progression_design.md](progression_design.md) for the reward flow and decisions
+that still need numerical values. This milestone follows the existing MVP.
 
-## Deferred from the earlier MVP
+## Future ideas — priority order
 
-| Idea | Extension point | Keep out of the current implementation |
+This is the user-selected order. Keyboard and head tracking come first because
+they supply the new completion bonuses. Do not reorder it for implementation convenience.
+
+| Priority | Idea | Goal and implementation boundary |
 | --- | --- | --- |
-| More foods | Add food definitions and assets; design selection only when needed | Premium pricing, inventory and a food menu |
-| Coins, shop and decorations | New economy/inventory feature with explicit events | Wallet fields, purchase rules and accessory protocol fields |
-| Health/hunger/friendship | Reconsider whether numeric care adds value | Hidden stats, decay and stat bars |
-| Tricks | New action and animation with a clear button interaction | Extra home/menu controls |
-| Pixel-art timer progress | Laptop chooses stage; firmware draws it if space permits | Required progress stages beside the dominant countdown |
-| Long breaks and automatic cycles | Extend timer policy and screen flow | Automatic next sessions |
-| Resume after restarting the app | Explicit persisted timing/recovery policy | Inferring focus from time the app was closed |
+| 1 | Add Keyboard | Pet watches keyboard/mouse activity, cheers/dances/mimics busy work, and taps the screen when idle during focus. Aggregate typing supplies a coin bonus. Independent on/off setting; never store typed text. |
+| 2 | Head tracking via laptop webcam | Estimate whether the user remains oriented toward work and award a focus coin bonus. Independent on/off setting; optional emotion reaction to looking away. No numerical care-stat penalties. Process frames locally without saving them. |
+| 3 | Sound | Button feedback, user-specific sounds/tags, and possibly alarms. Optional Pico audio driver plays laptop-requested cues. |
+| 4 | Weekly dashboard | Show daily, weekly and focus-session recaps on the laptop. Reuse event/report queries; the text recap is already MVP. |
+| 5 | GitHub Integration | Commits or merged PRs trigger Coin Rain and XP. Laptop adapter validates/deduplicates activity and calls the reward feature. Use the actual display driver; the original idea called it OLED. |
+| 6 | Lightweight Flask/FastAPI server or webhooks | Add a listener when an integration needs it. With the current Pico architecture it runs on the laptop; a server “on the Pi” would require a different board/runtime. |
+| 7 | Co-Op Boss Battles | Friends form a party and damage a weekly boss through completed Pomodoros. Shared loot/loss is an original idea requiring a separate product decision; identity, sync, trust and conflict handling need their own design. |
+| 8 | Pixel Art Progress Bar | Future timer visualization: pet eats a sandwich, crosses a bridge or builds a wall in step with the timer. This is a future idea, not a deferred former MVP requirement. |
+| 9 | The Tab Devourer | A browser extension reports distracting-site visits, then optionally closes/eats tabs or rewards closed tabs. Start with reporting; tab closing and overlays need explicit user controls. |
+| 10 | User-specific pets | NFC tags select profiles for scores, pets, clothing, food and sounds. Separate profile state; NFC possession is not authentication. |
 
-## Original future ideas
+The XP bar tracks advancement toward the next level. The pixel-art timer idea at
+#8 tracks a session's elapsed time. They are separate features; do not add the
+timer visualization to the next XP/coin milestone.
 
-| Idea | Intended boundary / first step |
-| --- | --- |
-| Keyboard/mouse reactions | Opt-in laptop adapter sends aggregate idle/busy events; never raw keystrokes. Feed the emotion rules. |
-| Sound/alarms | Optional audio driver; laptop requests cues, with mute and nonblocking playback. |
-| Graphical weekly dashboard | Reuse the laptop history queries; text recap remains MVP. |
-| Webcam head tracking | Deferred for privacy/CV complexity. Do not add look-away punishment by default. |
-| GitHub commits/PRs | Laptop integration validates/deduplicates activity and records an event for a happy reaction. Coin rain/XP would require a separately added economy. |
-| Flask/FastAPI listener | Only when an integration needs HTTP; run it on the laptop, not Pico. |
-| Co-op boss battles | Separate opt-in sync/projection layer. Stable IDs help but do not solve trust, ordering or conflicts. Reconsider collective punishment. |
-| Tab Devourer | Start with opt-in domain/category visit reports from a browser extension. Tab closing and overlays are separate expansions. |
-| NFC and user-specific pets | Explicit identity/profile selection plus assets; NFC possession is not authentication. |
+## Extension rules
 
-## Adding a feature
+Use adapters for keyboard/camera/GitHub inputs, pure feature functions for reward
+decisions, and Pico rendering for visual/audio output. Every integration uses the
+same durable-event path. Adding more food types remains possible through food
+definitions; it does not create a new priority item or require an MVP food menu.
 
-Keep external inputs in adapters, decisions in feature modules, and drawing in
-firmware. Add typed events and replay rules when durable behavior changes. Extend
-the wire format only if the screen/device needs new information, coordinating
-both ends and examples. Do not create placeholder frameworks for these ideas.
+The roadmap contains no care-stat system. Expressions remain the pet's feedback.
+Do not add unused feature stubs, sensing permissions, or reward fields to MVP code
+before their milestone.

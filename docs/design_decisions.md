@@ -13,13 +13,17 @@ earlier stats/shop proposal. No implementation or hardware verification is claim
   Twelve-Factor application; see [implementation guidelines](implementation_guidelines.md).
 - Existing plans may be improved. Future ideas should inform boundaries without
   requiring their implementation now.
+- Adding buttons or changing their functions should be a small, localized change.
+- Health/hunger/friendship are permanently removed; do not retain them as future work.
+- After MVP, prioritize XP/coins and level bonuses, then optional keyboard/head
+  bonuses. Preserve the exact [future-feature order](nice_to_haves.md).
 
 ## Current product decisions
 
 | Decision | Why |
 | --- | --- |
 | Home: big pet, top-right clock, Feed/Focus buttons | Fits the small display and keeps actions obvious. |
-| Two physical buttons with screen-specific labels | No touchscreen or third button dependency. |
+| Two default physical buttons; configurable bindings and ID-based input | No third button dependency, but adding/remapping buttons needs no rule rewrite. |
 | One free food with a separate definition and sprite | Small MVP with room for more foods later. |
 | 5–60-minute focus in five-minute steps; default 25, remember last confirmation | Simple adjustable duration. “5s” is interpreted as five-minute increments, as discussed with the user. |
 | Break = one-fifth of focus, rounded to whole minutes, minimum one | Transparent proposed product rule; not a universal Pomodoro requirement. |
@@ -29,6 +33,8 @@ earlier stats/shop proposal. No implementation or hardware verification is claim
 | Grace below 60 seconds of actual focus; brief sadness after that | Pauses do not consume grace; no lasting punishment. |
 | Emotions from saved events and explicit time | Predictable content/happy/sad reactions without hidden numerical stats. |
 | Laptop-only streak/weekly text report | Keeps useful history without cluttering the Pico. |
+| First post-MVP: top XP bar/coin total, focus-completion XP/coins, level bonus coins | Progression is now the next committed milestone, not an unspecified economy idea. |
+| Keyboard and head-tracking coin bonuses with separate on/off settings | Both inputs are priorities; base rewards remain available without sensing. |
 
 Reaction durations (content 20s, happiness 30s, sadness 30s), setup hold-to-back,
 and neutral break ending are documented defaults that can be tuned. The exact
@@ -52,17 +58,16 @@ screen/control behavior is owned by [MVP goals](features_and_goals.md).
 
 ## Superseded requirements
 
-Health/hunger/friendship, coins, a shop, premium food, accessories, tricks and
-pixel-art timer progress are outside the current MVP, including background
-mechanics. The old fixed-duration/no-pause focus flow is also superseded.
-The [backlog](nice_to_haves.md) retains future ideas without keeping them as
-active requirements. References to those concepts elsewhere should clearly be
-historical or deferred.
+Health/hunger/friendship are removed from the product, not deferred. Coins/XP are
+the first post-MVP milestone, specified in [progression design](progression_design.md).
+The former grouped “deferred MVP” backlog is removed. Pixel-art timer progress is
+only future idea #8. The old fixed-duration/no-pause focus flow is also superseded.
 
 Original hardware notes alternated Pico/Pi Zero and LCD/OLED; those choices were
 not verified. The plan assumes Pico with the listed LCD behind a replaceable driver.
-A future web listener belongs on the laptop. Original webcam/co-op punishment
-ideas still need product reconsideration before implementation.
+A future web listener belongs on the laptop. Head tracking is now a priority
+bonus source, replacing its former low-priority treatment. Original care-stat
+penalties are discarded; co-op shared loss remains a separate product decision.
 
 ## Open choices
 
@@ -73,6 +78,8 @@ ideas still need product reconsideration before implementation.
 | Sprite style/dimensions and actual redraw speed? | Full pet, small faces, food/animations; size to confirmed LCD and measure. |
 | Team members? | Four ownership areas; combine them if the team is smaller. |
 | Tuning? | Values in MVP goals/config proposal; maintain neutral breaks and brief reactions. |
+| Reward rates, level thresholds and sensor bonus caps? | Sources are agreed; amounts and whether sensor bonuses also affect XP remain open. |
+| XP/coin strip placement? | At the top; resolve space alongside clock/small face during the progression milestone. |
 
 The record of user intent belongs here, behavior in MVP goals, APIs in class
 design, and wire/storage details in their own specs. Update affected documents

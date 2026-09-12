@@ -31,9 +31,16 @@ revisions, epochs and nonces are integers as specified below.
 
 | Message | Required behavior |
 | --- | --- |
-| ready | Announce once at boot with null connection ID; reply to each hello with its ID. Advertise exactly buttons [1,2] and UI emotions_v1. |
-| button | Physical button 1 or 2; action press or hold; positive seq increasing within connection; positive control_epoch from the displayed view when the gesture began. |
+| ready | Announce once at boot with null connection ID; reply to each hello with its ID. Advertise configured physical IDs (default [1,2]) and UI emotions_v1. |
+| button | Physical ID from ready.buttons; action press or hold; positive seq increasing within connection; positive control_epoch from the displayed view when the gesture began. |
 | pong | Echo a valid current-session ping's nonnegative nonce. This checks liveness, not successful drawing or timer completion. |
+
+ready.buttons contains 1–8 unique integer IDs in 1–255, in physical layout order.
+The MVP advertises [1,2]. Adding an ID within these limits uses the same message
+shape and needs no protocol version change. Reject input from unadvertised IDs.
+Every render must include each advertised ID exactly once, even if unbound (label
+"-", enabled false). The firmware hardware table supplies each ID's layout slot;
+button count and actions are not inferred from a screen name.
 
 Proposed debounce is 20 ms and hold threshold 600 ms, configured on Pico. A short
 press emits once on stable release. Hold emits once at threshold, suppressing the
@@ -79,13 +86,13 @@ Each message carries a complete view. Examples are independent screen fixtures;
 navigation does not have to follow their order.
 
 ```json
-{"v":2,"type":"render","connection_id":"link-001","revision":1,"view":{"screen":"home","control_epoch":1,"mood":"calm","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"Feed","enabled":true},{"label":"Focus","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":2,"view":{"screen":"setup","control_epoch":2,"mood":"calm","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":25,"break_minutes":5,"buttons":[{"label":"Up","enabled":true},{"label":"Confirm","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":3,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":null,"timer_seconds":1499,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"End","enabled":true},{"label":"Pause","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":4,"view":{"screen":"focus","control_epoch":4,"mood":"calm","clock_text":null,"timer_seconds":1470,"paused":true,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"End","enabled":true},{"label":"Resume","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":5,"view":{"screen":"break_offer","control_epoch":5,"mood":"happy","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":5,"buttons":[{"label":"Home","enabled":true},{"label":"Start break","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":6,"view":{"screen":"break","control_epoch":6,"mood":"resting","clock_text":null,"timer_seconds":300,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"End","enabled":true},{"label":"Pause","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":7,"view":{"screen":"home","control_epoch":7,"mood":"sad","clock_text":"14:35","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"label":"Feed","enabled":true},{"label":"Focus","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":1,"view":{"screen":"home","control_epoch":1,"mood":"calm","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":2,"view":{"screen":"setup","control_epoch":2,"mood":"calm","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":25,"break_minutes":5,"buttons":[{"button":1,"label":"Up","enabled":true},{"button":2,"label":"Confirm","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":3,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":null,"timer_seconds":1499,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"End","enabled":true},{"button":2,"label":"Pause","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":4,"view":{"screen":"focus","control_epoch":4,"mood":"calm","clock_text":null,"timer_seconds":1470,"paused":true,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"End","enabled":true},{"button":2,"label":"Resume","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":5,"view":{"screen":"break_offer","control_epoch":5,"mood":"happy","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":5,"buttons":[{"button":1,"label":"Home","enabled":true},{"button":2,"label":"Start break","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":6,"view":{"screen":"break","control_epoch":6,"mood":"resting","clock_text":null,"timer_seconds":300,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"End","enabled":true},{"button":2,"label":"Pause","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":7,"view":{"screen":"home","control_epoch":7,"mood":"sad","clock_text":"14:35","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true}],"feedback":null}}
 ```
 
 | Field | Contract |
@@ -99,7 +106,7 @@ navigation does not have to follow their order.
 | paused | Boolean; false outside focus/break |
 | focus_minutes | Integer multiple of 5 from 5–60 on setup; null elsewhere |
 | break_minutes | Integer 1–60 on setup/break_offer; null elsewhere |
-| buttons | Exactly two {label, enabled} objects, left then right; printable ASCII label 1–12 characters and boolean enabled |
+| buttons | One {button, label, enabled} per advertised ID, in advertised physical order; label is printable ASCII 1–12 characters, enabled is boolean |
 | feedback | null, unavailable, or storage_error |
 
 All keys are required, with null for absent content. Reject inconsistent fields
@@ -138,3 +145,12 @@ break_offer. Cues never block button/USB polling or change the timer/screen.
 Changing food appearance is an asset change; adding new asset IDs requires updating
 the agreed UI vocabulary. Changing timer, grace or reaction rules needs no firmware
 game logic. Coordinate future incompatible wire revisions with both owners.
+
+## Progression extension after MVP
+
+The current render schema has no XP/coin fields. Add the top strip through a
+coordinated UI/schema update when implementing [progression](progression_design.md);
+Pico receives XP progress, level and coin display values but never sensor streams
+or reward rules. Ordinary button remapping or adding a declared button does not
+require this kind of schema change. This v2 spec is still unreleased; all current
+fixtures now include explicit button IDs.

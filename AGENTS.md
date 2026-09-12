@@ -6,8 +6,10 @@ phone-checking with a pleasant, glanceable desk device.
 
 Current MVP: large home pet and clock, one free food, a 5–60-minute focus selector,
 large countdown with a small expressive face, End/Pause/Resume, and optional
-calculated breaks. Emotions come from events. Numeric pet stats, coins, shop and
-progress art are deferred, including their hidden mechanics.
+calculated breaks. Emotions come from events. Health/hunger/friendship are removed
+from the product entirely. The first post-MVP milestone is XP, coins and level-up
+bonuses, followed by optional typing/head-tracking bonuses. Timer progress art is
+future idea #8, separate from the XP bar.
 
 For a short, plain-language introduction, read [the overview](docs/overview.md).
 Use the detailed specifications as task-specific references, not a required
@@ -39,7 +41,8 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 | [serial_protocol.md](docs/serial_protocol.md) | Exact laptop ↔ Pico wire format and examples | Firmware, serial adapter, simulator |
 | [event_model.md](docs/event_model.md) | Durable events, pause timing, emotion selection, replay and streaks | Game rules, persistence, reports |
 | [hackathon_plan.md](docs/hackathon_plan.md) | File ownership, integration order, verification | Splitting work or integrating changes |
-| [nice_to_haves.md](docs/nice_to_haves.md) | Deferred ideas and intended extension points | Considering future scope |
+| [nice_to_haves.md](docs/nice_to_haves.md) | Ordered future ideas and extension points | Considering future scope |
+| [progression_design.md](docs/progression_design.md) | Next milestone: XP, coins, levels and optional activity bonuses | Reviewing or implementing progression |
 | [design_decisions.md](docs/design_decisions.md) | User preferences, resolved conflicts, assumptions, open questions | Reconsidering a decision |
 
 Start with this file and the MVP goals; then read the documents relevant to the
@@ -71,6 +74,9 @@ User instructions override the plan; document material deviations.
   period. Record pause/resume transitions; no time spent paused counts as focus.
 - Put tunable rules in laptop configuration and pin assignments in firmware
   configuration. Keep protocol limits and schema versions in their contracts.
+- Keep button bindings declarative and independent of game rules. One action
+  definition supplies both its label and behavior; new physical buttons use the
+  same scanner/message path. See [class design](docs/class_design.md).
 - Treat interfaces and shared configuration as coordinated files. Follow
   [hackathon_plan.md](docs/hackathon_plan.md); folder boundaries reduce conflicts but
   cannot guarantee nobody edits the same file.
@@ -83,6 +89,8 @@ User instructions override the plan; document material deviations.
   Early-ended focus can cause brief sadness; feeding is always free on Home.
 - Local-first: MVP data stays on the laptop. Future network or sensor features
   must have a clear purpose and explicit opt-in.
+- Keyboard and head tracking must have independent on/off controls. They add
+  completion bonuses; disabling them cannot remove the base XP/coin reward.
 - Home emphasizes a large pet and top-right clock. Focus/break views emphasize a
   legible central timer and small face at top right. Both physical buttons have
   visible labels for their current action; no stat bars or progress art in MVP.

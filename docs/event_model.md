@@ -149,3 +149,8 @@ bound because unsaved running time can be lost; label it accordingly.
 Queries are read-only. A future dashboard or integration reuses them rather than
 mutating history. Version future schema changes explicitly; local seq and origin
 tags alone are not a co-op synchronization/conflict policy.
+
+The first post-MVP extension is [XP/coins and optional activity bonuses](progression_design.md).
+It adds versioned policy/summary data and a deduplicated reward event. Keep the
+MVP schema above unchanged until that milestone; keyboard/head adapters do not
+write balances directly. Numerical care stats are permanently excluded.

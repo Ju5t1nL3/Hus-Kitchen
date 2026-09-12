@@ -25,6 +25,11 @@ other screens do nothing in MVP. Firmware emits one press OR one hold per gestur
 never both. No third button is required. Labels should fit the actual screen;
 the state machine and actions stay on the laptop.
 
+These are default bindings, not hardcoded branches throughout the app. Changing
+an existing action's button updates the controls configuration. Labels and input
+handling use the same action definitions; the [class design](class_design.md)
+explains how to add a physical button or new behavior.
+
 ## Duration and break rules
 
 - The selector is in **minutes**: 5 → 10 → … → 60 → 5. First use starts at 25;
@@ -92,11 +97,19 @@ restart or detected system sleep ends any unfinished focus/break neutrally; manu
 pause/resume is supported, but resume across app restarts is deferred. A saved
 pending break offer survives restart. A fresh installation starts on Home.
 
-## Out of MVP
+## Product boundary and next milestone
 
-Health/hunger/friendship stats, coins, shops, premium food, accessories, tricks and
-pixel-art progress are deferred, including their background mechanics. The large
-countdown takes priority over extra progress art. See [nice_to_haves.md](nice_to_haves.md).
+Health/hunger/friendship are permanently removed, including hidden values and
+decay; they are not a deferred feature. Feeding and expressions remain.
+
+Immediately after MVP, add a top XP bar and coin total, completion XP/coins and
+bonus coins for gaining levels. Optional keyboard and head tracking supply
+additional coin bonuses, with independent on/off settings. Rates/thresholds still
+need values; see [progression design](progression_design.md).
+
+The ordered [future ideas](nice_to_haves.md) begin keyboard → head tracking → sound
+→ weekly dashboard. Pixel-art timer progress belongs only at #8 in that list;
+it is separate from the next milestone's XP bar.
 
 ## Acceptance checks
 

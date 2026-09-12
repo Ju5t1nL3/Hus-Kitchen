@@ -18,6 +18,11 @@ global constants file. Do not create an abstraction just because two short piece
 of code happen to look similar. Laptop and firmware may have separate protocol
 implementations, checked against the same examples.
 
+Keep button bindings and action definitions separate from game rules. Use the
+same definitions to resolve input and draw labels; adding a button uses declared
+IDs/pins instead of new per-button branches. Follow the [class design](class_design.md)
+recipe rather than creating a generic plugin framework.
+
 ## Make inputs and outputs explicit
 
 - Annotate laptop function parameters and return values. Use named records for

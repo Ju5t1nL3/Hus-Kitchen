@@ -21,6 +21,13 @@ Home: large central pet, clock at top right, labels above two bottom buttons.
 Timer: large central countdown, small face at top right, bottom End/Pause labels.
 Setup and break offer must fit their duration and both button labels without bars.
 
+Two buttons are the baseline, not a hardcoded scanner limit. Define ID, GPIO and
+label-layout slot per button in hardware_config.py. Iterate that table for scanning,
+advertising capabilities and drawing label positions. Adding a third button needs
+a real pin/placement check and a laptop binding, not new feeding/timer logic.
+The post-MVP top XP/coin strip needs a layout pass alongside the clock/face;
+it does not introduce numerical care stats or timer-progress artwork.
+
 Provide full-body and small-face sprites for `calm`, `content`, `happy`, `sad`,
 `focused` and `resting`; one `food_basic` sprite; and feeding/celebration frames.
 Share animation frames where practical. A face must remain recognizable at its

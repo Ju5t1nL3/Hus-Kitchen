@@ -43,7 +43,8 @@ content; a completed focus makes it happy; ending focus after the grace period
 makes it briefly sad. The latest applicable reaction wins and fades after a short
 time. Otherwise the pet looks calm, focused or resting according to what you do.
 
-There are no health bars, hidden hunger meters, coins or shop in this MVP.
+Health, hunger and friendship are removed entirely, including hidden meters.
+Coins and XP arrive immediately after this MVP.
 It never dies. Daily streaks and a weekly text summary use the same saved diary
 and stay on the laptop.
 
@@ -69,6 +70,29 @@ before the hardware is ready.
 
 Food definitions, emotion rules and sprite drawing are separate, so adding another
 food or changing the artwork later does not require rewriting the timer.
+
+Button assignments also live in one mapping. To move an existing action to another
+button, change that mapping; its label follows automatically. New hardware buttons
+reuse the scanner and USB messages rather than needing new game logic.
+
+## What comes next?
+
+First add an XP bar and coin total at the top. Finishing focus earns XP and coins;
+gaining a level gives extra coins. Next, keyboard activity and webcam head tracking
+can earn coin bonuses. You can turn either sensor on or off independently.
+Reward amounts and level thresholds still need to be chosen.
+
+The future-feature order starts keyboard, head tracking, sound, then a weekly
+dashboard. Pixel-art timer progress is later, at #8; it is not the XP bar.
+See the [ordered roadmap](nice_to_haves.md) and [reward plan](progression_design.md).
+
+## What should I review to agree on the plan?
+
+Read [MVP goals](features_and_goals.md) for current behavior, then the
+[roadmap](nice_to_haves.md) for priority order and [progression design](progression_design.md)
+for rewards, toggles and undecided amounts. [Design decisions](design_decisions.md)
+separates decisions/defaults from open questions. For button flexibility, read
+“Adding or changing buttons” in [class design](class_design.md).
 
 For exact behavior, read [MVP goals](features_and_goals.md). The full document map
 is in [AGENTS.md](../AGENTS.md); you do not need to read every specification at once.

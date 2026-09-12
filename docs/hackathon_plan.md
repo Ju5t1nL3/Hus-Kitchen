@@ -47,6 +47,8 @@ laptop libraries into MicroPython.
    controls, breaks, screen epochs and reconnect handling.
 4. Run acceptance scenarios on the actual device, then tune readability/reactions.
 5. Only after MVP works, select a backlog feature if time permits.
+   The next planned milestone is [XP/coins/levels](progression_design.md), followed
+   by keyboard and head-tracking bonuses in the [roadmap order](nice_to_haves.md).
 
 Accelerate a fake clock to exercise long sessions quickly. A test harness can
 advance time while retaining the real 5–60-minute choices and grace calculation;
@@ -68,6 +70,7 @@ do not add an undocumented seconds-mode shortcut to production firmware.
 | Boundary | Checks |
 | --- | --- |
 | Controls/UI | Every two-button action, setup wrap/default/remembering, paused labels, no automatic break start |
+| Control modularity | Remap an action and simulate a third button through the same path; matching labels; invalid bindings rejected; no timer-rule edits |
 | Timer | Multiple pause/resume segments, paused End, 59.999s vs 60s grace, deadline wins over End/Pause, break completion/end neutral |
 | Emotion/feeding | One free food, correct assets, newest reaction wins, expiry does not revive older reactions, no hidden stats |
 | Replay/storage | Incremental/rebuilt state match; duplicate/conflicting terminal and break-choice keys; pinned terms after config change; commit-before-render crash |
