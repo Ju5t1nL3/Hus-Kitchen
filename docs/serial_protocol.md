@@ -15,6 +15,11 @@ Ignore unknown message types/extra fields; invalid known messages have no effect
 Unsupported version/UI prevents handshake. A render applies only after the whole
 view validates. No REPL/debug printing may share the protocol stream.
 
+Encode compact JSON with no optional whitespace. CPython and MicroPython encoders
+should use `separators=(",", ":")` where supported. This protocol remains JSON
+Lines: compact encoding does not remove the terminating newline. Both sides parse
+and validate every received message before using it.
+
 Connection/boot IDs are printable ASCII strings of 1–64 characters. The laptop
 generates a new connection UUID whenever opening/retrying a connection. Boot ID
 is an opaque Pico boot token; it is not a player identity. Sequence numbers,
@@ -121,8 +126,9 @@ gameplay while storage is unavailable. There are no stat, wallet, food-price,
 accessory or progress-stage fields.
 
 Publish on connection, navigation, accepted actions, and visible clock/timer/mood
-changes. Coalesce to the newest unsent view. Reset revision/epoch for a fresh
-connection; no old view or queued input survives it.
+changes. While a timer runs, publish when its visible whole-second value changes,
+approximately once per second. Coalesce to the newest unsent view. Reset revision/
+epoch for a fresh connection; no old view or queued input survives it.
 
 ## Laptop → Pico: animate
 
@@ -142,9 +148,23 @@ drop stale cues under load, and never resend after restart/reconnect. Navigation
 supersedes incompatible animations: feeding belongs on home and celebration on
 break_offer. Cues never block button/USB polling or change the timer/screen.
 
+Sprites and animation frames are firmware assets and never travel over this JSON
+link. The laptop sends only the agreed mood, sprite/animation identifier and timing
+metadata; the Pico selects and draws its locally stored frames.
+
 Changing food appearance is an asset change; adding new asset IDs requires updating
 the agreed UI vocabulary. Changing timer, grace or reaction rules needs no firmware
 game logic. Coordinate future incompatible wire revisions with both owners.
+
+## Performance evidence
+
+Keep JSON unless measurements on the selected board show it is the bottleneck.
+For the largest valid fixture and an ordinary timer render, record line size, JSON
+decode/validation time, display update time, free-memory change and button-to-render
+round-trip latency. Test repeated timer updates long enough to reveal allocation or
+garbage-collection spikes. Identify which stage dominates before shortening fields
+or replacing the format. Store the results in the Pico README's table and reference
+them when completing M21.
 
 ## Progression extension after MVP
 

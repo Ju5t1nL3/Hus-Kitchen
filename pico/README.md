@@ -90,10 +90,24 @@ Ruff's target is a syntax/lint setting, not a MicroPython version selector. It
 cannot validate firmware-only APIs or prove runtime compatibility; the smoke test
 on the actual board is the final check.
 
+## Performance record
+
+Complete this during real-device acceptance task M21. Use both an ordinary timer
+render and the largest valid shared fixture. Measure before considering a custom
+plaintext or binary protocol.
+
+| Scenario | Line bytes | Decode + validation | Display update | Free-memory change | Button → render |
+| --- | --- | --- | --- | --- | --- |
+| Timer render | TBD | TBD | TBD | TBD | TBD |
+| Largest valid fixture | TBD | TBD | TBD | TBD | TBD |
+
+Also note any garbage-collection pause or growing memory use observed during
+repeated one-second timer updates, and identify the measured bottleneck.
+
 ## Firmware boundaries
 
 Firmware may scan/debounce buttons, parse bounded messages, draw screens and run
-requested animations. It must not decide timer outcomes, emotions, rewards or
-persistence. See [components](../docs/components.md), the
+requested animations from locally stored sprites/frames. It must not decide timer
+outcomes, emotions, rewards or persistence. See [components](../docs/components.md), the
 [serial protocol](../docs/serial_protocol.md), and [M01/M15–M17](../docs/todo.md)
 before changing hardware or firmware.

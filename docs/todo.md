@@ -50,14 +50,14 @@ References: [MVP behavior](features_and_goals.md), [events](event_model.md),
 
 | Owner | Status | ID | Task / completion check | Needs | Notes |
 | --- | --- | --- | --- | --- | --- |
-| — | [ ] Todo | M06 | Implement focus/break rules: duration selection, break calculation, pause/resume, completion and active-time grace boundary. | M04, M05 | Cover 59.999s vs 60s, paused End and neutral break ending. |
+| justinle2006 | [x] Done | M06 | Implement focus/break rules: duration selection, break calculation, pause/resume, completion and active-time grace boundary. | M04, M05 | Added pure typed timer decisions and configurable validated policies. Ruff, strict Pyright and all 31 tests pass, including 59.999s/60s, paused End, deadline priority and neutral interruption/break endings. |
 | — | [ ] Todo | M07 | Implement one-food feeding and event-driven emotions; newest reaction expires correctly without hidden stats. | M04, M05 | Reaction durations stay configurable/provisional. |
 | — | [ ] Todo | M08 | Implement pure replay.apply_event and rebuild using the same transition function; incremental and rebuilt state match; invalid history fails clearly. | M04, M05 | Preserve input state; no clock/config reads, I/O or animations inside transitions. |
 | — | [ ] Todo | M09 | Implement SQLite append/read, uniqueness, writer lock and storage errors; commits survive reopen and retries cannot duplicate outcomes. | M04, M05 | Test terminal and break-choice conflicts. |
 | — | [ ] Todo | M10 | Implement streak and weekly text recap; pauses/breaks excluded and cumulative samples not double counted. | M08, M09 | Dashboard and reward accounting are outside MVP. |
 | — | [ ] Todo | M11 | Implement validated configuration, action definitions and button bindings; remapping changes behavior and labels together. | M04, M05 | Simulate a third button without editing timer rules. |
 | — | [ ] Todo | M12 | Implement screen presenter for Home/setup/focus/paused/break offer/break; snapshots match the wire contract. | M06, M07, M11 | Large timer, small face, correct labels and control epochs. |
-| — | [ ] Todo | M13 | Implement laptop wire codec; fragmented, combined, invalid and oversized messages behave as specified. | M04, M05 | Validate declared button IDs and full views. |
+| — | [ ] Todo | M13 | Implement laptop wire codec; fragmented, combined, invalid and oversized messages behave as specified. | M04, M05 | Validate declared button IDs/full views; emit compact JSON with `separators=(",", ":")` and one terminating newline. |
 | — | [ ] Todo | M14 | Implement portable serial discovery plus the threaded USB link, bounded queues, heartbeat and reconnect; latest view restores and stale input is discarded. | M13 | Optional configured port or unique metadata match; never hardcode/pick the first port. Test Windows and POSIX-style names with fakes. |
 
 ## Pico and artwork
@@ -70,7 +70,7 @@ Inspect the actual setup before replacing or repeating work already done.
 | — | [ ] Todo | M01 | Complete `pico/README.md` in order: (1) inventory all project-relevant board capabilities and existing work, including GPIO/buttons, display/bus/driver, USB, memory, timing, JSON, files, reset, scheduling and expansion needs; (2) select, flash and smoke-test a stable MicroPython build for the exact board, then pin its release, UF2 URL and checksum in `MICROPYTHON_VERSION` and the README; (3) align `pico/ruff.toml` to a conservative supported syntax target, run Ruff and verify on-device. | Existing hardware | The README contains the reporting template. Reuse the breadboard; do not rebuild working hardware. Ruff's target alone does not prove MicroPython compatibility. |
 | — | [ ] Todo | M15 | Complete/verify hardware configuration and generic button scanning; clean press-or-hold events carry declared IDs/epochs. | M01, M05 | Reuse existing wiring/code where present; verify debounce and held-button reset. |
 | — | [ ] Todo | M16 | Create/verify LCD layouts and sprites: full pet, six small-face moods, food, feeding and celebration; drawing remains responsive. | M01, M05 | Match confirmed display dimensions; reuse existing assets/driver. |
-| — | [ ] Todo | M17 | Integrate firmware codec/main loop, buttons and rendering; handshake, disconnect overlay and recorded views work on Pico. | M15, M16 | No laptop game logic on firmware; no debug output in protocol stream. |
+| — | [ ] Todo | M17 | Integrate firmware codec/main loop, buttons and rendering; handshake, disconnect overlay and recorded views work on Pico. | M15, M16 | Validate bounded JSON on receipt; sprites/frames remain local; no laptop game logic or debug output in the protocol stream. |
 
 ## Integration and MVP verification
 
@@ -81,7 +81,7 @@ References: [integration plan](hackathon_plan.md) and [acceptance checks](featur
 | — | [ ] Todo | M18 | Wire laptop coordinator/scheduler and entry point: button → decision → saved event → view; due completion precedes controls. | M06–M09, M11–M14 | Build a minimal vertical slice early using fakes, then fill out the flow. |
 | — | [ ] Todo | M19 | Verify restart, system-sleep, storage-failure and shutdown handling; unfinished timers end neutrally and pending breaks survive. | M18 | Saved elapsed lower bounds and no replayed animations. |
 | — | [ ] Todo | M20 | Run full fake-device MVP scenarios and type checks; fix failures and record results. | M10, M18, M19 | Includes pause exclusion, stale control epoch, duplicate completion, and portable not-found/unique/ambiguous serial discovery. |
-| — | [ ] Todo | M21 | Run real-device acceptance checks; verify readable screens, feeding, timers, reconnect and measured response/refresh timing. | M17–M19 | Hardware evidence required; tuning values may remain open. |
+| — | [ ] Todo | M21 | Run real-device acceptance checks; verify readable screens, feeding, timers and reconnect; fill the Pico performance table and identify the measured bottleneck. | M17–M19 | Record line size, decode/validation time, display time, memory change/GC spikes and button-to-render latency. Optimize or change JSON only from this evidence. |
 | — | [ ] Todo | M22 | Document actual setup/run/flash/report commands and demo steps; reconcile docs with implemented interfaces. | M10, M20, M21 | Document Windows deployment and portable port configuration/discovery; no invented commands or blanket completion of unverified tasks. |
 
 Existing hardware progress does not make an entire firmware task complete. Record
