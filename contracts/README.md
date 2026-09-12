@@ -19,6 +19,7 @@ When a wire or event contract changes, update its owning document and these file
 together. Run the laptop contract tests; the firmware implementation must reuse the
 same files or copies verified byte-for-byte by its test setup.
 
-The `ready` fixture advertises button 3 intentionally. This proves that button
-handling iterates advertised IDs instead of assuming exactly two buttons. The MVP
-hardware may continue advertising only buttons 1 and 2.
+The `ready` fixture advertises button 3. The three-physical-button MVP binds all
+three IDs on most screens; Home and the break-running screen use only two and
+render the third as a disabled dash, proving that button handling iterates
+advertised IDs instead of assuming a fixed count is bound everywhere.

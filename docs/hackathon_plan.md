@@ -74,15 +74,15 @@ do not add an undocumented seconds-mode shortcut to production firmware.
 
 | Boundary | Checks |
 | --- | --- |
-| Controls/UI | Every two-button action, setup wrap/default/remembering, paused labels, no automatic break start |
-| Control modularity | Remap an action and simulate a third button through the same path; matching labels; invalid bindings rejected; no timer-rule edits |
-| Timer | Multiple pause/resume segments, paused End, 59.999s vs 60s grace, deadline wins over End/Pause, break completion/end neutral |
+| Controls/UI | Every three-button action per screen, setup wrap/default/remembering, paused labels, no automatic break start, Home/break_running's unbound third button shows a disabled dash |
+| Control modularity | Remap an action and simulate an added fourth button through the same path; matching labels; invalid bindings rejected; no timer-rule edits |
+| Timer | Multiple pause/resume segments (focus only), paused End, 59.999s vs 60s grace, deadline wins over End/Pause, break end/skip neutral, break pause/resume rejected, Time reveal reverts after 5s without changing the timer or epoch, Again starts a new focus session at the last confirmed duration |
 | Emotion/feeding | One free food, correct assets, newest reaction wins, expiry does not revive older reactions, no hidden stats |
 | Replay/storage | Incremental/rebuilt state match; duplicate/conflicting terminal and break-choice keys; pinned terms after config change; commit-before-render crash |
 | History | No pause/break time credited as focus; cumulative samples not double counted; completion dates and today/yesterday streak |
 | Recovery | Running/paused session interrupted neutrally; pending break restored; unsaved elapsed labeled unknown; no replayed animations |
 | Wire/firmware | Fragmented/oversize/invalid JSON, stale seq/connection/epoch/revision, exclusive press/hold, nonblocking drawing and input |
-| App/hardware | Old Pause cannot become Start break; disconnect doesn't stop timer; storage error freezes gameplay; readable screen and measured latency |
+| App/hardware | Old Pause cannot become Break/Again after navigation; disconnect doesn't stop timer; storage error freezes gameplay; readable screen and measured latency |
 
 These are planned checks, not executed implementation tests. MVP is done when the
 [product acceptance criteria](features_and_goals.md) pass, setup/run instructions

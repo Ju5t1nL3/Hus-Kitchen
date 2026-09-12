@@ -1,8 +1,9 @@
 # Laptop ↔ Pico protocol v2
 
-Proposed JSON Lines contract for the emotion-only, two-button MVP. It replaces
-the earlier unimplemented stats/shop v1. Require `v: 2` and UI `emotions_v1`
-on both ends; do not mix examples from the former plan.
+Proposed JSON Lines contract for the emotion-only, three-button MVP. It replaces
+the earlier unimplemented stats/shop v1 and an earlier two-button draft of this
+plan. Require `v: 2` and UI `emotions_v1` on both ends; do not mix examples from
+either former plan.
 
 ## Framing and connection
 
@@ -41,11 +42,13 @@ revisions, epochs and nonces are integers as specified below.
 | pong | Echo a valid current-session ping's nonnegative nonce. This checks liveness, not successful drawing or timer completion. |
 
 ready.buttons contains 1–8 unique integer IDs in 1–255, in physical layout order.
-The MVP advertises [1,2]. Adding an ID within these limits uses the same message
+The MVP advertises [1,2,3]. Adding an ID within these limits uses the same message
 shape and needs no protocol version change. Reject input from unadvertised IDs.
 Every render must include each advertised ID exactly once, even if unbound (label
-"-", enabled false). The firmware hardware table supplies each ID's layout slot;
-button count and actions are not inferred from a screen name.
+"—", enabled false). The firmware hardware table supplies each ID's layout slot;
+button count and actions are not inferred from a screen name. Home and the
+break-running screen bind only two of the three IDs and render the third
+unbound; every other screen binds all three.
 
 Proposed debounce is 20 ms and hold threshold 600 ms, configured on Pico. A short
 press emits once on stable release. Hold emits once at threshold, suppressing the
@@ -91,14 +94,24 @@ Each message carries a complete view. Examples are independent screen fixtures;
 navigation does not have to follow their order.
 
 ```json
-{"v":2,"type":"render","connection_id":"link-001","revision":1,"view":{"screen":"home","control_epoch":1,"mood":"calm","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":2,"view":{"screen":"setup","control_epoch":2,"mood":"calm","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":25,"break_minutes":5,"buttons":[{"button":1,"label":"Up","enabled":true},{"button":2,"label":"Confirm","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":3,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":null,"timer_seconds":1499,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"End","enabled":true},{"button":2,"label":"Pause","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":4,"view":{"screen":"focus","control_epoch":4,"mood":"calm","clock_text":null,"timer_seconds":1470,"paused":true,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"End","enabled":true},{"button":2,"label":"Resume","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":5,"view":{"screen":"break_offer","control_epoch":5,"mood":"happy","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":5,"buttons":[{"button":1,"label":"Home","enabled":true},{"button":2,"label":"Start break","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":6,"view":{"screen":"break","control_epoch":6,"mood":"resting","clock_text":null,"timer_seconds":300,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"End","enabled":true},{"button":2,"label":"Pause","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":7,"view":{"screen":"home","control_epoch":7,"mood":"sad","clock_text":"14:35","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":1,"view":{"screen":"home","control_epoch":1,"mood":"calm","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true},{"button":3,"label":"—","enabled":false}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":2,"view":{"screen":"setup","control_epoch":2,"mood":"calm","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":25,"break_minutes":5,"buttons":[{"button":1,"label":"Up","enabled":true},{"button":2,"label":"Set","enabled":true},{"button":3,"label":"Back","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":3,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":null,"timer_seconds":1499,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Pause","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":4,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Pause","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":5,"view":{"screen":"focus","control_epoch":4,"mood":"calm","clock_text":null,"timer_seconds":1470,"paused":true,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Resume","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":6,"view":{"screen":"break_offer","control_epoch":5,"mood":"happy","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":5,"buttons":[{"button":1,"label":"Break","enabled":true},{"button":2,"label":"Again","enabled":true},{"button":3,"label":"Home","enabled":true}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":7,"view":{"screen":"break","control_epoch":6,"mood":"resting","clock_text":null,"timer_seconds":300,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Again","enabled":true},{"button":2,"label":"Home","enabled":true},{"button":3,"label":"—","enabled":false}],"feedback":null}}
+{"v":2,"type":"render","connection_id":"link-001","revision":8,"view":{"screen":"home","control_epoch":7,"mood":"sad","clock_text":"14:35","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true},{"button":3,"label":"—","enabled":false}],"feedback":null}}
 ```
+
+Revisions 3 and 4 are the same focus screen and control_epoch: revision 4 is
+what pressing button 1 (Time) produces, showing the real clock instead of the
+countdown for five seconds. Revealing the clock is a visible change like any
+other clock/timer/mood update, so it still gets a new revision; it does not
+bump control_epoch because button meanings have not changed. When the five
+seconds elapse, the laptop publishes another new revision restoring
+`clock_text: null` and the current `timer_seconds`, still under that same
+epoch.
 
 | Field | Contract |
 | --- | --- |
@@ -106,9 +119,9 @@ navigation does not have to follow their order.
 | screen | home, setup, focus, break_offer, break |
 | control_epoch | Positive, nondecreasing across accepted snapshots; changes when button meanings change, not each countdown tick |
 | mood | calm, content, happy, sad, focused, resting; laptop chooses |
-| clock_text | Valid 24-hour HH:MM on home; null elsewhere |
-| timer_seconds | Integer 0–3,600 on focus/break; null elsewhere; never decrement locally |
-| paused | Boolean; false outside focus/break |
+| clock_text | Valid 24-hour HH:MM on home, or on focus while the laptop is revealing the real time; null elsewhere |
+| timer_seconds | Integer 0–3,600 on focus/break when clock_text is null there; null whenever clock_text is set or outside focus/break; never decrement locally |
+| paused | Boolean; false outside focus/break; always false on break, which has no paused state |
 | focus_minutes | Integer multiple of 5 from 5–60 on setup; null elsewhere |
 | break_minutes | Integer 1–60 on setup/break_offer; null elsewhere |
 | buttons | One {button, label, enabled} per advertised ID, in advertised physical order; label is printable ASCII 1–12 characters, enabled is boolean |

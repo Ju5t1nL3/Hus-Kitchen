@@ -1,10 +1,12 @@
 """Presenter snapshots must match docs/serial_protocol.md's render fixtures.
 
 Each test below reconstructs the GameState/RuntimeState/sample/clock that would
-produce one of the seven independent screen fixtures in that document, and
-asserts presenter.build's RenderSnapshot has exactly those field values. The
+produce one of the independent screen fixtures in that document, and asserts
+presenter.build's RenderSnapshot has exactly those field values. The
 bindings/actions passed in are a fixture-only stand-in for M11's real
-config-driven bindings loader; they only need to reproduce these labels.
+config-driven bindings loader; they only need to reproduce these labels. This
+reflects the three-physical-button control layout: Home and the break-running
+screen bind only two of the three advertised buttons, the rest bind all three.
 """
 
 import unittest
@@ -14,13 +16,16 @@ from uuid import uuid4
 from deskpet.app.presenter import PresenterConfig, build, on_commit
 from deskpet.core.commands import (
     ActionId,
+    BackHome,
     ConfirmFocus,
     CycleDuration,
     EndCurrent,
     FeedDefault,
     OpenSetup,
     PauseCurrent,
+    RestartFocus,
     ResumeCurrent,
+    ShowTime,
     SkipBreakIntent,
     StartBreakIntent,
 )
@@ -56,7 +61,7 @@ from deskpet.core.views import ActionDefinition, ButtonLabel, ControlContext
 from deskpet.features.timers import BreakPolicy
 
 CONFIG = PresenterConfig(clock_timezone="UTC", break_policy=BreakPolicy())
-DEVICE_BUTTONS = (ButtonId(1), ButtonId(2))
+DEVICE_BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3))
 
 ACTIONS = {
     ActionId.FEED_DEFAULT: ActionDefinition(
@@ -79,8 +84,20 @@ ACTIONS = {
     ),
     ActionId.CONFIRM_FOCUS: ActionDefinition(
         id=ActionId.CONFIRM_FOCUS,
-        label="Confirm",
+        label="Set",
         intent=ConfirmFocus(),
+        available=lambda _: True,
+    ),
+    ActionId.BACK_HOME: ActionDefinition(
+        id=ActionId.BACK_HOME,
+        label="Back",
+        intent=BackHome(),
+        available=lambda _: True,
+    ),
+    ActionId.SHOW_TIME: ActionDefinition(
+        id=ActionId.SHOW_TIME,
+        label="Time",
+        intent=ShowTime(),
         available=lambda _: True,
     ),
     ActionId.END_CURRENT: ActionDefinition(
@@ -109,8 +126,20 @@ ACTIONS = {
     ),
     ActionId.START_BREAK: ActionDefinition(
         id=ActionId.START_BREAK,
-        label="Start break",
+        label="Break",
         intent=StartBreakIntent(),
+        available=lambda _: True,
+    ),
+    ActionId.RESTART_FOCUS: ActionDefinition(
+        id=ActionId.RESTART_FOCUS,
+        label="Again",
+        intent=RestartFocus(),
+        available=lambda state: state.last_focus_minutes is not None,
+    ),
+    ActionId.END_BREAK: ActionDefinition(
+        id=ActionId.END_BREAK,
+        label="Home",
+        intent=EndCurrent(),
         available=lambda _: True,
     ),
 }
@@ -120,24 +149,33 @@ BINDINGS = {
     (ControlContext.HOME, ButtonId(2), Gesture.PRESS): ActionId.OPEN_SETUP,
     (ControlContext.SETUP, ButtonId(1), Gesture.PRESS): ActionId.CYCLE_DURATION,
     (ControlContext.SETUP, ButtonId(2), Gesture.PRESS): ActionId.CONFIRM_FOCUS,
-    (ControlContext.FOCUS_RUNNING, ButtonId(1), Gesture.PRESS): ActionId.END_CURRENT,
+    (ControlContext.SETUP, ButtonId(3), Gesture.PRESS): ActionId.BACK_HOME,
+    (ControlContext.FOCUS_RUNNING, ButtonId(1), Gesture.PRESS): ActionId.SHOW_TIME,
     (ControlContext.FOCUS_RUNNING, ButtonId(2), Gesture.PRESS): ActionId.PAUSE_CURRENT,
-    (ControlContext.FOCUS_PAUSED, ButtonId(1), Gesture.PRESS): ActionId.END_CURRENT,
+    (ControlContext.FOCUS_RUNNING, ButtonId(3), Gesture.PRESS): ActionId.END_CURRENT,
+    (ControlContext.FOCUS_PAUSED, ButtonId(1), Gesture.PRESS): ActionId.SHOW_TIME,
     (ControlContext.FOCUS_PAUSED, ButtonId(2), Gesture.PRESS): ActionId.RESUME_CURRENT,
-    (ControlContext.BREAK_OFFER, ButtonId(1), Gesture.PRESS): ActionId.SKIP_BREAK,
-    (ControlContext.BREAK_OFFER, ButtonId(2), Gesture.PRESS): ActionId.START_BREAK,
-    (ControlContext.BREAK_RUNNING, ButtonId(1), Gesture.PRESS): ActionId.END_CURRENT,
-    (ControlContext.BREAK_RUNNING, ButtonId(2), Gesture.PRESS): ActionId.PAUSE_CURRENT,
-    (ControlContext.BREAK_PAUSED, ButtonId(1), Gesture.PRESS): ActionId.END_CURRENT,
-    (ControlContext.BREAK_PAUSED, ButtonId(2), Gesture.PRESS): ActionId.RESUME_CURRENT,
+    (ControlContext.FOCUS_PAUSED, ButtonId(3), Gesture.PRESS): ActionId.END_CURRENT,
+    (ControlContext.BREAK_OFFER, ButtonId(1), Gesture.PRESS): ActionId.START_BREAK,
+    (ControlContext.BREAK_OFFER, ButtonId(2), Gesture.PRESS): ActionId.RESTART_FOCUS,
+    (ControlContext.BREAK_OFFER, ButtonId(3), Gesture.PRESS): ActionId.SKIP_BREAK,
+    (ControlContext.BREAK_RUNNING, ButtonId(1), Gesture.PRESS): ActionId.RESTART_FOCUS,
+    (ControlContext.BREAK_RUNNING, ButtonId(2), Gesture.PRESS): ActionId.END_BREAK,
 }
 
 
-def _clock(hour: int, minute: int) -> ClockReading:
-    return ClockReading(datetime(2026, 9, 13, hour, minute, tzinfo=UTC), 0, False)
+def _clock(hour: int, minute: int, monotonic_ms: int = 0) -> ClockReading:
+    return ClockReading(
+        datetime(2026, 9, 13, hour, minute, tzinfo=UTC), monotonic_ms, False
+    )
 
 
-def _runtime(screen: Screen, epoch: int) -> RuntimeState:
+def _runtime(
+    screen: Screen,
+    epoch: int,
+    *,
+    clock_reveal_until_mono_ms: int | None = None,
+) -> RuntimeState:
     return RuntimeState(
         screen=screen,
         selected_focus_minutes=25,
@@ -146,6 +184,7 @@ def _runtime(screen: Screen, epoch: int) -> RuntimeState:
         control_epoch=epoch,
         connection_id=None,
         boot_id=None,
+        clock_reveal_until_mono_ms=clock_reveal_until_mono_ms,
     )
 
 
@@ -175,6 +214,7 @@ class PresenterFixtureTests(unittest.TestCase):
             (
                 ButtonLabel(button=ButtonId(1), label="Feed", enabled=True),
                 ButtonLabel(button=ButtonId(2), label="Focus", enabled=True),
+                ButtonLabel(button=ButtonId(3), label="—", enabled=False),
             ),
         )
         self.assertIsNone(snapshot.feedback)
@@ -195,7 +235,9 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertIsNone(snapshot.clock_text)
         self.assertEqual(snapshot.focus_minutes, 25)
         self.assertEqual(snapshot.break_minutes, 5)
-        self.assertEqual([label.label for label in snapshot.buttons], ["Up", "Confirm"])
+        self.assertEqual(
+            [label.label for label in snapshot.buttons], ["Up", "Set", "Back"]
+        )
 
     def test_focus_running_matches_fixture(self) -> None:
         session = Session(
@@ -222,7 +264,49 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertEqual(snapshot.mood, "focused")
         self.assertEqual(snapshot.timer_seconds, 1499)
         self.assertFalse(snapshot.paused)
-        self.assertEqual([label.label for label in snapshot.buttons], ["End", "Pause"])
+        self.assertEqual(
+            [label.label for label in snapshot.buttons], ["Time", "Pause", "End"]
+        )
+
+    def test_focus_running_reveals_clock_for_five_seconds(self) -> None:
+        session = Session(
+            id="s1",
+            kind=SessionKind.FOCUS,
+            terms=FocusTerms(1500, 300, 60_000, 30, 30, "UTC"),
+            status=SessionStatus.RUNNING,
+            committed_active_ms=0,
+        )
+        state = GameState(user_id="u1", pet_id="p1", active_session=session)
+        sample = TimerSample(
+            session_id="s1", active_ms=1000, remaining_seconds=1499, due=False
+        )
+        runtime = _runtime(Screen.FOCUS, 3, clock_reveal_until_mono_ms=5_000)
+
+        revealing = build(
+            state,
+            runtime,
+            sample,
+            _clock(14, 32, monotonic_ms=1_000),
+            CONFIG,
+            BINDINGS,
+            ACTIONS,
+            DEVICE_BUTTONS,
+        )
+        self.assertEqual(revealing.clock_text, "14:32")
+        self.assertIsNone(revealing.timer_seconds)
+
+        expired = build(
+            state,
+            runtime,
+            sample,
+            _clock(14, 32, monotonic_ms=5_001),
+            CONFIG,
+            BINDINGS,
+            ACTIONS,
+            DEVICE_BUTTONS,
+        )
+        self.assertIsNone(expired.clock_text)
+        self.assertEqual(expired.timer_seconds, 1499)
 
     def test_focus_paused_matches_fixture(self) -> None:
         session = Session(
@@ -249,12 +333,15 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertEqual(snapshot.mood, "calm")
         self.assertEqual(snapshot.timer_seconds, 1470)
         self.assertTrue(snapshot.paused)
-        self.assertEqual([label.label for label in snapshot.buttons], ["End", "Resume"])
+        self.assertEqual(
+            [label.label for label in snapshot.buttons], ["Time", "Resume", "End"]
+        )
 
     def test_break_offer_matches_fixture(self) -> None:
         state = GameState(
             user_id="u1",
             pet_id="p1",
+            last_focus_minutes=25,
             pending_break=BreakOffer(
                 parent_focus_id="s1", duration_seconds=300, report_timezone="UTC"
             ),
@@ -277,7 +364,7 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertIsNone(snapshot.timer_seconds)
         self.assertEqual(snapshot.break_minutes, 5)
         self.assertEqual(
-            [label.label for label in snapshot.buttons], ["Home", "Start break"]
+            [label.label for label in snapshot.buttons], ["Break", "Again", "Home"]
         )
 
     def test_break_running_matches_fixture(self) -> None:
@@ -288,7 +375,9 @@ class PresenterFixtureTests(unittest.TestCase):
             status=SessionStatus.RUNNING,
             committed_active_ms=0,
         )
-        state = GameState(user_id="u1", pet_id="p1", active_session=session)
+        state = GameState(
+            user_id="u1", pet_id="p1", last_focus_minutes=25, active_session=session
+        )
         sample = TimerSample(
             session_id="s2", active_ms=0, remaining_seconds=300, due=False
         )
@@ -304,8 +393,12 @@ class PresenterFixtureTests(unittest.TestCase):
         )
         self.assertEqual(snapshot.mood, "resting")
         self.assertEqual(snapshot.timer_seconds, 300)
+        self.assertFalse(snapshot.paused)
         self.assertIsNone(snapshot.break_minutes)
-        self.assertEqual([label.label for label in snapshot.buttons], ["End", "Pause"])
+        self.assertEqual(
+            [label.label for label in snapshot.buttons],
+            ["Again", "Home", "—"],
+        )
 
     def test_home_with_sad_reaction_matches_fixture(self) -> None:
         state = GameState(
@@ -328,7 +421,9 @@ class PresenterFixtureTests(unittest.TestCase):
         )
         self.assertEqual(snapshot.mood, "sad")
         self.assertEqual(snapshot.clock_text, "14:35")
-        self.assertEqual([label.label for label in snapshot.buttons], ["Feed", "Focus"])
+        self.assertEqual(
+            [label.label for label in snapshot.buttons], ["Feed", "Focus", "—"]
+        )
 
 
 def _committed(draft: EventDraft) -> DomainEvent:

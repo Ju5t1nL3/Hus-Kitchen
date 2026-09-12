@@ -29,7 +29,9 @@ earlier stats/shop proposal. No implementation or hardware verification is claim
 | Decision | Why |
 | --- | --- |
 | Home: big pet, top-right clock, Feed/Focus buttons | Fits the small display and keeps actions obvious. |
-| Two default physical buttons; configurable bindings and ID-based input | No third button dependency, but adding/remapping buttons needs no rule rewrite. |
+| Three default physical buttons; configurable bindings and ID-based input | The third button gives most screens a real Back/secondary action (Setup's Back, focus's Time reveal, break's Again) without special-casing button counts; Home and break_running still only bind two and leave the third disabled. |
+| Break sessions cannot be paused | Break offers only two actions (Again, Home), both of which end the break; keeping a third pause/resume pair added no value once ending was always one press away. |
+| Again: skip/end a break and immediately start a new focus session at the last confirmed duration | Lets a user keep working without revisiting Setup, while remaining an explicit press rather than an automatic continuation. |
 | One free food with a separate definition and sprite | Small MVP with room for more foods later. |
 | 5–60-minute focus in five-minute steps; default 25, remember last confirmation | Simple adjustable duration. “5s” is interpreted as five-minute increments, as discussed with the user. |
 | Break = one-fifth of focus, rounded to whole minutes, minimum one | Transparent proposed product rule; not a universal Pomodoro requirement. |

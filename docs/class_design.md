@@ -29,7 +29,7 @@ Feedback = Literal["unavailable", "storage_error"]
 | Session | id: str, kind: SessionKind, matching typed terms, status: SessionStatus, committed_active_ms: int |
 | GameState | user_id: str, pet_id: str, active_session: Session or None, pending_break: BreakOffer or None, last_focus_minutes: int or None, latest_reaction: Reaction or None, focus_dates: frozenset[date], last_seq: int |
 | ClockReading | utc: aware datetime, monotonic_ms: int, resumed: bool |
-| RuntimeState | screen: Screen, selected_focus_minutes: int, run_anchor_mono_ms: int or None, previous_clock: ClockReading or None, control_epoch: int, connection_id/boot_id: str or None |
+| RuntimeState | screen: Screen, selected_focus_minutes: int, run_anchor_mono_ms: int or None, previous_clock: ClockReading or None, control_epoch: int, connection_id/boot_id: str or None, clock_reveal_until_mono_ms: int or None |
 | TimerSample | session_id: str, active_ms: int, remaining_seconds: int, due: bool; explicit trusted laptop sample |
 | ButtonInput | connection_id, boot_id, seq, control_epoch, button: ButtonId (positive int advertised by device), action: Gesture; internal received clock sample |
 | RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration fields, paused, tuple of ButtonLabels, feedback |
@@ -51,7 +51,10 @@ After history replay, RuntimeState is reconstructed according to recovery policy
   and connected flag; Tick carries a ClockReading; Shutdown carries no game data.
 - ControlIntent: zero-field variants FeedDefault, OpenSetup, CycleDuration,
   ConfirmFocus, EndCurrent, PauseCurrent, ResumeCurrent, SkipBreak, StartBreak,
-  BackHome. controls selects one; application supplies IDs and current values.
+  BackHome, ShowTime, RestartFocus. controls selects one; application supplies
+  IDs and current values. ShowTime is a temporary render toggle (below); RestartFocus
+  is a compound navigation intent the application resolves into two domain commands
+  (see "Repeating the last focus duration").
 - DomainCommand: FeedPet(food_id, operation_key), StartFocus(session_id, minutes),
   StartBreak(session_id, parent_focus_id), PauseSession(session_id, operation_key),
   ResumeSession(session_id, operation_key), EndSession(session_id, reason),
@@ -138,10 +141,13 @@ resume keeps that screen, break_skipped returns Home, and pet_created selects Ho
 ## Adding or changing buttons
 
 Use one small action-definition dictionary in app/controls.py, plus declarative
-bindings under controls in laptop/config.yaml. Contexts are home, setup, focus_running,
-focus_paused, break_offer, break_running and break_paused. ActionId is a closed
-literal/enum matching the defined ControlIntents, not an executable string.
-Example binding subset (not a complete configuration):
+bindings under controls in laptop/config.yaml. Contexts are home, setup,
+focus_running, focus_paused, break_offer and break_running; there is no
+break_paused context because break sessions cannot be paused. ActionId is a
+closed literal/enum matching the defined ControlIntents, not an executable
+string. The MVP hardware advertises three physical buttons ([1,2,3]); Home and
+break_running bind only two of them, so the third renders as a disabled dash on
+those two screens. Example binding subset (not a complete configuration):
 
 ```yaml
 controls:
@@ -150,8 +156,9 @@ controls:
       "1.press": feed_default
       "2.press": open_setup
     focus_running:
-      "1.press": end_current
+      "1.press": show_time
       "2.press": pause_current
+      "3.press": end_current
 ```
 
 - Remap an existing action: edit its binding; controls.labels derives the new
@@ -159,15 +166,48 @@ controls:
 - Change behavior: edit its owning feature/handler. Keep the physical mapping
   stable unless the user-facing action also changes.
 - Add an action: add its typed intent, action definition and application handler,
-  then bind it. Reuse existing domain commands where possible.
+  then bind it. Reuse existing domain commands where possible. Two ActionIds may
+  share one ControlIntent when the same underlying command needs a different
+  label per screen: break_running's Home button uses ActionId END_BREAK with the
+  EndCurrent intent, distinct from focus's END_CURRENT, purely so the label reads
+  "Home" instead of "End".
 - Add a physical button: add its ID/GPIO/layout slot to hardware_config.py,
   advertise it in ready, and bind an action. Scanner and codecs iterate declared
-  IDs; no button-1/button-2 branches. Extra labels need usable screen space.
+  IDs; no button-1/button-2/button-3 branches. Extra labels need usable screen space.
 
 One handler dictionary maps intents to command construction/navigation; no dynamic
 plugin loader or large nested button switch. Unbound buttons show a disabled dash
 and do nothing. Use the press action for the primary label; if only hold is bound,
-show a short hold hint from its definition. Setup's hold-to-back remains documented.
+show a short hold hint from its definition. The third button now provides an
+explicit Back action on setup instead of the earlier two-button hold-to-back;
+Setup's press bindings are Up, Set and Back.
+
+## The clock reveal (ShowTime)
+
+ShowTime is bound to a button on focus_running and focus_paused. It is a
+temporary render toggle, not a durable event: the application sets
+`RuntimeState.clock_reveal_until_mono_ms` to five seconds past the accepted
+input's monotonic time and does not touch GameState, save an event, or change
+control_epoch (button meanings are unchanged). `presenter.build` compares that
+deadline against the current clock on every call and swaps `timer_seconds` for
+`clock_text` while it is in the future, so no separate revert step, timer, or
+scheduler wake beyond the app's normal per-second refresh is required; the next
+ordinary tick after the deadline naturally redraws the countdown.
+
+## Repeating the last focus duration (RestartFocus)
+
+RestartFocus is bound to a button on break_offer and break_running (labeled
+Again). It produces two domain commands from one button press instead of one:
+first SkipBreak (from break_offer) or EndSession with reason user (from a
+running break) to close out the break, then StartFocus using
+`state.last_focus_minutes` once that first event is applied, skipping Setup
+entirely. The application runs decide/save/apply_event for each command in
+sequence and presents only once, after the second event; presenter.on_commit
+needs no change for this because the two events it processes,
+BreakSkipped/BreakSessionEnded then FocusSessionStarted, already navigate to
+Home and then Focus in the existing per-event switch. RestartFocus is
+unavailable (and the button greyed out) when `last_focus_minutes` is unset,
+which cannot happen once a focus session has ever been confirmed.
 
 Validate bindings at startup/handshake: reject unknown actions, duplicate
 (context, button, gesture) entries, unadvertised IDs and layouts that do not fit.

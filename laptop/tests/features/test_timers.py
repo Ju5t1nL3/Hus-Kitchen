@@ -207,6 +207,30 @@ class PauseResumeRuleTests(unittest.TestCase):
         assert isinstance(resume_result.event, FocusSessionResumed)
         self.assertEqual(resume_result.event.active_ms, 45_000)
 
+    def test_break_sessions_cannot_be_paused_or_resumed(self) -> None:
+        running = state_with(break_session())
+        paused = state_with(
+            break_session(status=SessionStatus.PAUSED, committed_active_ms=10_000)
+        )
+
+        pause_result = decide(
+            running,
+            PauseSession("break-1", "button:link:1"),
+            sample("break-1", 10_000, duration_ms=60_000),
+            RULES,
+            NOW,
+        )
+        resume_result = decide(
+            paused,
+            ResumeSession("break-1", "button:link:2"),
+            sample("break-1", 10_000, duration_ms=60_000),
+            RULES,
+            NOW,
+        )
+
+        self.assertEqual(pause_result, Rejected(RejectionCode.UNAVAILABLE))
+        self.assertEqual(resume_result, Rejected(RejectionCode.UNAVAILABLE))
+
     def test_paused_time_cannot_appear_in_resume_sample(self) -> None:
         paused = state_with(
             focus_session(status=SessionStatus.PAUSED, committed_active_ms=45_000)

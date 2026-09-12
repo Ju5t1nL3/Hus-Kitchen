@@ -85,7 +85,7 @@ def decode_line(raw: bytes, now: ClockReading) -> ParseResult:
 
     try:
         decoded: object = json.loads(text)
-    except json.JSONDecodeError, ValueError:
+    except ValueError:
         return Invalid("bad_json")
 
     if not isinstance(decoded, dict):

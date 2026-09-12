@@ -193,12 +193,17 @@ class RuntimeState:
     control_epoch: int
     connection_id: str | None
     boot_id: str | None
+    clock_reveal_until_mono_ms: int | None = None
 
     def __post_init__(self) -> None:
         _require_positive(self.selected_focus_minutes, "selected_focus_minutes")
         _require_positive(self.control_epoch, "control_epoch")
         if self.run_anchor_mono_ms is not None:
             _require_nonnegative(self.run_anchor_mono_ms, "run_anchor_mono_ms")
+        if self.clock_reveal_until_mono_ms is not None:
+            _require_nonnegative(
+                self.clock_reveal_until_mono_ms, "clock_reveal_until_mono_ms"
+            )
 
 
 @dataclass(frozen=True, slots=True)

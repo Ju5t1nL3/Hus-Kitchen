@@ -192,7 +192,7 @@ snapshots replace older unsent ones and transient cues use a bounded queue.
 
 Before handling an input, check for an interruption, then due completion. Recheck
 the input's connection ID and control_epoch against the current screen after that
-work. A stale End or Pause must not become Home or Start break on a new screen.
+work. A stale End or Pause must not become Home or Break on a new screen.
 Increment the control epoch when button meanings change (navigation, pause/resume,
 completion); ordinary clock/mood/countdown refreshes leave it unchanged.
 

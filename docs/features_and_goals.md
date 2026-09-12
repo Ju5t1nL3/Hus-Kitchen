@@ -5,25 +5,40 @@ phone. Keep the code modular, maintainable and easy to divide among teammates.
 This is the current small-screen design; it replaces the earlier stats/shop MVP.
 All behavior below is planned, not implemented.
 
-## Screens and two-button controls
+## Screens and three-button controls
 
-The two physical buttons sit below the screen. Draw their current labels above
-them: button 1 on the left, button 2 on the right. They are not touchscreen buttons.
+Three physical buttons sit below the screen, left to right as button 1/2/3. Draw
+their current labels above them. They are not touchscreen buttons. The third
+button acts as a back/cancel button on most screens, but not on every screen: on
+Home and the running/paused break screen it has no back destination and takes on
+a different role instead (unbound on Home and break-running; "Time" during
+focus). Unbound buttons show a disabled dash, per the button-labeling rule in
+[class design](class_design.md).
 
-| Screen | What is visible | Left press | Right press |
-| --- | --- | --- | --- |
-| Home | Large central pet; clock at top right | Feed | Focus: open setup |
-| Setup | Selected focus minutes; smaller calculated break duration | Up: next duration | Confirm: start focus |
-| Focus, running | Large central countdown; small expressive face at top right | End | Pause |
-| Focus, paused | Frozen countdown; “Paused”; small face at top right | End | Resume |
-| Break offer | Happy pet; “Focus complete”; proposed break minutes | Home: skip break | Start break |
-| Break, running | Large countdown; “Break”; small face at top right | End | Pause |
-| Break, paused | Frozen countdown; “Break paused”; small face | End | Resume |
+| Screen | What is visible | Button 1 | Button 2 | Button 3 |
+| --- | --- | --- | --- | --- |
+| Home | Large central pet; clock at top right | Feed | Focus: open setup | *(unbound)* |
+| Setup | Selected focus minutes; smaller calculated break duration | Up: next duration | Set: start focus | Back: cancel to Home |
+| Focus, running | Large central countdown; small expressive face at top right | Time: show the real clock | Pause | End |
+| Focus, paused | Frozen countdown; “Paused”; small face at top right | Time: show the real clock | Resume | End |
+| Focus complete (break offer) | Happy pet; “Focus complete”; proposed break minutes | Break: start the break | Again: skip the break and start a new focus session immediately, using the previous duration | Home: skip the break and return to Home |
+| Break, running | Large countdown; “Break”; small face at top right | Again: end the break and start a new focus session immediately, using the previous duration | Home: end the break and return to Home | *(unbound)* |
 
-A hold on either setup button returns home, without starting a session. Holds on
-other screens do nothing in MVP. Firmware emits one press OR one hold per gesture,
-never both. No third button is required. Labels should fit the actual screen;
-the state machine and actions stay on the laptop.
+Breaks can no longer be paused; ending one always goes either straight into
+another focus session (Again) or back to Home. Holds do nothing in MVP; firmware
+emits one press OR one hold per gesture, never both. Labels should fit the actual
+screen; the state machine and actions stay on the laptop.
+
+**Time reveal.** Pressing Time on a running or paused focus screen swaps the
+countdown for the actual wall-clock time (e.g. "4:00", the same HH:MM format used
+on Home) for five seconds, then automatically reverts to the countdown. This is
+a temporary render toggle, not a durable event, and does not pause the timer or
+change the control epoch.
+
+**Again (repeat the last focus duration).** From the break offer or a running
+break, Again ends/skips the break and starts a brand-new focus session at the
+previously confirmed duration, without visiting Setup. It reuses the existing
+start-focus and skip/end-break rules; no new event type is needed.
 
 These are default bindings, not hardcoded branches throughout the app. Changing
 an existing action's button updates the controls configuration. Labels and input
@@ -40,11 +55,15 @@ explains how to add a physical button or new behavior.
 - This is our proportional break rule, not a claim that Pomodoro requires it.
   Keep allowed durations, defaults and break ratio in laptop configuration.
 - Completing focus records completion once, plays a brief celebration and opens
-  the break offer. A break begins only when the user presses Start break.
-- Ending focus early returns home with no break offer. Completing or ending a
-  break returns home. There is no automatic next focus session or long-break cycle.
-- Pause freezes remaining time and contributes no focused time. Resume continues
-  from that remaining time. Pausing or skipping/ending a break has no penalty.
+  the break offer. A break begins only when the user presses Break.
+- Ending focus early returns home with no break offer. Ending a break returns
+  either to Home or straight into a new focus session, both by explicit button
+  press (Home or Again). There is no automatic next focus session or long-break
+  cycle; Again is a manual shortcut that skips Setup, not an automatic
+  continuation.
+- Pause freezes remaining time and contributes no focused time, and only applies
+  to focus; breaks cannot be paused. Resume continues from that remaining time.
+  Pausing, or ending/skipping a break by any path, has no penalty.
 
 ## Early ending and emotions
 
@@ -73,6 +92,13 @@ face during a timer can therefore show an emotion too. No accumulating punishmen
 death, offline neglect, or permanent damage. See [event_model.md](event_model.md)
 for how reactions are stored and replayed.
 
+End currently navigates straight to Home, where the sad reaction above is already
+visible on the pet. **Nice to have:** instead of going straight to Home, briefly
+show a dedicated full-screen sad interstitial for 5 seconds, then automatically
+continue to Home. This is a presentation-only addition (a new Screen value and a
+runtime auto-advance timer, same shape as the focus-screen clock reveal); it
+changes no rule, event, or emotion duration and is not required for MVP.
+
 ## Feeding and assets
 
 Home's Feed action immediately offers one free food, `basic`. No shop, cost,
@@ -94,8 +120,9 @@ session is logged separately and never counts as completed.
 
 USB reconnect restores the current screen while the laptop keeps running. App
 restart or detected system sleep ends any unfinished focus/break neutrally; manual
-pause/resume is supported, but resume across app restarts is deferred. A saved
-pending break offer survives restart. A fresh installation starts on Home.
+pause/resume is supported for focus (breaks cannot pause), but resume across app
+restarts is deferred. A saved pending break offer survives restart. A fresh
+installation starts on Home.
 
 ## Product boundary and next milestone
 
@@ -113,17 +140,27 @@ it is separate from the next milestone's XP bar.
 
 ## Acceptance checks
 
-1. Home shows a large pet, top-right clock and Feed/Focus labels on the real LCD.
+1. Home shows a large pet, top-right clock and Feed/Focus labels on the real LCD,
+   with a disabled dash on the unbound third button.
 2. Feed displays the food sprite/animation and a content reaction, without costs.
-3. Setup cycles 5–60 minutes, wraps, shows the derived break and confirms correctly.
-4. Pause/resume preserves remaining time; paused time cannot consume the grace period.
+3. Setup cycles 5–60 minutes, wraps, shows the derived break and confirms
+   correctly; Back returns to Home without starting a session or an event.
+4. Pause/resume preserves remaining time for focus; paused time cannot consume
+   the grace period. Break has no Pause/Resume buttons at all.
 5. End at 59.999 focused seconds is neutral; End at 60 seconds is briefly sad.
-6. Completion is saved once; the break starts only on confirmation. Ending or
-   skipping it is neutral, and its minutes never count as focus.
-7. Emotions expire and can change through later events; no permanent negative state.
-8. Restart/reconnect preserves history without duplicate completions or replayed
-   animations. Pending breaks and interrupted sessions follow the policy above.
-9. Test rules using a fake device/clock, then measure actual LCD/button behavior.
+6. Completion is saved once; the break starts only when Break is pressed. Ending
+   a break via Home, or skipping/ending it via Again, is neutral, and break
+   minutes never count as focus.
+7. Again, from the break offer or a running break, starts a new focus session at
+   the previously confirmed duration without visiting Setup, and does not create
+   a break-completion or extra event beyond the normal skip/end and start events.
+8. Time, pressed during a running or paused focus session, shows the real clock
+   for 5 seconds and then automatically reverts to the countdown, without
+   changing the timer, pausing it, or bumping the control epoch.
+9. Emotions expire and can change through later events; no permanent negative state.
+10. Restart/reconnect preserves history without duplicate completions or replayed
+    animations. Pending breaks and interrupted sessions follow the policy above.
+11. Test rules using a fake device/clock, then measure actual LCD/button behavior.
 
 Target under 50 ms from a recognized debounced gesture to the start of its screen
 update. Measure gesture recognition and full redraw separately; hardware performance

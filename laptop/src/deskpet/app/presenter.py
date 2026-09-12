@@ -17,8 +17,6 @@ from deskpet.core.commands import ActionId
 from deskpet.core.events import (
     BreakSessionCompleted,
     BreakSessionEnded,
-    BreakSessionPaused,
-    BreakSessionResumed,
     BreakSessionStarted,
     BreakSkipped,
     DomainEvent,
@@ -76,15 +74,22 @@ def build(
         and state.active_session.status is SessionStatus.PAUSED
     )
     context = _context(runtime.screen, paused)
+    revealing_clock = (
+        runtime.screen is Screen.FOCUS
+        and runtime.clock_reveal_until_mono_ms is not None
+        and now.monotonic_ms < runtime.clock_reveal_until_mono_ms
+    )
 
     return RenderSnapshot(
         screen=runtime.screen,
         control_epoch=runtime.control_epoch,
         mood=emotions.select(state, now.utc),
         clock_text=_clock_text(now, config.clock_timezone)
-        if runtime.screen is Screen.HOME
+        if runtime.screen is Screen.HOME or revealing_clock
         else None,
-        timer_seconds=_timer_seconds(runtime.screen, sample),
+        timer_seconds=None
+        if revealing_clock
+        else _timer_seconds(runtime.screen, sample),
         paused=paused,
         focus_minutes=runtime.selected_focus_minutes
         if runtime.screen is Screen.SETUP
@@ -107,12 +112,7 @@ def on_commit(
             return PresentationResult(screen=Screen.FOCUS, cues=())
         case BreakSessionStarted():
             return PresentationResult(screen=Screen.BREAK, cues=())
-        case (
-            FocusSessionPaused()
-            | FocusSessionResumed()
-            | BreakSessionPaused()
-            | BreakSessionResumed()
-        ):
+        case FocusSessionPaused() | FocusSessionResumed():
             return PresentationResult(screen=runtime.screen, cues=())
         case FocusSessionCompleted():
             cue = CueRequest(name=AnimationName.CELEBRATE, food_sprite=None)
@@ -148,9 +148,7 @@ def _context(screen: Screen, paused: bool) -> ControlContext:
         case Screen.BREAK_OFFER:
             return ControlContext.BREAK_OFFER
         case Screen.BREAK:
-            return (
-                ControlContext.BREAK_PAUSED if paused else ControlContext.BREAK_RUNNING
-            )
+            return ControlContext.BREAK_RUNNING
         case _ as unreachable:
             assert_never(unreachable)
 

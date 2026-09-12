@@ -49,8 +49,8 @@ startup with an actionable error, not a silently reset database.
 | `pet_created` | `pet_id` | Initialize identity once; no numerical care stats |
 | `pet_fed` | `food_id`, `reaction` (content) | Record free feeding and resolved expression expiry |
 | `session_started` | `session_id`, `kind: focus\|break`, kind-specific `terms` | Start running at zero active time; focus updates last confirmed duration; break consumes matching offer |
-| `session_paused` | `session_id`, `kind`, `active_ms` | Save cumulative progress and mark paused |
-| `session_resumed` | `session_id`, `kind`, `active_ms` | Mark running; active_ms must equal preceding pause |
+| `session_paused` | `session_id`, `kind: focus`, `active_ms` | Save cumulative progress and mark paused; focus only, break sessions cannot pause |
+| `session_resumed` | `session_id`, `kind: focus`, `active_ms` | Mark running; active_ms must equal preceding pause; focus only |
 | `session_completed` | `session_id`, `kind`, `active_ms`, `credit_date`, `break_offer`, `reaction` | Clear session; focus supplies local date, offer and happy reaction; break supplies null for those three fields |
 | `session_ended` | `session_id`, `kind`, `active_ms`, `reason`, `reaction` | End without completion; only user_early focus supplies a sad reaction, otherwise null |
 | `break_skipped` | `parent_focus_id` | Consume an offered break without a session or mood effect |
@@ -84,6 +84,9 @@ Start/resume establish a temporary monotonic anchor. Pause samples elapsed activ
 time and stores it before freezing the UI. Resume stores a resume event before
 establishing the next anchor. Neither pauses nor pause durations count as focus.
 End while paused uses the saved active time. Do not write events every second.
+Pause/resume are focus-only; a break session can only reach a terminal state
+(ended or completed), never paused, so `_pause`/`_resume` reject a break
+session's kind before it can be validated further.
 
 The scheduler alone can issue completion, and only for a running timer at its
 deadline. It processes due completion before buttons: an End/Pause arriving at

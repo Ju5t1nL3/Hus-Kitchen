@@ -24,7 +24,6 @@ class ControlContext(StrEnum):
     FOCUS_PAUSED = "focus_paused"
     BREAK_OFFER = "break_offer"
     BREAK_RUNNING = "break_running"
-    BREAK_PAUSED = "break_paused"
 
 
 @dataclass(frozen=True, slots=True)

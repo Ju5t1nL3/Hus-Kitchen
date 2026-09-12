@@ -26,8 +26,6 @@ from deskpet.core.commands import (
 from deskpet.core.events import (
     BreakSessionCompleted,
     BreakSessionEnded,
-    BreakSessionPaused,
-    BreakSessionResumed,
     BreakSessionStarted,
     BreakSkipped,
     EndReason,
@@ -216,16 +214,15 @@ def _pause(
     session = _matching_session(state, command.session_id)
     if session is None:
         return Rejected(RejectionCode.NO_SESSION)
+    if session.kind is SessionKind.BREAK:
+        return Rejected(RejectionCode.UNAVAILABLE)
     if session.status is not SessionStatus.RUNNING:
         return Rejected(RejectionCode.WRONG_SESSION_STATE)
     checked = _require_sample(session, sample)
     if checked.due:
         return NoOp()
-    event_type = (
-        FocusSessionPaused if session.kind is SessionKind.FOCUS else BreakSessionPaused
-    )
     return Accepted(
-        event_type(
+        FocusSessionPaused(
             source=EventSource.SYSTEM,
             dedupe_key=command.operation_key,
             session_id=session.id,
@@ -242,18 +239,15 @@ def _resume(
     session = _matching_session(state, command.session_id)
     if session is None:
         return Rejected(RejectionCode.NO_SESSION)
+    if session.kind is SessionKind.BREAK:
+        return Rejected(RejectionCode.UNAVAILABLE)
     if session.status is not SessionStatus.PAUSED:
         return Rejected(RejectionCode.WRONG_SESSION_STATE)
     checked = _require_sample(session, sample)
     if checked.active_ms != session.committed_active_ms or checked.due:
         raise ValueError("paused resume sample does not match saved active time")
-    event_type = (
-        FocusSessionResumed
-        if session.kind is SessionKind.FOCUS
-        else BreakSessionResumed
-    )
     return Accepted(
-        event_type(
+        FocusSessionResumed(
             source=EventSource.SYSTEM,
             dedupe_key=command.operation_key,
             session_id=session.id,

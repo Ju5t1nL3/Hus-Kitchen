@@ -5,24 +5,31 @@ for implementing specific parts.
 
 ## What does it do?
 
-When you first plug it in, you see a big pet, a clock at the top right, and two
-button labels: **Feed** and **Focus**.
+When you first plug it in, you see a big pet, a clock at the top right, and
+labels above two of the three buttons: **Feed** and **Focus** (the third does
+nothing here and shows a dash).
 
 Feed gives it one kind of food and plays a cute animation. Focus opens a screen
-where the left button cycles through 5, 10, 15 … 60 minutes and back to 5.
-The right button confirms. The first selection is 25 minutes; later it remembers
-your last confirmed choice.
+where the first button cycles through 5, 10, 15 … 60 minutes and back to 5, the
+second (**Set**) confirms, and the third (**Back**) returns home without
+starting anything. The first selection is 25 minutes; later it remembers your
+last confirmed choice.
 
 The countdown fills most of the screen, with a small pet face at the top right.
-The buttons become **End** and **Pause/Resume**. Pausing freezes the timer.
+There's now a third button below the screen too, and its job changes with the
+screen. During focus the three buttons are **Time**, **Pause/Resume** and **End**.
+Pausing freezes the timer; Time swaps the countdown for the real clock for five
+seconds, then switches back on its own.
 
 Ending before one minute of actual focus is treated as an accidental start.
 Ending later still works, but the pet looks sad briefly. Time spent paused does
 not count toward that minute.
 
-When focus finishes, the pet celebrates and offers a break. The break is one-fifth
-of the focus time: 25 minutes of focus gives 5 minutes of rest. You choose whether
-to start it. Finishing or ending the break takes you home without a penalty.
+When focus finishes, the pet celebrates and offers a break: **Break** starts it,
+**Again** skips it and jumps straight into another focus session at the same
+length you just used, and **Home** skips it and goes home. A running break only
+has two buttons, **Again** and **Home** — it can no longer be paused, since
+ending it was always one press away anyway. Neither path is a penalty.
 
 ## What runs where?
 

@@ -13,11 +13,14 @@ class ActionId(StrEnum):
     CYCLE_DURATION = "cycle_duration"
     CONFIRM_FOCUS = "confirm_focus"
     END_CURRENT = "end_current"
+    END_BREAK = "end_break"
     PAUSE_CURRENT = "pause_current"
     RESUME_CURRENT = "resume_current"
     SKIP_BREAK = "skip_break"
     START_BREAK = "start_break"
     BACK_HOME = "back_home"
+    SHOW_TIME = "show_time"
+    RESTART_FOCUS = "restart_focus"
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +63,14 @@ class StartBreakIntent: ...
 class BackHome: ...
 
 
+@dataclass(frozen=True, slots=True)
+class ShowTime: ...
+
+
+@dataclass(frozen=True, slots=True)
+class RestartFocus: ...
+
+
 type ControlIntent = (
     FeedDefault
     | OpenSetup
@@ -71,6 +82,8 @@ type ControlIntent = (
     | SkipBreakIntent
     | StartBreakIntent
     | BackHome
+    | ShowTime
+    | RestartFocus
 )
 
 

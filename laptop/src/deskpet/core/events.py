@@ -80,27 +80,11 @@ class FocusSessionPaused(DraftMetadata):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class BreakSessionPaused(DraftMetadata):
-    event_type: ClassVar[Literal["session_paused"]] = "session_paused"
-    session_id: str
-    active_ms: int
-    kind: Literal[SessionKind.BREAK] = SessionKind.BREAK
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class FocusSessionResumed(DraftMetadata):
     event_type: ClassVar[Literal["session_resumed"]] = "session_resumed"
     session_id: str
     active_ms: int
     kind: Literal[SessionKind.FOCUS] = SessionKind.FOCUS
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class BreakSessionResumed(DraftMetadata):
-    event_type: ClassVar[Literal["session_resumed"]] = "session_resumed"
-    session_id: str
-    active_ms: int
-    kind: Literal[SessionKind.BREAK] = SessionKind.BREAK
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -153,9 +137,7 @@ type EventDraft = (
     | FocusSessionStarted
     | BreakSessionStarted
     | FocusSessionPaused
-    | BreakSessionPaused
     | FocusSessionResumed
-    | BreakSessionResumed
     | FocusSessionCompleted
     | BreakSessionCompleted
     | FocusSessionEnded
