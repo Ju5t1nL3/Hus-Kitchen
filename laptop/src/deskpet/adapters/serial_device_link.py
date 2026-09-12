@@ -1,5 +1,4 @@
-"""DeviceLink adapter that drives handshake, heartbeat and connection IDs over a serial port. 
-"""
+"""DeviceLink adapter that drives handshake, heartbeat and connection IDs over a serial port."""
 
 import threading
 import uuid
@@ -7,23 +6,25 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Protocol
 
-from deskpet.core.models import PublishStatus
-from deskpet.core.ports import InputCallback
-from deskpet.core.views import (
-    AnimationCue,
-    ButtonInput,
-    ConnectionChanged,
-    DeviceReady,
-    Invalid,
-    Pong,
-    RenderSnapshot,
-)
 from deskpet.adapters import wire_codec
 from deskpet.adapters.wire_codec import (
     AnimateMessage,
     HelloMessage,
     PingMessage,
     RenderMessage,
+)
+from deskpet.core.models import ClockReading, PublishStatus
+from deskpet.core.ports import InputCallback
+from deskpet.core.views import (
+    AnimationCue,
+    ButtonInput,
+    ConnectionChanged,
+    DeviceMessage,
+    DeviceReady,
+    InputMessage,
+    Invalid,
+    Pong,
+    RenderSnapshot,
 )
 
 PING_INTERVAL_S = 2.0
@@ -33,7 +34,7 @@ ANIMATION_QUEUE_SIZE = 32
 
 
 class ClockProtocol(Protocol):
-    def read(self): ...
+    def read(self) -> ClockReading: ...
 
 
 class SerialPort(Protocol):
@@ -134,39 +135,47 @@ class SerialDeviceLink:
                 continue
             self._handle_message(result.message)
 
-    def _handle_message(self, message) -> None:
+    def _handle_message(self, message: DeviceMessage) -> None:
         if isinstance(message, DeviceReady):
             self._handle_ready(message)
         elif isinstance(message, ButtonInput):
             self._handle_button(message)
-        elif isinstance(message, Pong):
+        else:
             self._handle_pong(message)
 
     def _handle_ready(self, message: DeviceReady) -> None:
+        hello: HelloMessage | None = None
         with self._lock:
             if message.connection_id is None:
                 connection_id = str(uuid.uuid4())
-                self._session = _Session(connection_id=connection_id, boot_id=message.boot_id)
+                self._session = _Session(
+                    connection_id=connection_id, boot_id=message.boot_id
+                )
                 self._pending_render = None
                 self._animation_queue.clear()
                 self._recent_animation_ids.clear()
                 hello = HelloMessage(connection_id=connection_id)
-                self._write(wire_codec.encode(hello))
-                return
+            else:
+                session = self._session
+                if (
+                    session is None
+                    or message.connection_id != session.connection_id
+                    or message.boot_id != session.boot_id
+                ):
+                    return
 
-            session = self._session
-            if (
-                session is None
-                or message.connection_id != session.connection_id
-                or message.boot_id != session.boot_id
-            ):
-                return
+                session.awaiting_hello_ack = False
+                session.connected = True
+                session.last_pong_at_mono_ms = self._clock.read().monotonic_ms
 
-            session.awaiting_hello_ack = False
-            session.connected = True
-            session.last_pong_at_mono_ms = self._clock.read().monotonic_ms
+        if hello is not None:
+            self._write(wire_codec.encode(hello))
+            return
 
-        self._emit(ConnectionChanged(connection_id=message.connection_id, connected=True))
+        assert message.connection_id is not None
+        self._emit(
+            ConnectionChanged(connection_id=message.connection_id, connected=True)
+        )
         self._emit(message)
 
     def _handle_button(self, message: ButtonInput) -> None:
@@ -199,6 +208,8 @@ class SerialDeviceLink:
 
         while not self._stop.is_set():
             now = self._clock.read()
+            connection_id: str | None = None
+            ping: PingMessage | None = None
 
             with self._lock:
                 session = self._session
@@ -218,27 +229,27 @@ class SerialDeviceLink:
                 else:
                     should_notify_disconnect = False
 
-                should_ping = (
-                    session is not None
-                    and session.connected
-                    and (
+                if session is not None and session.connected:
+                    should_ping = (
                         last_ping_at_mono_ms is None
-                        or now.monotonic_ms - last_ping_at_mono_ms >= PING_INTERVAL_S * 1000
+                        or now.monotonic_ms - last_ping_at_mono_ms
+                        >= PING_INTERVAL_S * 1000
                     )
-                )
-                if should_ping:
-                    nonce = session.next_ping_nonce
-                    session.next_ping_nonce += 1
-                    ping = PingMessage(connection_id=session.connection_id, nonce=nonce)
-                else:
-                    ping = None
+                    if should_ping:
+                        nonce = session.next_ping_nonce
+                        session.next_ping_nonce += 1
+                        ping = PingMessage(
+                            connection_id=session.connection_id, nonce=nonce
+                        )
 
                 render = self._pending_render
                 self._pending_render = None
                 cue = self._animation_queue.popleft() if self._animation_queue else None
 
-            if should_notify_disconnect:
-                self._emit(ConnectionChanged(connection_id=connection_id, connected=False))
+            if should_notify_disconnect and connection_id is not None:
+                self._emit(
+                    ConnectionChanged(connection_id=connection_id, connected=False)
+                )
             if ping is not None:
                 last_ping_at_mono_ms = now.monotonic_ms
                 self._write(wire_codec.encode(ping))
@@ -267,6 +278,6 @@ class SerialDeviceLink:
             self._session = None
         self._emit(ConnectionChanged(connection_id=connection_id, connected=False))
 
-    def _emit(self, message) -> None:
+    def _emit(self, message: InputMessage) -> None:
         if self._on_input is not None:
             self._on_input(message)
