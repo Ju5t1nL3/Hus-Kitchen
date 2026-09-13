@@ -10,7 +10,9 @@ from deskpet.adapters.fakes import FakeClock, FakeDeviceLink, FakeEventStore
 from deskpet.app.application import Application
 from deskpet.core.events import (
     BreakSkipped,
+    EndReason,
     FocusSessionCompleted,
+    FocusSessionEnded,
     FocusSessionPaused,
     FocusSessionResumed,
     FocusSessionStarted,
@@ -20,12 +22,13 @@ from deskpet.core.events import (
 from deskpet.core.models import (
     ButtonId,
     ClockReading,
+    Feedback,
     Gesture,
     PublishStatus,
     Screen,
     SessionStatus,
 )
-from deskpet.core.ports import AppendResult
+from deskpet.core.ports import AppendResult, EventStoreError
 from deskpet.core.views import (
     AnimationCue,
     ButtonInput,
@@ -72,6 +75,18 @@ class TracedDevice(FakeDeviceLink):
     def animate(self, cue: AnimationCue) -> PublishStatus:
         self._trace.append(f"animate:{cue.name.value}")
         return super().animate(cue)
+
+
+class FailNextAppendStore(FakeEventStore):
+    def __init__(self) -> None:
+        super().__init__()
+        self.fail_next_append = False
+
+    def append(self, event: UncommittedEvent) -> AppendResult:
+        if self.fail_next_append:
+            self.fail_next_append = False
+            raise EventStoreError("injected append failure")
+        return super().append(event)
 
 
 class ApplicationTests(unittest.TestCase):
@@ -207,6 +222,179 @@ class ApplicationTests(unittest.TestCase):
         )
 
         self.assertGreater(self.device.published[-1].revision, previous_revision)
+
+    def test_detected_sleep_neutrally_ends_from_saved_elapsed(self) -> None:
+        self.start_focus()
+        self.clock.advance(12_000)
+        self.press(2, 3)
+        self.clock.advance(60_000, resumed=True)
+
+        self.app.handle(Tick(self.clock.read()), self.clock.read())
+
+        ended = self.store.events[-1].event.draft
+        self.assertIsInstance(ended, FocusSessionEnded)
+        assert isinstance(ended, FocusSessionEnded)
+        self.assertIs(ended.reason, EndReason.SUSPEND)
+        self.assertEqual(ended.active_ms, 12_000)
+        self.assertIsNone(ended.reaction)
+        self.assertIsNone(self.app.state.active_session)
+
+    def test_shutdown_records_live_elapsed_neutrally_before_close(self) -> None:
+        self.start_focus()
+        self.clock.advance(12_000)
+
+        self.app.stop()
+
+        ended = self.store.events[-1].event.draft
+        self.assertIsInstance(ended, FocusSessionEnded)
+        assert isinstance(ended, FocusSessionEnded)
+        self.assertIs(ended.reason, EndReason.APP_SHUTDOWN)
+        self.assertEqual(ended.active_ms, 12_000)
+        self.assertIsNone(ended.reaction)
+        self.assertTrue(self.device.stopped)
+        self.assertTrue(self.store.closed)
+
+
+class RecoveryTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.config = load(CONFIG_PATH)
+        self.clock = FakeClock(NOW)
+
+    def _start_connected_focus(self) -> tuple[Application, FakeEventStore]:
+        store = FakeEventStore()
+        app = Application(
+            store,
+            FakeDeviceLink(),
+            self.clock,
+            self.config,
+            uuid_factory=SequentialUuids(),
+        )
+        app.start()
+        app.handle(ConnectionChanged("connection-1", True), self.clock.read())
+        app.handle(
+            DeviceReady("connection-1", "boot-1", BUTTONS, "emotions_v1"),
+            self.clock.read(),
+        )
+        for seq in (1, 2):
+            app.handle(
+                ButtonInput(
+                    "connection-1",
+                    "boot-1",
+                    seq,
+                    app.runtime.control_epoch,
+                    ButtonId(2),
+                    Gesture.PRESS,
+                    self.clock.read(),
+                ),
+                self.clock.read(),
+            )
+        return app, store
+
+    def test_restart_ends_unfinished_session_without_animation(self) -> None:
+        _original, original_store = self._start_connected_focus()
+        persisted = original_store.events
+
+        restarted_store = FakeEventStore(persisted)
+        restarted_device = FakeDeviceLink()
+        restarted = Application(
+            restarted_store,
+            restarted_device,
+            self.clock,
+            self.config,
+            uuid_factory=SequentialUuids(),
+        )
+        restarted.start()
+        self.addCleanup(restarted.stop)
+
+        ended = restarted_store.events[-1].event.draft
+        self.assertIsInstance(ended, FocusSessionEnded)
+        assert isinstance(ended, FocusSessionEnded)
+        self.assertIs(ended.reason, EndReason.APP_RESTART)
+        self.assertEqual(ended.active_ms, 0)
+        self.assertIsNone(ended.reaction)
+        self.assertIsNone(restarted.state.active_session)
+        self.assertIs(restarted.runtime.screen, Screen.HOME)
+        self.assertEqual(restarted_device.animations, [])
+
+    def test_restart_preserves_pending_break_offer(self) -> None:
+        original, original_store = self._start_connected_focus()
+        self.clock.advance(25 * 60 * 1_000)
+        original.handle(Tick(self.clock.read()), self.clock.read())
+        persisted = original_store.events
+
+        restarted_device = FakeDeviceLink()
+        restarted = Application(
+            FakeEventStore(persisted),
+            restarted_device,
+            self.clock,
+            self.config,
+        )
+        restarted.start()
+        self.addCleanup(restarted.stop)
+
+        self.assertIsNotNone(restarted.state.pending_break)
+        self.assertIs(restarted.runtime.screen, Screen.BREAK_OFFER)
+        self.assertEqual(restarted_device.animations, [])
+
+    def test_storage_failure_freezes_then_replays_and_ends_neutrally(self) -> None:
+        store = FailNextAppendStore()
+        device = FakeDeviceLink()
+        app = Application(
+            store,
+            device,
+            self.clock,
+            self.config,
+            uuid_factory=SequentialUuids(),
+        )
+        app.start()
+        self.addCleanup(app.stop)
+        app.handle(ConnectionChanged("connection-1", True), self.clock.read())
+        app.handle(
+            DeviceReady("connection-1", "boot-1", BUTTONS, "emotions_v1"),
+            self.clock.read(),
+        )
+        for seq in (1, 2):
+            app.handle(
+                ButtonInput(
+                    "connection-1",
+                    "boot-1",
+                    seq,
+                    app.runtime.control_epoch,
+                    ButtonId(2),
+                    Gesture.PRESS,
+                    self.clock.read(),
+                ),
+                self.clock.read(),
+            )
+        self.clock.advance(12_000)
+        store.fail_next_append = True
+        app.handle(
+            ButtonInput(
+                "connection-1",
+                "boot-1",
+                3,
+                app.runtime.control_epoch,
+                ButtonId(2),
+                Gesture.PRESS,
+                self.clock.read(),
+            ),
+            self.clock.read(),
+        )
+
+        self.assertIs(app.runtime.feedback, Feedback.STORAGE_ERROR)
+        self.assertIs(device.published[-1].view.feedback, Feedback.STORAGE_ERROR)
+        self.assertIsNotNone(app.state.active_session)
+
+        app.handle(Tick(self.clock.read()), self.clock.read())
+
+        ended = store.events[-1].event.draft
+        self.assertIsInstance(ended, FocusSessionEnded)
+        assert isinstance(ended, FocusSessionEnded)
+        self.assertIs(ended.reason, EndReason.STORAGE_RECOVERY)
+        self.assertEqual(ended.active_ms, 0)
+        self.assertIsNone(app.runtime.feedback)
+        self.assertIsNone(app.state.active_session)
+        self.assertEqual(device.animations, [])
 
 
 class CommitOrderingTests(unittest.TestCase):

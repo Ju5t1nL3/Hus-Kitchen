@@ -36,7 +36,7 @@ from deskpet.core.models import (
     ReactionMood,
     SessionKind,
 )
-from deskpet.core.ports import AppendResult
+from deskpet.core.ports import AppendResult, EventStoreError
 
 type JsonValue = (
     None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
@@ -71,7 +71,7 @@ user_id, device_id, source, dedupe_key, payload_json
 """
 
 
-class StorageError(RuntimeError):
+class StorageError(EventStoreError):
     """Base class for operational event-store failures."""
 
 

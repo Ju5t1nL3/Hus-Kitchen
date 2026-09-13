@@ -10,6 +10,10 @@ from deskpet.core.models import ClockReading, PublishStatus, WeeklyReport
 from deskpet.core.views import AnimationCue, InputMessage, RenderSnapshot
 
 
+class EventStoreError(RuntimeError):
+    """Operational failure while reading or writing durable events."""
+
+
 @dataclass(frozen=True, slots=True)
 class AppendResult:
     inserted: bool

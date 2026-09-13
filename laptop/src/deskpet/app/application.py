@@ -52,6 +52,7 @@ from deskpet.core.events import (
 from deskpet.core.models import (
     ButtonId,
     ClockReading,
+    Feedback,
     GameState,
     RejectionCode,
     RuntimeState,
@@ -59,7 +60,13 @@ from deskpet.core.models import (
     SessionKind,
     TimerSample,
 )
-from deskpet.core.ports import AppendResult, Clock, DeviceLink, EventStore
+from deskpet.core.ports import (
+    AppendResult,
+    Clock,
+    DeviceLink,
+    EventStore,
+    EventStoreError,
+)
 from deskpet.core.views import (
     AnimationCue,
     ButtonInput,
@@ -139,6 +146,8 @@ class Application:
             connection_id=None,
             boot_id=None,
         )
+        if state.active_session is not None:
+            self._end_replayed_session(now, RequestedEndReason.APP_RESTART)
         self._started = True
         self._device.start(self._enqueue)
 
@@ -181,6 +190,11 @@ class Application:
             self._set_previous_clock(now)
             return
 
+        if self.runtime.feedback is Feedback.STORAGE_ERROR:
+            self._recover_storage(now)
+            self._set_previous_clock(now)
+            return
+
         completed = self._advance_due(now)
         if isinstance(incoming, Tick):
             self._set_previous_clock(now)
@@ -191,12 +205,33 @@ class Application:
         self._set_previous_clock(now)
 
     def stop(self) -> None:
-        """Stop workers and close resources idempotently."""
+        """Neutrally end a session, then stop workers and resources idempotently."""
         if self._stopped:
             return
-        self._stopped = True
-        self._device.stop()
-        self._store.close()
+        try:
+            if self._started and self._state is not None and self._state.active_session:
+                now = self._clock.read()
+                session = self._state.active_session
+                sample = self._current_sample(now)
+                command = (
+                    CompleteSession(session.id)
+                    if sample is not None and sample.due
+                    else EndSession(session.id, RequestedEndReason.APP_SHUTDOWN)
+                )
+                decision = timers.decide(
+                    self._state,
+                    command,
+                    sample,
+                    self._timer_rules(),
+                    now,
+                )
+                self._commit(decision, now, render=False)
+        finally:
+            self._stopped = True
+            try:
+                self._device.stop()
+            finally:
+                self._store.close()
 
     def _enqueue(self, incoming: InputMessage) -> None:
         self._inputs.put_nowait(incoming)
@@ -412,7 +447,11 @@ class Application:
     ) -> bool:
         if isinstance(decision, Rejected | NoOp):
             return False
-        result = self._append(decision.event, now)
+        try:
+            result = self._append(decision.event, now)
+        except EventStoreError:
+            self._freeze_for_storage_error(now)
+            return False
         current = self._require_state()
         if result.event.seq <= current.last_seq:
             return False
@@ -431,6 +470,56 @@ class Application:
                 result.event.event.event_id,
             )
         return True
+
+    def _end_replayed_session(
+        self, now: ClockReading, reason: RequestedEndReason
+    ) -> None:
+        """End replayed work from its persisted lower bound without side effects."""
+        session = self._require_state().active_session
+        if session is None:
+            return
+        decision = timers.decide(
+            self.state,
+            EndSession(session.id, reason),
+            scheduling.sample(session, None, now.monotonic_ms),
+            self._timer_rules(),
+            now,
+        )
+        if not self._commit(decision, now, render=False):
+            raise EventStoreError("could not persist neutral session recovery")
+
+    def _freeze_for_storage_error(self, now: ClockReading) -> None:
+        """Keep the last applied state and stop trusting unsaved timer progress."""
+        self._runtime = replace(
+            self.runtime,
+            run_anchor_mono_ms=None,
+            previous_clock=now,
+            clock_reveal_until_mono_ms=None,
+            feedback=Feedback.STORAGE_ERROR,
+            control_epoch=self.runtime.control_epoch + 1,
+        )
+        self._render(now)
+
+    def _recover_storage(self, now: ClockReading) -> None:
+        """Replay authoritative storage before unfreezing gameplay."""
+        try:
+            rebuilt = replay.rebuild(self._store.read_after())
+            if rebuilt is None:
+                raise EventStoreError("event history disappeared during recovery")
+            self._state = rebuilt
+            self._runtime = replace(
+                self.runtime,
+                screen=_startup_screen(rebuilt),
+                run_anchor_mono_ms=None,
+                feedback=None,
+                control_epoch=self.runtime.control_epoch + 1,
+            )
+            if rebuilt.active_session is not None:
+                self._end_replayed_session(now, RequestedEndReason.STORAGE_RECOVERY)
+        except EventStoreError:
+            self._freeze_for_storage_error(now)
+            return
+        self._render(now)
 
     def _append(self, draft: EventDraft, now: ClockReading) -> AppendResult:
         return self._store.append(

@@ -96,7 +96,7 @@ def build(
         else None,
         break_minutes=_break_minutes(runtime, state, config),
         buttons=resolve_labels(context, state, device_buttons, bindings, actions),
-        feedback=None,
+        feedback=runtime.feedback,
     )
 
 
