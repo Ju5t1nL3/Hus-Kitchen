@@ -4,6 +4,7 @@ import argparse
 from enum import StrEnum
 from pathlib import Path
 
+from deskpet.adapters.camera_tracker import OpenCvHaarAttentionTracker
 from deskpet.adapters.config_loader import load
 from deskpet.adapters.keyboard_tracker import PynputKeyboardTracker
 from deskpet.adapters.serial_device_link import SerialDeviceLink
@@ -65,6 +66,7 @@ def build_application(
             clock,
             config,
             keyboard_tracker=PynputKeyboardTracker(),
+            attention_tracker=OpenCvHaarAttentionTracker(),
         )
 
     selector = DeviceSelector(
@@ -88,6 +90,7 @@ def build_application(
         clock,
         config,
         keyboard_tracker=PynputKeyboardTracker(),
+        attention_tracker=OpenCvHaarAttentionTracker(),
     )
 
 

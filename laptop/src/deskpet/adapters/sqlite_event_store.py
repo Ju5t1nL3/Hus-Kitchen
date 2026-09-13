@@ -372,6 +372,12 @@ def _encode_draft(draft: EventDraft) -> JsonObject:
                 "keyboard_available": draft.keyboard_available,
                 "keyboard_keypresses": draft.keyboard_keypresses,
                 "keyboard_yarn": draft.keyboard_yarn,
+                "camera_enabled": draft.camera_enabled,
+                "camera_available": draft.camera_available,
+                "camera_attempted_samples": draft.camera_attempted_samples,
+                "camera_observed_samples": draft.camera_observed_samples,
+                "camera_attentive_samples": draft.camera_attentive_samples,
+                "camera_yarn": draft.camera_yarn,
                 "total_xp_before": draft.total_xp_before,
                 "total_xp_after": draft.total_xp_after,
                 "level_before": draft.level_before,
@@ -554,6 +560,12 @@ def _decode_draft(
             "keyboard_available",
             "keyboard_keypresses",
             "keyboard_yarn",
+            "camera_enabled",
+            "camera_available",
+            "camera_attempted_samples",
+            "camera_observed_samples",
+            "camera_attentive_samples",
+            "camera_yarn",
             "total_xp_before",
             "total_xp_after",
             "level_before",
@@ -561,17 +573,26 @@ def _decode_draft(
             "yarn_before",
             "yarn_after",
         }
-        legacy_fields = fields - {
+        keyboard_fields = fields - {
+            "camera_enabled",
+            "camera_available",
+            "camera_attempted_samples",
+            "camera_observed_samples",
+            "camera_attentive_samples",
+            "camera_yarn",
+        }
+        legacy_fields = keyboard_fields - {
             "keyboard_enabled",
             "keyboard_available",
             "keyboard_keypresses",
             "keyboard_yarn",
         }
-        if set(payload) not in (fields, legacy_fields):
+        if set(payload) not in (fields, keyboard_fields, legacy_fields):
             raise CorruptEventStoreError(
                 "stored event payload fields do not match its type"
             )
-        has_keyboard = set(payload) == fields
+        has_keyboard = set(payload) in (fields, keyboard_fields)
+        has_camera = set(payload) == fields
         return FocusRewardGranted(
             **metadata,
             focus_session_id=_text_field(payload, "focus_session_id"),
@@ -592,6 +613,22 @@ def _decode_draft(
                 _int_field(payload, "keyboard_keypresses") if has_keyboard else 0
             ),
             keyboard_yarn=(_int_field(payload, "keyboard_yarn") if has_keyboard else 0),
+            camera_enabled=(
+                _bool_field(payload, "camera_enabled") if has_camera else False
+            ),
+            camera_available=(
+                _bool_field(payload, "camera_available") if has_camera else False
+            ),
+            camera_attempted_samples=(
+                _int_field(payload, "camera_attempted_samples") if has_camera else 0
+            ),
+            camera_observed_samples=(
+                _int_field(payload, "camera_observed_samples") if has_camera else 0
+            ),
+            camera_attentive_samples=(
+                _int_field(payload, "camera_attentive_samples") if has_camera else 0
+            ),
+            camera_yarn=(_int_field(payload, "camera_yarn") if has_camera else 0),
             total_xp_before=_int_field(payload, "total_xp_before"),
             total_xp_after=_int_field(payload, "total_xp_after"),
             level_before=_int_field(payload, "level_before"),

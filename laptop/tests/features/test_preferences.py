@@ -1,6 +1,7 @@
 """Tests for durable, explicit activity-tracking consent decisions."""
 
 import unittest
+from dataclasses import replace
 
 from deskpet.core.commands import Accepted, Rejected
 from deskpet.core.events import TrackingPreferencesChanged
@@ -27,6 +28,16 @@ class PreferenceDecisionTests(unittest.TestCase):
         result = decide_toggle(self.state, 1, "button:c:1", camera_available=False)
 
         self.assertIsInstance(result, Rejected)
+
+    def test_unavailable_camera_can_still_be_disabled(self) -> None:
+        enabled = replace(self.state, camera_tracking_enabled=True)
+        result = decide_toggle(enabled, 1, "button:c:2", camera_available=False)
+        self.assertIsInstance(result, Accepted)
+        assert isinstance(result, Accepted)
+        event = result.event
+        self.assertIsInstance(event, TrackingPreferencesChanged)
+        assert isinstance(event, TrackingPreferencesChanged)
+        self.assertFalse(event.camera_enabled)
 
 
 if __name__ == "__main__":

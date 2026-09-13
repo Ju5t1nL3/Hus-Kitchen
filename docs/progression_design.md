@@ -124,7 +124,15 @@ eligible count and resolved yarn in the reward event, never key identities.
 
 Hold Home button 1 to open Settings. Up cycles Keyboard/Camera, Select toggles the
 selected available integration, and Back returns Home. Consent defaults Off and is
-saved locally. Camera is displayed as Unavailable until M29 implements it.
+saved locally. A camera that cannot be opened is displayed as Unavailable.
+
+M29 samples the camera locally twice per second with OpenCV's bundled frontal-face
+Haar cascade. A centered frontal face is an attentive sample; this is a coarse
+presence/orientation signal, not eye-gaze tracking or recognition. More than five
+continuous active seconds without one selects Working Sad. Failed frame reads are
+unknown and reset that continuous-away interval. Rewards require at least 60%
+usable observations: 70–89% attentive earns +1 yarn and 90–100% earns +2 yarn.
+Camera activity never awards XP and is capped at two yarn per completion.
 
 Summary intervals must be valid and nonoverlapping. Permission failures and device
 errors yield zero bonus from that source, never a penalty.

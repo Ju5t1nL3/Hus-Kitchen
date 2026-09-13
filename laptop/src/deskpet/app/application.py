@@ -62,6 +62,8 @@ from deskpet.core.events import (
     UncommittedEvent,
 )
 from deskpet.core.models import (
+    AttentionStatus,
+    AttentionSummary,
     ButtonId,
     ClockReading,
     Feedback,
@@ -77,6 +79,7 @@ from deskpet.core.models import (
 )
 from deskpet.core.ports import (
     AppendResult,
+    AttentionTracker,
     Clock,
     DeviceLink,
     EventStore,
@@ -113,6 +116,7 @@ class Application:
         *,
         uuid_factory: UuidFactory = uuid4,
         keyboard_tracker: KeyboardTracker | None = None,
+        attention_tracker: AttentionTracker | None = None,
     ) -> None:
         self._store = store
         self._device = device
@@ -120,6 +124,7 @@ class Application:
         self._config = config
         self._uuid_factory = uuid_factory
         self._keyboard = keyboard_tracker or _InactiveKeyboardTracker()
+        self._attention = attention_tracker or _InactiveAttentionTracker()
         self._inputs: queue.Queue[InputMessage] = queue.Queue()
         self._state: GameState | None = None
         self._runtime: RuntimeState | None = None
@@ -227,6 +232,8 @@ class Application:
             self._set_previous_clock(now)
             return
 
+        self._refresh_attention()
+
         completed = self._advance_due(now)
         if isinstance(incoming, Tick):
             self._set_previous_clock(now)
@@ -266,7 +273,10 @@ class Application:
                 try:
                     self._keyboard.stop()
                 finally:
-                    self._store.close()
+                    try:
+                        self._attention.stop()
+                    finally:
+                        self._store.close()
 
     def _enqueue(self, incoming: InputMessage) -> None:
         self._inputs.put_nowait(incoming)
@@ -341,7 +351,7 @@ class Application:
                     self.state,
                     self.runtime.settings_row,
                     f"button:{incoming.connection_id}:{incoming.seq}",
-                    camera_available=False,
+                    camera_available=self.runtime.camera_available,
                 )
                 self._commit(decision, now)
             case _:
@@ -544,6 +554,12 @@ class Application:
             and self.state.keyboard_tracking_enabled
             else None
         )
+        camera_summary = (
+            self._attention.finish()
+            if isinstance(decision.event, FocusSessionCompleted)
+            and self.state.camera_tracking_enabled
+            else None
+        )
         try:
             result = self._append(decision.event, now)
         except EventStoreError:
@@ -573,6 +589,7 @@ class Application:
                 completed_minutes,
                 now,
                 keyboard_summary,
+                camera_summary,
             )
         ):
             return False
@@ -590,6 +607,7 @@ class Application:
         focus_minutes: int,
         now: ClockReading,
         keyboard_summary: KeyboardSummary | None,
+        camera_summary: AttentionSummary | None,
     ) -> bool:
         """Persist and apply a completion reward before exposing the party screen."""
         chain_number = self.runtime.focus_chain_count + 1
@@ -600,6 +618,7 @@ class Application:
             chain_number,
             self._reward_policy(),
             keyboard_summary,
+            camera_summary,
         )
         if not isinstance(decision, Accepted):
             return False
@@ -618,7 +637,12 @@ class Application:
             self.runtime,
             focus_chain_count=chain_number,
             last_earned_xp=draft.base_xp + draft.chain_xp,
-            last_earned_yarn=(draft.base_yarn + draft.chain_yarn + draft.keyboard_yarn),
+            last_earned_yarn=(
+                draft.base_yarn
+                + draft.chain_yarn
+                + draft.keyboard_yarn
+                + draft.camera_yarn
+            ),
         )
         return True
 
@@ -706,17 +730,31 @@ class Application:
             meaning_changed = True
         if isinstance(draft, FocusSessionStarted):
             available = self._keyboard.begin(self.state.keyboard_tracking_enabled)
-            runtime = replace(runtime, keyboard_available=available)
+            camera_available = self._attention.begin(self.state.camera_tracking_enabled)
+            runtime = replace(
+                runtime,
+                keyboard_available=available,
+                camera_available=camera_available,
+                attention_lost=False,
+            )
         elif isinstance(draft, FocusSessionPaused):
             self._keyboard.pause()
+            self._attention.pause()
+            runtime = replace(runtime, attention_lost=False)
         elif isinstance(draft, FocusSessionResumed):
             self._keyboard.resume()
+            self._attention.resume()
         elif isinstance(draft, FocusSessionEnded):
             self._keyboard.finish()
+            self._attention.finish()
+            runtime = replace(runtime, attention_lost=False)
         elif (
             isinstance(draft, TrackingPreferencesChanged) and not draft.keyboard_enabled
         ):
             self._keyboard.stop()
+        if isinstance(draft, TrackingPreferencesChanged) and not draft.camera_enabled:
+            self._attention.stop()
+            runtime = replace(runtime, attention_lost=False, camera_available=True)
         chain_count = runtime.focus_chain_count
         last_xp = runtime.last_earned_xp
         last_yarn = runtime.last_earned_yarn
@@ -821,6 +859,15 @@ class Application:
             keyboard_two_yarn_keypresses=(
                 self._config.activity.keyboard_two_yarn_keypresses
             ),
+            camera_minimum_coverage_percent=(
+                self._config.activity.camera_minimum_coverage_percent
+            ),
+            camera_one_yarn_attention_percent=(
+                self._config.activity.camera_one_yarn_attention_percent
+            ),
+            camera_two_yarn_attention_percent=(
+                self._config.activity.camera_two_yarn_attention_percent
+            ),
         )
 
     def _wait_seconds(self, now: ClockReading) -> float:
@@ -831,6 +878,18 @@ class Application:
 
     def _set_previous_clock(self, now: ClockReading) -> None:
         self._runtime = replace(self.runtime, previous_clock=now)
+
+    def _refresh_attention(self) -> None:
+        status = self._attention.status()
+        if (
+            status.available != self.runtime.camera_available
+            or status.attention_lost != self.runtime.attention_lost
+        ):
+            self._runtime = replace(
+                self.runtime,
+                camera_available=status.available,
+                attention_lost=status.attention_lost,
+            )
 
     def _require_state(self) -> GameState:
         if self._state is None:
@@ -867,5 +926,22 @@ class _InactiveKeyboardTracker:
 
     def finish(self) -> KeyboardSummary:
         return KeyboardSummary(0, False)
+
+    def stop(self) -> None: ...
+
+
+class _InactiveAttentionTracker:
+    def begin(self, enabled: bool) -> bool:
+        return not enabled
+
+    def pause(self) -> None: ...
+
+    def resume(self) -> None: ...
+
+    def status(self) -> AttentionStatus:
+        return AttentionStatus(False, False)
+
+    def finish(self) -> AttentionSummary:
+        return AttentionSummary(0, 0, 0, False)
 
     def stop(self) -> None: ...

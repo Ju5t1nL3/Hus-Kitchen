@@ -7,6 +7,8 @@ from typing import Protocol
 
 from deskpet.core.events import DomainEvent, UncommittedEvent
 from deskpet.core.models import (
+    AttentionStatus,
+    AttentionSummary,
     ClockReading,
     KeyboardSummary,
     PublishStatus,
@@ -39,6 +41,22 @@ class KeyboardTracker(Protocol):
     def resume(self) -> None: ...
 
     def finish(self) -> KeyboardSummary: ...
+
+    def stop(self) -> None: ...
+
+
+class AttentionTracker(Protocol):
+    """Expose aggregate local observations without exposing camera frames."""
+
+    def begin(self, enabled: bool) -> bool: ...
+
+    def pause(self) -> None: ...
+
+    def resume(self) -> None: ...
+
+    def status(self) -> AttentionStatus: ...
+
+    def finish(self) -> AttentionSummary: ...
 
     def stop(self) -> None: ...
 

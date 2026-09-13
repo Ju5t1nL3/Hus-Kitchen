@@ -286,7 +286,13 @@ def _progression(raw: Mapping[str, object]) -> ProgressionConfig:
 def _activity(raw: Mapping[str, object]) -> ActivityConfig:
     _exact_keys(
         raw,
-        {"keyboard_one_yarn_keypresses", "keyboard_two_yarn_keypresses"},
+        {
+            "keyboard_one_yarn_keypresses",
+            "keyboard_two_yarn_keypresses",
+            "camera_minimum_coverage_percent",
+            "camera_one_yarn_attention_percent",
+            "camera_two_yarn_attention_percent",
+        },
         "activity",
     )
     return ActivityConfig(
@@ -297,6 +303,18 @@ def _activity(raw: Mapping[str, object]) -> ActivityConfig:
         keyboard_two_yarn_keypresses=_integer(
             _required(raw, "keyboard_two_yarn_keypresses", "activity"),
             "activity.keyboard_two_yarn_keypresses",
+        ),
+        camera_minimum_coverage_percent=_integer(
+            _required(raw, "camera_minimum_coverage_percent", "activity"),
+            "activity.camera_minimum_coverage_percent",
+        ),
+        camera_one_yarn_attention_percent=_integer(
+            _required(raw, "camera_one_yarn_attention_percent", "activity"),
+            "activity.camera_one_yarn_attention_percent",
+        ),
+        camera_two_yarn_attention_percent=_integer(
+            _required(raw, "camera_two_yarn_attention_percent", "activity"),
+            "activity.camera_two_yarn_attention_percent",
         ),
     )
 

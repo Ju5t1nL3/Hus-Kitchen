@@ -165,6 +165,29 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 and (draft.keyboard_keypresses or draft.keyboard_yarn)
             ):
                 raise ReplayError("focus reward keyboard eligibility is inconsistent")
+            camera_counts = (
+                draft.camera_attempted_samples,
+                draft.camera_observed_samples,
+                draft.camera_attentive_samples,
+            )
+            if any(value < 0 for value in camera_counts) or draft.camera_yarn not in (
+                0,
+                1,
+                2,
+            ):
+                raise ReplayError("focus reward camera fields are invalid")
+            if (
+                draft.camera_observed_samples > draft.camera_attempted_samples
+                or draft.camera_attentive_samples > draft.camera_observed_samples
+            ):
+                raise ReplayError("focus reward camera sample counts are inconsistent")
+            if (
+                not draft.camera_enabled
+                and (draft.camera_available or any(camera_counts) or draft.camera_yarn)
+            ) or (
+                not draft.camera_available and (any(camera_counts) or draft.camera_yarn)
+            ):
+                raise ReplayError("focus reward camera eligibility is inconsistent")
             if (
                 draft.total_xp_before != progression.total_xp
                 or draft.level_before != progression.level
@@ -182,6 +205,7 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 + draft.base_yarn
                 + draft.chain_yarn
                 + draft.keyboard_yarn
+                + draft.camera_yarn
             ):
                 raise ReplayError("focus reward yarn breakdown does not add up")
             expected_level = level_for_xp(

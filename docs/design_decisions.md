@@ -48,8 +48,9 @@ hardware-verification status.
 | Level thresholds are 75, 100, 125, ... XP with no maximum level | Early levels arrive quickly enough for a demo and first-session reinforcement; linear growth preserves long-term progression without an arbitrary endpoint or explosive grind. |
 | Physical Home shows level and yarn, while dev diagnostics may show exact XP | The small production screen stays glanceable and avoids a noisy progress bar; developers retain visibility for balancing and debugging. |
 | Keyboard and camera-attention yarn bonuses with separate on/off settings | Both inputs are active planned tasks; base rewards remain available without sensing. |
+| Camera model | Use OpenCV's bundled frontal-face Haar cascade for the MVP. Treat a centered frontal face as a coarse attention signal; keep it behind an adapter so a landmark model can replace it later. No frames or identity data are stored. |
 | Keyboard gives +1 yarn at 500 presses or +2 at 1,000+, capped at 2 and never grants XP | Optional, gameable activity should feel helpful without overtaking focus completion or disadvantaging reading/thinking; XP remains a clean measure of completed focus. |
-| Hold Home button 1 for persistent opt-in Settings; Camera is Unavailable until M29 | Keeps the normal judge flow uncluttered, makes consent explicit, and avoids an apparently enabled feature that does nothing. |
+| Hold Home button 1 for persistent opt-in Settings; unavailable host sensors cannot be enabled | Keeps the normal judge flow uncluttered, makes consent explicit, and avoids an apparently enabled feature that does nothing. |
 | Level, uninterrupted focus-chain and daily-streak yarn bonuses | Rewards continued work while requiring deduplicated, explainable history facts. |
 
 Existing reaction durations are provisional until M26. Neutral break ending

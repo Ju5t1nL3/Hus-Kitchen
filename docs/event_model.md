@@ -172,3 +172,7 @@ The approved expansion is [XP, levels, yarn, purchases and reward inputs](progre
 It adds versioned purchase/reward policy and summary data plus deduplicated economy
 events. M24 must version the schema deliberately; keyboard/camera adapters never
 write balances directly. Numerical care stats remain permanently excluded.
+
+`focus_reward_granted` stores the resolved camera enabled/available flags,
+attempted/observed/attentive sample counts, and camera yarn. Replay consumes that
+recorded breakdown and never reopens the camera or recalculates historical rewards.

@@ -4,7 +4,13 @@ from dataclasses import dataclass
 
 from deskpet.core.commands import Accepted, Decision, Rejected
 from deskpet.core.events import EventSource, FocusRewardGranted
-from deskpet.core.models import GameState, KeyboardSummary, RejectionCode, level_for_xp
+from deskpet.core.models import (
+    AttentionSummary,
+    GameState,
+    KeyboardSummary,
+    RejectionCode,
+    level_for_xp,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,6 +22,9 @@ class RewardPolicy:
     chain_yarn_per_step: int
     keyboard_one_yarn_keypresses: int
     keyboard_two_yarn_keypresses: int
+    camera_minimum_coverage_percent: int = 60
+    camera_one_yarn_attention_percent: int = 70
+    camera_two_yarn_attention_percent: int = 90
 
     def __post_init__(self) -> None:
         if self.version <= 0 or self.xp_per_focus_minute <= 0:
@@ -28,6 +37,18 @@ class RewardPolicy:
             self.keyboard_two_yarn_keypresses <= self.keyboard_one_yarn_keypresses
         ):
             raise ValueError("keyboard reward thresholds must be positive and increase")
+        percentages = (
+            self.camera_minimum_coverage_percent,
+            self.camera_one_yarn_attention_percent,
+            self.camera_two_yarn_attention_percent,
+        )
+        if any(value <= 0 or value > 100 for value in percentages):
+            raise ValueError("camera percentages must be in [1, 100]")
+        if (
+            self.camera_two_yarn_attention_percent
+            <= self.camera_one_yarn_attention_percent
+        ):
+            raise ValueError("camera attention thresholds must increase")
 
 
 def decide(
@@ -37,6 +58,7 @@ def decide(
     chain_number: int,
     policy: RewardPolicy,
     keyboard: KeyboardSummary | None = None,
+    camera: AttentionSummary | None = None,
 ) -> Decision:
     """Return one fully resolved, deduplicated completion reward."""
     progression = state.progression
@@ -61,8 +83,30 @@ def decide(
         if keypresses >= policy.keyboard_two_yarn_keypresses
         else int(keypresses >= policy.keyboard_one_yarn_keypresses)
     )
+    camera_enabled = camera is not None
+    camera_available = camera.available if camera is not None else False
+    attempted = camera.attempted_samples if camera_available and camera else 0
+    observed = camera.observed_samples if camera_available and camera else 0
+    attentive = camera.attentive_samples if camera_available and camera else 0
+    enough_coverage = (
+        attempted > 0
+        and observed * 100 >= attempted * policy.camera_minimum_coverage_percent
+    )
+    camera_yarn = 0
+    if (
+        enough_coverage
+        and attentive * 100 >= observed * policy.camera_two_yarn_attention_percent
+    ):
+        camera_yarn = 2
+    elif (
+        enough_coverage
+        and attentive * 100 >= observed * policy.camera_one_yarn_attention_percent
+    ):
+        camera_yarn = 1
     total_xp_after = progression.total_xp + base_xp + chain_xp
-    yarn_after = progression.yarn_balance + base_yarn + chain_yarn + keyboard_yarn
+    yarn_after = (
+        progression.yarn_balance + base_yarn + chain_yarn + keyboard_yarn + camera_yarn
+    )
     level_after = level_for_xp(
         total_xp_after, progression.xp_per_level, progression.xp_level_increment
     )
@@ -82,6 +126,12 @@ def decide(
             keyboard_available=keyboard_available,
             keyboard_keypresses=keypresses,
             keyboard_yarn=keyboard_yarn,
+            camera_enabled=camera_enabled,
+            camera_available=camera_available,
+            camera_attempted_samples=attempted,
+            camera_observed_samples=observed,
+            camera_attentive_samples=attentive,
+            camera_yarn=camera_yarn,
             total_xp_before=progression.total_xp,
             total_xp_after=total_xp_after,
             level_before=progression.level,

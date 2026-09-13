@@ -132,6 +132,9 @@ class ProgressionConfig:
 class ActivityConfig:
     keyboard_one_yarn_keypresses: int
     keyboard_two_yarn_keypresses: int
+    camera_minimum_coverage_percent: int
+    camera_one_yarn_attention_percent: int
+    camera_two_yarn_attention_percent: int
 
     def __post_init__(self) -> None:
         _positive(
@@ -140,6 +143,18 @@ class ActivityConfig:
         )
         if self.keyboard_two_yarn_keypresses <= self.keyboard_one_yarn_keypresses:
             raise ValueError("activity keyboard thresholds must increase")
+        camera_values = (
+            self.camera_minimum_coverage_percent,
+            self.camera_one_yarn_attention_percent,
+            self.camera_two_yarn_attention_percent,
+        )
+        if any(value <= 0 or value > 100 for value in camera_values):
+            raise ValueError("activity camera percentages must be in [1, 100]")
+        if (
+            self.camera_two_yarn_attention_percent
+            <= self.camera_one_yarn_attention_percent
+        ):
+            raise ValueError("activity camera attention thresholds must increase")
 
 
 @dataclass(frozen=True, slots=True)

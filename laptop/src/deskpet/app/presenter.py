@@ -263,7 +263,7 @@ def _settings(state: GameState, runtime: RuntimeState) -> SettingsView:
         keyboard_enabled=state.keyboard_tracking_enabled,
         keyboard_available=runtime.keyboard_available,
         camera_enabled=state.camera_tracking_enabled,
-        camera_available=False,
+        camera_available=runtime.camera_available,
     )
 
 

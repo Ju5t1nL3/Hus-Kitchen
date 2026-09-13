@@ -19,7 +19,7 @@ def decide_toggle(
         keyboard_enabled = not state.keyboard_tracking_enabled
         camera_enabled = state.camera_tracking_enabled
     elif selected_row == 1:
-        if not camera_available:
+        if not camera_available and not state.camera_tracking_enabled:
             return Rejected(RejectionCode.UNAVAILABLE)
         keyboard_enabled = state.keyboard_tracking_enabled
         camera_enabled = not state.camera_tracking_enabled

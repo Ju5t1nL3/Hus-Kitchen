@@ -87,7 +87,7 @@ Where a fixed enum is specified, use that type rather than an unrestricted strin
 | timers.break_minutes(focus_minutes, policy) → int | Selected duration and validated break policy | Pure proportional calculation; no Pico involvement |
 | timers.decide(state, command, sample, rules, now) → Decision | Immutable state, timer command, TimerSample or None, validated rules and clock reading | Validate transition, pin terms on start, classify early end, build one event |
 | rewards.decide(state, focus_session_id, focus_minutes, chain_number, policy) → Decision | Completed focus/break offer, prior totals, runtime chain position and versioned integer rates | Return one deduplicated, fully resolved reward event; no I/O or current-clock dependency |
-| preferences.decide_toggle(state, selected_row, operation_key, camera_available) → Decision | Current durable consent plus selected settings row | Toggle an available integration or reject; camera remains unavailable through M28 |
+| preferences.decide_toggle(state, selected_row, operation_key, camera_available) → Decision | Current durable consent plus selected settings row | Toggle an available integration or reject when its host permission/device is unavailable |
 | emotions.select(state, now_utc) → Mood | Event-derived state and explicit UTC | Latest unexpired reaction, then activity default; no I/O or event append |
 | replay.apply_event(state, event) → GameState | GameState or None, committed event | Pure reducer: return new state, validate transition and advance last_seq; do not mutate input |
 | replay.rebuild(events) → GameState or None | Ordered committed history | Repeatedly call apply_event; empty log returns None, invalid/unsupported history raises ReplayError |

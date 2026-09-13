@@ -7,6 +7,7 @@ from uuid import UUID
 
 from deskpet.adapters.config_loader import load
 from deskpet.adapters.fakes import (
+    FakeAttentionTracker,
     FakeClock,
     FakeDeviceLink,
     FakeEventStore,
@@ -101,6 +102,7 @@ class ApplicationTests(unittest.TestCase):
         self.store = FakeEventStore()
         self.device = FakeDeviceLink()
         self.keyboard = FakeKeyboardTracker()
+        self.attention = FakeAttentionTracker()
         self.app = Application(
             self.store,
             self.device,
@@ -108,6 +110,7 @@ class ApplicationTests(unittest.TestCase):
             load(CONFIG_PATH),
             uuid_factory=SequentialUuids(),
             keyboard_tracker=self.keyboard,
+            attention_tracker=self.attention,
         )
         self.app.start()
         self.addCleanup(self.app.stop)
@@ -179,13 +182,13 @@ class ApplicationTests(unittest.TestCase):
         settings = self.device.published[-1].view.settings
         assert settings is not None
         self.assertFalse(settings.keyboard_enabled)
-        self.assertFalse(settings.camera_available)
+        self.assertTrue(settings.camera_available)
 
         self.press(2, 2)
         self.assertTrue(self.app.state.keyboard_tracking_enabled)
         self.press(1, 3)
         self.press(2, 4)
-        self.assertFalse(self.app.state.camera_tracking_enabled)
+        self.assertTrue(self.app.state.camera_tracking_enabled)
         self.press(3, 5)
 
         self.press(2, 6)
@@ -195,8 +198,10 @@ class ApplicationTests(unittest.TestCase):
         self.press(2, 8)
         self.assertFalse(self.keyboard.capturing)
         self.keyboard.add_presses(1_000)
+        self.attention.add_samples(attempted=100, observed=100, attentive=100)
         self.press(2, 9)
         self.keyboard.add_presses(1)
+        self.attention.add_samples(attempted=10, observed=10, attentive=9)
         self.clock.advance(1_500_000)
         self.app.handle(Tick(self.clock.read()), self.clock.read())
 
@@ -204,9 +209,10 @@ class ApplicationTests(unittest.TestCase):
         assert isinstance(reward, FocusRewardGranted)
         self.assertEqual(reward.keyboard_keypresses, 500)
         self.assertEqual(reward.keyboard_yarn, 1)
+        self.assertEqual(reward.camera_yarn, 2)
         earned = self.device.published[-1].view.earned_rewards
         assert earned is not None
-        self.assertEqual(earned.yarn, 4)
+        self.assertEqual(earned.yarn, 6)
 
     def test_insufficient_yarn_does_not_append_or_animate(self) -> None:
         for index in range(5):

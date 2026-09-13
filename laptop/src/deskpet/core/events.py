@@ -109,6 +109,12 @@ class FocusRewardGranted(DraftMetadata):
     keyboard_available: bool = False
     keyboard_keypresses: int = 0
     keyboard_yarn: int = 0
+    camera_enabled: bool = False
+    camera_available: bool = False
+    camera_attempted_samples: int = 0
+    camera_observed_samples: int = 0
+    camera_attentive_samples: int = 0
+    camera_yarn: int = 0
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

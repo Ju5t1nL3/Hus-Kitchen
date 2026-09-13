@@ -5,6 +5,10 @@ rules, coordinator, protocol codec and screen presenter. A profile selects exter
 resources and diagnostics; it must never change timer, feeding, emotion or reward
 behavior.
 
+Opted-in keyboard and camera adapters use the real host devices in development
+mode too. Fake timer advancement does not fabricate keystrokes, elapsed camera
+attention, or samples.
+
 | Profile | Device | Storage | Clock | Diagnostics |
 | --- | --- | --- | --- | --- |
 | `dev` | Clickable virtual Pico | Temporary/in-memory by default; explicit path allowed | Real by default; controllable fake clock available | Visible bidirectional wire trace and validation errors |

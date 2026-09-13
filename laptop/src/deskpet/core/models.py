@@ -252,6 +252,7 @@ class RuntimeState:
     last_earned_yarn: int | None = None
     settings_row: int = 0
     keyboard_available: bool = True
+    camera_available: bool = True
 
     def __post_init__(self) -> None:
         _require_positive(self.selected_focus_minutes, "selected_focus_minutes")
@@ -282,6 +283,33 @@ class KeyboardSummary:
         _require_nonnegative(self.keypress_count, "keypress_count")
         if not self.available and self.keypress_count:
             raise ValueError("unavailable keyboard summary cannot contain presses")
+
+
+@dataclass(frozen=True, slots=True)
+class AttentionSummary:
+    attempted_samples: int
+    observed_samples: int
+    attentive_samples: int
+    available: bool
+
+    def __post_init__(self) -> None:
+        _require_nonnegative(self.attempted_samples, "attempted_samples")
+        _require_nonnegative(self.observed_samples, "observed_samples")
+        _require_nonnegative(self.attentive_samples, "attentive_samples")
+        if self.observed_samples > self.attempted_samples:
+            raise ValueError("observed_samples cannot exceed attempted_samples")
+        if self.attentive_samples > self.observed_samples:
+            raise ValueError("attentive_samples cannot exceed observed_samples")
+        if not self.available and (self.observed_samples or self.attentive_samples):
+            raise ValueError(
+                "unavailable attention summary cannot contain observations"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class AttentionStatus:
+    available: bool
+    attention_lost: bool
 
 
 @dataclass(frozen=True, slots=True)

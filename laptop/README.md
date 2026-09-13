@@ -6,6 +6,10 @@ Global keyboard counting uses `pynput`; it starts only after the user opts in an
 a focus session begins, and it never stores key identities or text. The OS may
 request Accessibility/input-monitoring permission. A denial simply disables the
 bonus without affecting focus rewards.
+Local camera attention uses `opencv-python` only after an independent opt-in. Its
+Haar cascade detects a centered frontal face; frames are processed in memory and
+discarded immediately. Camera selection uses OpenCV's portable camera index rather
+than OS names or platform-specific capture APIs.
 It must not be copied to or imported by the Pico firmware.
 
 The expected deployment host is an HP Windows laptop; initial tooling was also

@@ -5,7 +5,13 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from deskpet.core.events import DomainEvent, UncommittedEvent
-from deskpet.core.models import ClockReading, KeyboardSummary, PublishStatus
+from deskpet.core.models import (
+    AttentionStatus,
+    AttentionSummary,
+    ClockReading,
+    KeyboardSummary,
+    PublishStatus,
+)
 from deskpet.core.ports import AppendResult, InputCallback
 from deskpet.core.views import AnimationCue, InputMessage, RenderSnapshot
 
@@ -80,6 +86,55 @@ class FakeKeyboardTracker:
     def stop(self) -> None:
         self.capturing = False
         self.stopped = True
+
+
+class FakeAttentionTracker:
+    """Controllable aggregate attention tracker for coordinator tests."""
+
+    def __init__(self, *, available: bool = True) -> None:
+        self.available = available
+        self.capturing = False
+        self.attention_lost = False
+        self.attempted = 0
+        self.observed = 0
+        self.attentive = 0
+
+    def begin(self, enabled: bool) -> bool:
+        self.attempted = self.observed = self.attentive = 0
+        self.attention_lost = False
+        self.capturing = enabled and self.available
+        return not enabled or self.available
+
+    def pause(self) -> None:
+        self.capturing = False
+        self.attention_lost = False
+
+    def resume(self) -> None:
+        if self.available:
+            self.capturing = True
+
+    def status(self) -> AttentionStatus:
+        return AttentionStatus(self.available, self.attention_lost and self.capturing)
+
+    def add_samples(self, *, attempted: int, observed: int, attentive: int) -> None:
+        summary = AttentionSummary(attempted, observed, attentive, self.available)
+        if self.capturing:
+            self.attempted += summary.attempted_samples
+            self.observed += summary.observed_samples
+            self.attentive += summary.attentive_samples
+
+    def finish(self) -> AttentionSummary:
+        self.capturing = False
+        self.attention_lost = False
+        return AttentionSummary(
+            self.attempted,
+            self.observed if self.available else 0,
+            self.attentive if self.available else 0,
+            self.available,
+        )
+
+    def stop(self) -> None:
+        self.pause()
 
 
 class FakeEventStore:

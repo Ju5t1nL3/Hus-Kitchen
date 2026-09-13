@@ -5,6 +5,7 @@ import unittest
 from deskpet.core.commands import Accepted, Rejected
 from deskpet.core.events import FocusRewardGranted
 from deskpet.core.models import (
+    AttentionSummary,
     BreakOffer,
     GameState,
     KeyboardSummary,
@@ -106,6 +107,24 @@ class RewardDecisionTests(unittest.TestCase):
         self.assertTrue(unavailable_event.keyboard_enabled)
         self.assertFalse(unavailable_event.keyboard_available)
         self.assertEqual(unavailable_event.keyboard_yarn, 0)
+
+    def test_camera_bonus_requires_coverage_and_uses_attention_tiers(self) -> None:
+        cases = (
+            (AttentionSummary(10, 5, 5, True), 0),
+            (AttentionSummary(10, 6, 4, True), 0),
+            (AttentionSummary(10, 6, 5, True), 1),
+            (AttentionSummary(10, 10, 9, True), 2),
+            (AttentionSummary(100, 100, 100, True), 2),
+            (AttentionSummary(0, 0, 0, False), 0),
+        )
+        for summary, expected_yarn in cases:
+            with self.subTest(summary=summary):
+                result = decide(state(), "focus-1", 25, 1, POLICY, camera=summary)
+                assert isinstance(result, Accepted)
+                event = result.event
+                assert isinstance(event, FocusRewardGranted)
+                self.assertEqual(event.camera_yarn, expected_yarn)
+                self.assertEqual(event.total_xp_after, 75)
 
 
 class LevelCurveTests(unittest.TestCase):
