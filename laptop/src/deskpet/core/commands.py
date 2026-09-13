@@ -12,6 +12,7 @@ class ActionId(StrEnum):
     FEED_DEFAULT = "open_feed"  # compatibility alias for pre-M25 callers
     BUY_JOLLOF = "buy_jollof"
     BUY_COFFEE = "buy_coffee"
+    PET = "pet"
     OPEN_SETUP = "open_setup"
     CYCLE_DURATION = "cycle_duration"
     CONFIRM_FOCUS = "confirm_focus"
@@ -36,6 +37,10 @@ FeedDefault = OpenFeed
 @dataclass(frozen=True, slots=True)
 class BuyItem:
     item_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class PetOnce: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,6 +90,8 @@ class RestartFocus: ...
 type ControlIntent = (
     OpenFeed
     | BuyItem
+    | PetOnce
+    | PetOnce
     | OpenSetup
     | CycleDuration
     | ConfirmFocus

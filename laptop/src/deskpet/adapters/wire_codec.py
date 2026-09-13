@@ -16,6 +16,7 @@ from deskpet.core.views import (
     ButtonInput,
     ButtonLabel,
     DeviceReady,
+    EarnedRewardsView,
     Invalid,
     Parsed,
     ParseResult,
@@ -293,6 +294,7 @@ def _encode_render(
         "buttons": buttons,
         "feedback": view.feedback.value if view.feedback is not None else None,
         "progression": _encode_progression(view.progression),
+        "earned_rewards": _encode_rewards(view.earned_rewards),
     }
     return {
         "v": PROTOCOL_VERSION,
@@ -320,6 +322,12 @@ def _encode_progression(value: ProgressionView | None) -> JsonObject | None:
         "xp_for_next_level": value.xp_for_next_level,
         "yarn_balance": value.yarn_balance,
     }
+
+
+def _encode_rewards(value: EarnedRewardsView | None) -> JsonObject | None:
+    if value is None:
+        return None
+    return {"xp": value.xp, "yarn": value.yarn}
 
 
 def _encode_animate(message: AnimateMessage) -> JsonObject:
@@ -383,6 +391,8 @@ def _validate_view(
         raise EncodeError("feed menu requires progression")
     if view.screen not in {Screen.HOME, Screen.FEED} and view.progression is not None:
         raise EncodeError("progression is only valid on home or feed")
+    if view.screen is not Screen.BREAK_OFFER and view.earned_rewards is not None:
+        raise EncodeError("earned_rewards is only valid on break_offer")
     if is_timer:
         if revealing_clock and view.timer_seconds is not None:
             raise EncodeError("focus clock reveal cannot include timer_seconds")

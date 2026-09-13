@@ -26,6 +26,7 @@ from deskpet.core.events import (
     FocusSessionResumed,
     FocusSessionStarted,
     ItemPurchasedAndFed,
+    PetComforted,
     PetCreated,
     PetFed,
     ProgressionInitialized,
@@ -68,6 +69,7 @@ class PresenterConfig:
     food_definitions: Mapping[str, FoodDefinition] = field(
         default_factory=_empty_food_definitions
     )
+    hunger_seconds: int = 300
 
 
 def build(
@@ -95,7 +97,7 @@ def build(
     return RenderSnapshot(
         screen=runtime.screen,
         control_epoch=runtime.control_epoch,
-        mood=emotions.select(state, now.utc),
+        mood=emotions.select(state, now.utc, runtime, config.hunger_seconds),
         clock_text=_clock_text(now, config.clock_timezone)
         if runtime.screen is Screen.HOME or revealing_clock
         else None,
@@ -108,7 +110,14 @@ def build(
         else None,
         break_minutes=_break_minutes(runtime, state, config),
         buttons=_buttons(
-            context, state, device_buttons, bindings, actions, config, runtime.screen
+            context,
+            state,
+            device_buttons,
+            bindings,
+            actions,
+            config,
+            runtime.screen,
+            now,
         ),
         feedback=runtime.feedback,
         progression=_progression(state)
@@ -142,6 +151,8 @@ def on_commit(
         ):
             return PresentationResult(screen=Screen.HOME, cues=())
         case PetCreated():
+            return PresentationResult(screen=Screen.HOME, cues=())
+        case PetComforted():
             return PresentationResult(screen=Screen.HOME, cues=())
         case ProgressionInitialized():
             return PresentationResult(screen=runtime.screen, cues=())
@@ -226,8 +237,34 @@ def _buttons(
     actions: Mapping[ActionId, ActionDefinition],
     config: PresenterConfig,
     screen: Screen,
+    now: ClockReading,
 ) -> tuple[ButtonLabel, ...]:
     labels = resolve_labels(context, state, device_buttons, bindings, actions)
+    if screen is Screen.HOME:
+        hungry = emotions.is_hungry(state, now.utc, config.hunger_seconds)
+        updated_home: list[ButtonLabel] = []
+        for label in labels:
+            action_id = bindings.get((context, label.button, Gesture.PRESS))
+            if action_id is ActionId.OPEN_FEED:
+                updated_home.append(
+                    ButtonLabel(
+                        label.button,
+                        label.label,
+                        (state.last_fed_at is None or hungry)
+                        and not state.needs_comfort,
+                    )
+                )
+            elif action_id is ActionId.PET:
+                updated_home.append(
+                    ButtonLabel(
+                        label.button,
+                        label.label if state.needs_comfort else "-",
+                        state.needs_comfort,
+                    )
+                )
+            else:
+                updated_home.append(label)
+        return tuple(updated_home)
     if screen is not Screen.FEED:
         return labels
     updated: list[ButtonLabel] = []

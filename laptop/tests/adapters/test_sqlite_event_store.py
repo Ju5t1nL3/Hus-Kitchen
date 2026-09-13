@@ -30,6 +30,7 @@ from deskpet.core.events import (
     FocusSessionResumed,
     FocusSessionStarted,
     ItemPurchasedAndFed,
+    PetComforted,
     PetCreated,
     PetFed,
     ProgressionInitialized,
@@ -92,6 +93,7 @@ def every_draft() -> tuple[EventDraft, ...]:
             yarn_balance_after=7,
             reaction=happy,
         ),
+        PetComforted(**metadata("button:c:comfort"), reaction=happy),
         PetFed(
             source=EventSource.LOCAL_CONTROLS,
             dedupe_key="button:c:1",
@@ -167,7 +169,7 @@ class SqliteEventStoreTests(unittest.TestCase):
             restored = reopened.read_after()
 
         self.assertEqual(restored, committed)
-        self.assertEqual([event.seq for event in restored], list(range(1, 14)))
+        self.assertEqual([event.seq for event in restored], list(range(1, 15)))
 
     def test_semantic_retry_ignores_new_id_and_timestamp(self) -> None:
         draft = every_draft()[0]

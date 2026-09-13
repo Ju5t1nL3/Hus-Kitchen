@@ -50,6 +50,7 @@ startup with an actionable error, not a silently reset database.
 | `progression_initialized` | `policy_version`, `starting_yarn`, `xp_per_level` | Initialize XP 0, level 1 and recorded yarn exactly once; replay never substitutes newer config |
 | `pet_fed` | `food_id`, `reaction` (content) | Current M07 event; M25 versions/replaces it with resolved yarn price/balance facts for purchase-and-feed |
 | `item_purchased_and_fed` | `item_id`, `price_paid`, `yarn_balance_after`, `reaction` (happy) | Atomically spend the configured price and feed; retained facts make replay independent of later price edits |
+| `pet_comforted` | `reaction` (happy for 15 seconds) | The fifth Pet tap clears durable sadness; the preceding four-tap count is intentionally runtime-only |
 | `session_started` | `session_id`, `kind: focus\|break`, kind-specific `terms` | Start running at zero active time; focus updates last confirmed duration; break consumes matching offer |
 | `session_paused` | `session_id`, `kind: focus`, `active_ms` | Save cumulative progress and mark paused; focus only, break sessions cannot pause |
 | `session_resumed` | `session_id`, `kind: focus`, `active_ms` | Mark running; active_ms must equal preceding pause; focus only |
@@ -123,8 +124,12 @@ last confirmed focus duration, pending break, latest reaction candidate and
 qualifying focus dates. A null reaction does not erase a previous candidate.
 
 `emotions.select(state, now_utc)` uses the latest reaction if unexpired, otherwise
-focused for running focus, resting for running break, or calm. Paused sessions
-default to calm. When a newer reaction expires, do not revive an older one.
+The current selector is screen-first: Party on the break offer; Working Neutral or
+Working Sad during running focus; Sleeping during breaks. At Home, Sad precedes
+Hungry, then a live Happy reaction, then Idle. Sad persists until `pet_comforted`.
+Hungry begins five minutes after creation/last feed and remains until feeding;
+feeding restarts that deadline. Paused focus displays Idle. Expired reactions do
+not revive older ones.
 This makes the emotion a simple query over recorded facts and current time;
 the projection avoids rescanning the entire history on every redraw.
 

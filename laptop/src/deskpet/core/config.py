@@ -57,10 +57,12 @@ class FocusConfig:
 @dataclass(frozen=True, slots=True)
 class FeedingConfig:
     definitions: Mapping[str, FoodDefinition]
+    hunger_seconds: int
 
     def __post_init__(self) -> None:
         if not self.definitions:
             raise ValueError("feeding.definitions must not be empty")
+        _positive(self.hunger_seconds, "feeding.hunger_seconds")
         for food_id, definition in self.definitions.items():
             if food_id != definition.id:
                 raise ValueError("feeding definition key and id must match")

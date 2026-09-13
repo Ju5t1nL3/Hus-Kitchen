@@ -9,23 +9,24 @@ focus:
   focus_minutes_per_break_minute: 5
   minimum_break_minutes: 1
   grace_active_seconds: 60
-  happy_seconds: 30
+  happy_seconds: 15
   sad_seconds: 30
   report_timezone: America/Chicago
 
 feeding:
+  hunger_seconds: 300
   definitions:
     jollof_rice:
       display_name: Jollof Rice
       sprite_id: jollof_rice
       price_yarn: 3
-      happy_seconds: 30
+      happy_seconds: 15
       consume_animation: feed
     coffee:
       display_name: Coffee
       sprite_id: coffee
       price_yarn: 2
-      happy_seconds: 30
+      happy_seconds: 15
       consume_animation: feed
 
 progression:
@@ -38,6 +39,7 @@ controls:
     home:
       1.press: open_feed
       2.press: open_setup
+      3.press: pet
     feed:
       1.press: buy_jollof
       2.press: buy_coffee

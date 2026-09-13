@@ -217,7 +217,8 @@ _html = _replace_once(
     "document.getElementById('feedback').textContent=view?.feedback||'';",
     "document.getElementById('feedback').textContent=view?.feedback||"
     "(view?.focus_minutes!=null&&view?.break_minutes!=null?"
-    "'break: '+view.break_minutes+' min':'');",
+    "'break: '+view.break_minutes+' min':view?.earned_rewards?"
+    "'earned: '+view.earned_rewards.xp+' XP · '+view.earned_rewards.yarn+' yarn':'');",
 )
 _html = _replace_once(
     _html,

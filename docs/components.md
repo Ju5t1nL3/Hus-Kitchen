@@ -37,8 +37,9 @@ timer logic.
 The XP/level/yarn strip needs a layout pass alongside the clock/face;
 it does not introduce numerical care stats or timer-progress artwork.
 
-Provide full-body and small-face sprites for `calm`, `content`, `happy`, `sad`,
-`focused` and `resting`; one `food_basic` sprite; and feeding/celebration frames.
+Provide individual PNG frames for Idle (2), Happy (2), Sad (2), Hungry (2),
+Working Neutral (2), Working Sad (2), Sleeping (2), Eating (3), and Party (1).
+Jollof Rice and Coffee have item sprites and share the Eating animation.
 Share animation frames where practical. A face must remain recognizable at its
 small size. Exact pixel dimensions, fonts and palette depend on the confirmed LCD.
 

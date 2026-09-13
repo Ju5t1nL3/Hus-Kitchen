@@ -18,6 +18,7 @@ from deskpet.core.events import (
     FocusSessionResumed,
     FocusSessionStarted,
     ItemPurchasedAndFed,
+    PetComforted,
     PetCreated,
     PetFed,
     ProgressionInitialized,
@@ -59,6 +60,7 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
         return GameState(
             user_id=event.event.user_id,
             pet_id=draft.pet_id,
+            last_fed_at=event.event.occurred_at,
             last_seq=event.seq,
         )
 
@@ -107,6 +109,17 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 state,
                 event,
                 progression=replace(progression, yarn_balance=draft.yarn_balance_after),
+                latest_reaction=draft.reaction,
+                last_fed_at=event.event.occurred_at,
+            )
+        case PetComforted():
+            if not state.needs_comfort:
+                raise ReplayError("pet_comforted requires a sad pet")
+            _require_reaction(draft.reaction, ReactionMood.HAPPY, "comfort")
+            return _advance(
+                state,
+                event,
+                needs_comfort=False,
                 latest_reaction=draft.reaction,
             )
         case FocusSessionStarted():
@@ -207,6 +220,8 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
             changes: dict[str, object] = {"active_session": None}
             if draft.reaction is not None:
                 changes["latest_reaction"] = draft.reaction
+            if draft.reason is EndReason.USER_EARLY:
+                changes["needs_comfort"] = True
             return _advance(state, event, **changes)
         case BreakSessionEnded():
             session = _require_session(state, draft.session_id, SessionKind.BREAK)

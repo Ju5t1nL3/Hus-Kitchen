@@ -33,6 +33,7 @@ from deskpet.core.views import (
     ButtonInput,
     ButtonLabel,
     DeviceReady,
+    EarnedRewardsView,
     Parsed,
     Pong,
     ProgressionView,
@@ -640,6 +641,16 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
             xp_for_next_level=_required_int(raw_progression, "xp_for_next_level"),
             yarn_balance=_required_int(raw_progression, "yarn_balance"),
         )
+    rewards_value = value.get("earned_rewards")
+    rewards = None
+    if rewards_value is not None:
+        if not isinstance(rewards_value, dict):
+            raise ValueError("bad_earned_rewards")
+        raw_rewards = cast(dict[str, object], rewards_value)
+        rewards = EarnedRewardsView(
+            xp=_required_int(raw_rewards, "xp"),
+            yarn=_required_int(raw_rewards, "yarn"),
+        )
     return RenderSnapshot(
         screen=Screen(_required_str(value, "screen")),
         control_epoch=_required_int(value, "control_epoch"),
@@ -652,6 +663,7 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
         buttons=tuple(labels),
         feedback=feedback,
         progression=progression,
+        earned_rewards=rewards,
     )
 
 
@@ -686,6 +698,9 @@ def _view_json(view: RenderSnapshot) -> dict[str, object]:
             "xp_for_next_level": view.progression.xp_for_next_level,
             "yarn_balance": view.progression.yarn_balance,
         },
+        "earned_rewards": None
+        if view.earned_rewards is None
+        else {"xp": view.earned_rewards.xp, "yarn": view.earned_rewards.yarn},
     }
 
 

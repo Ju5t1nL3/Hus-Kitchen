@@ -165,7 +165,7 @@ def _focus(raw: Mapping[str, object]) -> FocusConfig:
 
 
 def _feeding(raw: Mapping[str, object]) -> FeedingConfig:
-    _exact_keys(raw, {"definitions"}, "feeding")
+    _exact_keys(raw, {"hunger_seconds", "definitions"}, "feeding")
     definitions_raw = _mapping(
         _required(raw, "definitions", "feeding"), "feeding.definitions"
     )
@@ -212,7 +212,12 @@ def _feeding(raw: Mapping[str, object]) -> FeedingConfig:
                 f"feeding.definitions.{food_id}.consume_animation",
             ),
         )
-    return FeedingConfig(definitions=MappingProxyType(definitions))
+    return FeedingConfig(
+        definitions=MappingProxyType(definitions),
+        hunger_seconds=_integer(
+            _required(raw, "hunger_seconds", "feeding"), "feeding.hunger_seconds"
+        ),
+    )
 
 
 def _progression(raw: Mapping[str, object]) -> ProgressionConfig:

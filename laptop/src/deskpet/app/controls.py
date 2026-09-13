@@ -15,6 +15,7 @@ from deskpet.core.commands import (
     OpenFeed,
     OpenSetup,
     PauseCurrent,
+    PetOnce,
     RestartFocus,
     ResumeCurrent,
     ShowTime,
@@ -73,6 +74,10 @@ def _can_restart_focus(state: GameState) -> bool:
     return state.last_focus_minutes is not None
 
 
+def _needs_comfort(state: GameState) -> bool:
+    return _idle(state) and state.needs_comfort
+
+
 ACTIONS: Mapping[ActionId, ActionDefinition] = MappingProxyType(
     {
         ActionId.OPEN_FEED: ActionDefinition(
@@ -84,6 +89,7 @@ ACTIONS: Mapping[ActionId, ActionDefinition] = MappingProxyType(
         ActionId.BUY_COFFEE: ActionDefinition(
             ActionId.BUY_COFFEE, "Coffee", BuyItem("coffee"), _idle
         ),
+        ActionId.PET: ActionDefinition(ActionId.PET, "Pet", PetOnce(), _needs_comfort),
         ActionId.OPEN_SETUP: ActionDefinition(
             ActionId.OPEN_SETUP, "Focus", OpenSetup(), _idle
         ),

@@ -81,8 +81,8 @@ precedence rule and duration:
 | Event or situation | Appearance |
 | --- | --- |
 | Feed | Content for 20 seconds; play feeding animation |
-| Focus completes | Happy for 30 seconds; play celebration |
-| User ends unfinished focus after grace | Sad for 30 seconds |
+| Focus completes | Static Party scene on the break offer; M27 supplies earned XP/yarn text |
+| User ends unfinished focus after grace | Sad until five runtime-only Pet taps; at restart the tap count resets |
 | Grace exit, pause, break skip/end, system interruption | No new sadness |
 | No unexpired reaction, focus running | Focused |
 | No unexpired reaction, break running | Resting |
@@ -116,7 +116,7 @@ returns Home without an event. The current direction is immediate purchase and
 feeding, with no inventory, quantities, cooldown or shop browsing.
 
 The configured catalog is Jollof Rice for 3 yarn and Coffee for 2 yarn. Both use
-the same three-frame eating animation and then leave the pet Happy for 30 seconds.
+the same three-frame eating animation and then leave the pet Happy for 15 seconds.
 Prices, reaction duration and manifest IDs are configuration rather than rule code.
 
 Define consumable data separately from feeding logic. Required assets now include

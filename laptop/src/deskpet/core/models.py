@@ -18,6 +18,12 @@ class Screen(StrEnum):
 
 
 class Mood(StrEnum):
+    IDLE = "idle"
+    HUNGRY = "hungry"
+    WORKING_NEUTRAL = "working_neutral"
+    WORKING_SAD = "working_sad"
+    PARTY = "party"
+    SLEEPING = "sleeping"
     CALM = "calm"
     CONTENT = "content"
     HAPPY = "happy"
@@ -193,6 +199,8 @@ class GameState:
     last_focus_minutes: int | None = None
     latest_reaction: Reaction | None = None
     progression: ProgressionState | None = None
+    last_fed_at: datetime | None = None
+    needs_comfort: bool = False
     focus_dates: frozenset[date] = field(default_factory=lambda: frozenset[date]())
     last_seq: int = 0
 
@@ -204,6 +212,8 @@ class GameState:
             raise ValueError("active_session and pending_break are mutually exclusive")
         if self.last_focus_minutes is not None:
             _require_positive(self.last_focus_minutes, "last_focus_minutes")
+        if self.last_fed_at is not None:
+            _require_aware(self.last_fed_at, "last_fed_at")
 
 
 @dataclass(frozen=True, slots=True)
@@ -228,6 +238,8 @@ class RuntimeState:
     boot_id: str | None
     clock_reveal_until_mono_ms: int | None = None
     feedback: Feedback | None = None
+    sad_pet_count: int = 0
+    attention_lost: bool = False
 
     def __post_init__(self) -> None:
         _require_positive(self.selected_focus_minutes, "selected_focus_minutes")
@@ -238,6 +250,7 @@ class RuntimeState:
             _require_nonnegative(
                 self.clock_reveal_until_mono_ms, "clock_reveal_until_mono_ms"
             )
+        _require_nonnegative(self.sad_pet_count, "sad_pet_count")
 
 
 @dataclass(frozen=True, slots=True)

@@ -73,6 +73,12 @@ class ItemPurchasedAndFed(DraftMetadata):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PetComforted(DraftMetadata):
+    event_type: ClassVar[Literal["pet_comforted"]] = "pet_comforted"
+    reaction: Reaction
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class FocusSessionStarted(DraftMetadata):
     event_type: ClassVar[Literal["session_started"]] = "session_started"
     session_id: str
@@ -153,6 +159,7 @@ type EventDraft = (
     | ProgressionInitialized
     | PetFed
     | ItemPurchasedAndFed
+    | PetComforted
     | FocusSessionStarted
     | BreakSessionStarted
     | FocusSessionPaused

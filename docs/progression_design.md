@@ -47,7 +47,7 @@ inventory. One committed event must contain the resolved item, price paid, balan
 change and reaction facts needed for deterministic replay. Insufficient yarn is a
 rejection: do not feed, animate or mutate state. Both choices use the shared
 three-frame eating animation (`feed` manifest ID) and then set Happy for a
-configured 30 seconds.
+configured 15 seconds.
 
 ## Reward calculation
 

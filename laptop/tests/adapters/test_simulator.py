@@ -142,6 +142,7 @@ class SimulatorTests(unittest.TestCase):
         self.assertTrue(all('": ' not in entry.raw for entry in entries))
 
     def test_feed_menu_purchase_traverses_production_json_codec(self) -> None:
+        self.device.advance(300)
         self._press(1, Screen.FEED)
         view = cast_view(self._state())
         buttons = cast(list[dict[str, object]], view["buttons"])

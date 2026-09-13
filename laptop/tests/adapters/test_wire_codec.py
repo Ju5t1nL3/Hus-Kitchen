@@ -47,14 +47,14 @@ def home() -> RenderSnapshot:
     return RenderSnapshot(
         screen=Screen.HOME,
         control_epoch=1,
-        mood=Mood.CALM,
+        mood=Mood.IDLE,
         clock_text="14:32",
         timer_seconds=None,
         paused=False,
         focus_minutes=None,
         break_minutes=None,
         buttons=(
-            ButtonLabel(ButtonId(1), "Feed", True),
+            ButtonLabel(ButtonId(1), "Feed", False),
             ButtonLabel(ButtonId(2), "Focus", True),
             ButtonLabel(ButtonId(3), "-", False),
         ),

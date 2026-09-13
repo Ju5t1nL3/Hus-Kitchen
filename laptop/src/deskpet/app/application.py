@@ -3,11 +3,13 @@
 import queue
 from collections.abc import Callable
 from dataclasses import replace
+from datetime import timedelta
 from typing import assert_never
 from uuid import UUID, uuid4
 
 from deskpet.app import controls, presenter, scheduling
 from deskpet.core.commands import (
+    Accepted,
     BackHome,
     BuyItem,
     CompleteSession,
@@ -23,6 +25,7 @@ from deskpet.core.commands import (
     OpenSetup,
     PauseCurrent,
     PauseSession,
+    PetOnce,
     Rejected,
     RequestedEndReason,
     RestartFocus,
@@ -47,6 +50,7 @@ from deskpet.core.events import (
     FocusSessionPaused,
     FocusSessionResumed,
     FocusSessionStarted,
+    PetComforted,
     PetCreated,
     ProgressionInitialized,
     UncommittedEvent,
@@ -56,6 +60,8 @@ from deskpet.core.models import (
     ClockReading,
     Feedback,
     GameState,
+    Reaction,
+    ReactionMood,
     RejectionCode,
     RuntimeState,
     Screen,
@@ -82,7 +88,7 @@ from deskpet.core.views import (
     Shutdown,
     Tick,
 )
-from deskpet.features import feeding, replay, timers
+from deskpet.features import emotions, feeding, replay, timers
 
 UuidFactory = Callable[[], UUID]
 
@@ -293,13 +299,24 @@ class Application:
             return
 
         match intent:
-            case OpenFeed() | OpenSetup() | CycleDuration() | BackHome() | ShowTime():
+            case OpenFeed():
+                if self.state.needs_comfort or not emotions.is_hungry(
+                    self.state, now.utc, self._config.feeding.hunger_seconds
+                ):
+                    return
+                self._runtime = controls.navigate(
+                    runtime, intent, self.state, self._config.focus, now
+                )
+                self._render(now)
+            case OpenSetup() | CycleDuration() | BackHome() | ShowTime():
                 self._runtime = controls.navigate(
                     runtime, intent, self._require_state(), self._config.focus, now
                 )
                 self._render(now)
             case RestartFocus():
                 self._restart_focus(incoming, now)
+            case PetOnce():
+                self._pet_once(incoming, now)
             case _:
                 decision = self._decide(intent, incoming, now)
                 self._commit(decision, now)
@@ -321,6 +338,7 @@ class Application:
                     FeedPet(item_id, operation_key),
                     self._config.feeding.definitions,
                     now.utc,
+                    self._config.feeding.hunger_seconds,
                 )
             case ConfirmFocus():
                 return timers.decide(
@@ -391,10 +409,32 @@ class Application:
                 | BackHome()
                 | ShowTime()
                 | RestartFocus()
+                | PetOnce()
             ):
                 raise ValueError("navigation intent cannot become a domain command")
             case _ as unreachable:
                 assert_never(unreachable)
+
+    def _pet_once(self, button: ButtonInput, now: ClockReading) -> None:
+        if not self.state.needs_comfort:
+            return
+        count = self.runtime.sad_pet_count + 1
+        if count < 5:
+            self._runtime = replace(self.runtime, sad_pet_count=count)
+            self._render(now)
+            return
+        decision = Accepted(
+            PetComforted(
+                source=EventSource.LOCAL_CONTROLS,
+                dedupe_key=f"button:{button.connection_id}:{button.seq}",
+                reaction=Reaction(
+                    ReactionMood.HAPPY,
+                    now.utc + timedelta(seconds=self._config.focus.happy_seconds),
+                ),
+            )
+        )
+        if self._commit(decision, now):
+            self._runtime = replace(self.runtime, sad_pet_count=0)
 
     def _restart_focus(self, button: ButtonInput, now: ClockReading) -> None:
         state = self._require_state()
@@ -603,6 +643,7 @@ class Application:
                     self._config.focus.minimum_break_minutes,
                 ),
                 food_definitions=self._config.feeding.definitions,
+                hunger_seconds=self._config.feeding.hunger_seconds,
             ),
             self._config.bindings,
             controls.ACTIONS,

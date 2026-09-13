@@ -11,7 +11,7 @@ Define these in core rather than passing raw dictionaries through laptop modules
 
 ```python
 Screen = Literal["home", "setup", "focus", "break_offer", "break"]
-Mood = Literal["calm", "content", "happy", "sad", "focused", "resting"]
+Mood = Literal["idle", "happy", "sad", "hungry", "working_neutral", "working_sad", "sleeping", "party"]
 SessionKind = Literal["focus", "break"]
 SessionStatus = Literal["running", "paused"]
 Gesture = Literal["press", "hold"]
@@ -30,7 +30,7 @@ Feedback = Literal["unavailable", "storage_error"]
 | ProgressionState | total_xp: nonnegative int, derived level: positive int, yarn_balance: nonnegative int, policy_version/xp_per_level: positive ints |
 | GameState | user_id: str, pet_id: str, active_session: Session or None, pending_break: BreakOffer or None, last_focus_minutes: int or None, latest_reaction: Reaction or None, progression: ProgressionState or None for pre-M24 history, focus_dates: frozenset[date], last_seq: int |
 | ClockReading | utc: aware datetime, monotonic_ms: int, resumed: bool |
-| RuntimeState | screen: Screen, selected_focus_minutes: int, run_anchor_mono_ms: int or None, previous_clock: ClockReading or None, control_epoch: int, connection_id/boot_id: str or None, clock_reveal_until_mono_ms: int or None |
+| RuntimeState | screen/timer/connection fields plus runtime-only sad_pet_count and attention_lost; neither is durable gameplay history |
 | TimerSample | session_id: str, active_ms: int, remaining_seconds: int, due: bool; explicit trusted laptop sample |
 | ButtonInput | connection_id, boot_id, seq, control_epoch, button: ButtonId (positive int advertised by device), action: Gesture; internal received clock sample |
 | RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration/progression fields, paused, tuple of ButtonLabels, feedback |

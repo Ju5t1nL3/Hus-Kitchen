@@ -94,6 +94,16 @@ class ProgressionView:
             raise ValueError("yarn_balance must be nonnegative")
 
 
+@dataclass(frozen=True, slots=True)
+class EarnedRewardsView:
+    xp: int
+    yarn: int
+
+    def __post_init__(self) -> None:
+        if self.xp < 0 or self.yarn < 0:
+            raise ValueError("earned rewards must be nonnegative")
+
+
 type AvailabilityPredicate = Callable[[GameState], bool]
 
 
@@ -122,6 +132,7 @@ class RenderSnapshot:
     buttons: tuple[ButtonLabel, ...]
     feedback: Feedback | None
     progression: ProgressionView | None = None
+    earned_rewards: EarnedRewardsView | None = None
 
 
 class AnimationName(StrEnum):

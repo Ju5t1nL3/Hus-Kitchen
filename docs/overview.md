@@ -47,9 +47,10 @@ should be sad.
 ## How does the pet feel?
 
 The laptop keeps a diary of feeding and focus events. A recent feeding makes it
-content; a completed focus makes it happy; ending focus after the grace period
+happy; a completed focus opens the Party break offer; ending focus after the grace period
 makes it briefly sad. The latest applicable reaction wins and fades after a short
-time. Otherwise the pet looks calm, focused or resting according to what you do.
+time and requires five Pet taps. Otherwise it is Idle, Hungry, Working, or Sleeping
+according to durable timing and the current screen.
 
 Health, hunger and friendship are removed entirely, including hidden meters. XP
 raises levels; yarn is earned and spent on Food/Drink. It never dies. Daily streaks

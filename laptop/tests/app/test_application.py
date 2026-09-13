@@ -131,6 +131,7 @@ class ApplicationTests(unittest.TestCase):
         self.press(2, 2)
 
     def test_feed_menu_buys_both_items_and_spends_yarn(self) -> None:
+        self.clock.advance(300_000)
         self.press(1, 1)
         self.assertIs(self.app.runtime.screen, Screen.FEED)
         self.assertEqual(
@@ -142,6 +143,7 @@ class ApplicationTests(unittest.TestCase):
         assert self.app.state.progression is not None
         self.assertEqual(self.app.state.progression.yarn_balance, 8)
 
+        self.clock.advance(300_000)
         self.press(1, 3)
         self.press(1, 4)
 
@@ -151,6 +153,7 @@ class ApplicationTests(unittest.TestCase):
 
     def test_insufficient_yarn_does_not_append_or_animate(self) -> None:
         for index in range(5):
+            self.clock.advance(300_000)
             self.press(1, index * 2 + 1)
             self.press(2, index * 2 + 2)
         assert self.app.state.progression is not None
@@ -158,6 +161,7 @@ class ApplicationTests(unittest.TestCase):
         event_count = len(self.store.events)
         cue_count = len(self.device.animations)
 
+        self.clock.advance(300_000)
         self.press(1, 11)
         self.assertFalse(self.device.published[-1].view.buttons[1].enabled)
         self.press(2, 12)
@@ -186,6 +190,31 @@ class ApplicationTests(unittest.TestCase):
             [label.label for label in self.device.published[-1].view.buttons],
             ["Time", "Pause", "End"],
         )
+
+    def test_five_pets_clear_sad_then_reveal_hunger_before_feeding(self) -> None:
+        self.start_focus()
+        self.clock.advance(60_000)
+        self.press(3, 3)
+        self.assertTrue(self.app.state.needs_comfort)
+        self.assertEqual(self.device.published[-1].view.mood.value, "sad")
+        self.assertEqual(
+            [label.label for label in self.device.published[-1].view.buttons],
+            ["Feed", "Focus", "Pet"],
+        )
+
+        self.clock.advance(240_000)
+        for sequence in range(4, 8):
+            self.press(3, sequence)
+            self.assertTrue(self.app.state.needs_comfort)
+        self.assertEqual(self.app.runtime.sad_pet_count, 4)
+        self.press(3, 8)
+
+        self.assertFalse(self.app.state.needs_comfort)
+        self.assertEqual(self.app.runtime.sad_pet_count, 0)
+        self.assertEqual(self.device.published[-1].view.mood.value, "hungry")
+        self.press(1, 9)
+        self.press(2, 10)
+        self.assertEqual(self.device.published[-1].view.mood.value, "happy")
 
     def test_due_completion_precedes_and_invalidates_old_end_press(self) -> None:
         self.start_focus()
@@ -454,6 +483,7 @@ class CommitOrderingTests(unittest.TestCase):
             clock.read(),
         )
         trace.clear()
+        clock.advance(300_000)
 
         app.handle(
             ButtonInput(

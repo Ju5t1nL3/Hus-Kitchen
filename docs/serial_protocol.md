@@ -93,16 +93,7 @@ until a fresh hello. The laptop's timer keeps running if only USB was disconnect
 Each message carries a complete view. Examples are independent screen fixtures;
 navigation does not have to follow their order.
 
-```json
-{"v":2,"type":"render","connection_id":"link-001","revision":1,"view":{"screen":"home","control_epoch":1,"mood":"calm","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true},{"button":3,"label":"-","enabled":false}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":2,"view":{"screen":"setup","control_epoch":2,"mood":"calm","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":25,"break_minutes":5,"buttons":[{"button":1,"label":"Up","enabled":true},{"button":2,"label":"Set","enabled":true},{"button":3,"label":"Back","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":3,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":null,"timer_seconds":1499,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Pause","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":4,"view":{"screen":"focus","control_epoch":3,"mood":"focused","clock_text":"14:32","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Pause","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":5,"view":{"screen":"focus","control_epoch":4,"mood":"calm","clock_text":null,"timer_seconds":1470,"paused":true,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Time","enabled":true},{"button":2,"label":"Resume","enabled":true},{"button":3,"label":"End","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":6,"view":{"screen":"break_offer","control_epoch":5,"mood":"happy","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":5,"buttons":[{"button":1,"label":"Break","enabled":true},{"button":2,"label":"Again","enabled":true},{"button":3,"label":"Home","enabled":true}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":7,"view":{"screen":"break","control_epoch":6,"mood":"resting","clock_text":null,"timer_seconds":300,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Again","enabled":true},{"button":2,"label":"Home","enabled":true},{"button":3,"label":"-","enabled":false}],"feedback":null}}
-{"v":2,"type":"render","connection_id":"link-001","revision":8,"view":{"screen":"home","control_epoch":7,"mood":"sad","clock_text":"14:35","timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Feed","enabled":true},{"button":2,"label":"Focus","enabled":true},{"button":3,"label":"-","enabled":false}],"feedback":null}}
-```
+[Canonical render fixtures](../contracts/laptop_to_pico.v2.jsonl) are the executable examples for every screen. Keep that file, both validators and this field table synchronized.
 
 Revisions 3 and 4 are the same focus screen and control_epoch: revision 4 is
 what pressing button 1 (Time) produces, showing the real clock instead of the
@@ -125,7 +116,7 @@ laptop remains authoritative for affordability and spending):
 | revision | Positive increasing per connection; ignore duplicate/older snapshots; gaps allowed |
 | screen | home, feed, setup, focus, break_offer, break |
 | control_epoch | Positive, nondecreasing across accepted snapshots; changes when button meanings change, not each countdown tick |
-| mood | calm, content, happy, sad, focused, resting; laptop chooses |
+| mood | idle, happy, sad, hungry, working_neutral, working_sad, sleeping, party; laptop chooses |
 | clock_text | Valid 24-hour HH:MM on home, or on focus while the laptop is revealing the real time; null elsewhere |
 | timer_seconds | Integer 0–3,600 on focus/break when clock_text is null there; null whenever clock_text is set or outside focus/break; never decrement locally |
 | paused | Boolean; false outside focus/break; always false on break, which has no paused state |
@@ -134,6 +125,7 @@ laptop remains authoritative for affordability and spending):
 | buttons | One {button, label, enabled} per advertised ID, in advertised physical order; label is printable ASCII 1–12 characters, enabled is boolean |
 | feedback | null, unavailable, or storage_error |
 | progression | On Home and Feed: `{level, xp_into_level, xp_for_next_level, yarn_balance}`; null on every other screen |
+| earned_rewards | On break_offer after M27: `{xp, yarn}`; null until rewards exist and on other screens |
 
 All keys are required, with null for absent content. Reject inconsistent fields
 and decreasing epochs. Swapping the validated desired view is atomic in RAM;

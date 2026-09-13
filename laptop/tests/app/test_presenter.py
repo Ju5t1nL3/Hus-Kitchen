@@ -203,7 +203,7 @@ class PresenterFixtureTests(unittest.TestCase):
         )
         self.assertEqual(snapshot.screen, Screen.HOME)
         self.assertEqual(snapshot.control_epoch, 1)
-        self.assertEqual(snapshot.mood, "calm")
+        self.assertEqual(snapshot.mood, "idle")
         self.assertEqual(snapshot.clock_text, "14:32")
         self.assertIsNone(snapshot.timer_seconds)
         self.assertFalse(snapshot.paused)
@@ -231,7 +231,7 @@ class PresenterFixtureTests(unittest.TestCase):
             ACTIONS,
             DEVICE_BUTTONS,
         )
-        self.assertEqual(snapshot.mood, "calm")
+        self.assertEqual(snapshot.mood, "idle")
         self.assertIsNone(snapshot.clock_text)
         self.assertEqual(snapshot.focus_minutes, 25)
         self.assertEqual(snapshot.break_minutes, 5)
@@ -261,7 +261,7 @@ class PresenterFixtureTests(unittest.TestCase):
             ACTIONS,
             DEVICE_BUTTONS,
         )
-        self.assertEqual(snapshot.mood, "focused")
+        self.assertEqual(snapshot.mood, "working_neutral")
         self.assertEqual(snapshot.timer_seconds, 1499)
         self.assertFalse(snapshot.paused)
         self.assertEqual(
@@ -330,7 +330,7 @@ class PresenterFixtureTests(unittest.TestCase):
             ACTIONS,
             DEVICE_BUTTONS,
         )
-        self.assertEqual(snapshot.mood, "calm")
+        self.assertEqual(snapshot.mood, "idle")
         self.assertEqual(snapshot.timer_seconds, 1470)
         self.assertTrue(snapshot.paused)
         self.assertEqual(
@@ -360,7 +360,7 @@ class PresenterFixtureTests(unittest.TestCase):
             ACTIONS,
             DEVICE_BUTTONS,
         )
-        self.assertEqual(snapshot.mood, "happy")
+        self.assertEqual(snapshot.mood, "party")
         self.assertIsNone(snapshot.timer_seconds)
         self.assertEqual(snapshot.break_minutes, 5)
         self.assertEqual(
@@ -391,7 +391,7 @@ class PresenterFixtureTests(unittest.TestCase):
             ACTIONS,
             DEVICE_BUTTONS,
         )
-        self.assertEqual(snapshot.mood, "resting")
+        self.assertEqual(snapshot.mood, "sleeping")
         self.assertEqual(snapshot.timer_seconds, 300)
         self.assertFalse(snapshot.paused)
         self.assertIsNone(snapshot.break_minutes)
@@ -408,6 +408,7 @@ class PresenterFixtureTests(unittest.TestCase):
                 mood=ReactionMood.SAD,
                 expires_at=datetime(2026, 9, 13, 14, 36, tzinfo=UTC),
             ),
+            needs_comfort=True,
         )
         snapshot = build(
             state,

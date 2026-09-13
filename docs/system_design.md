@@ -269,7 +269,7 @@ its own discard/handshake policy.
 Use namespaced sections: identity, focus, feeding, progression, rewards, activity,
 controls, ui and device. Existing defaults include
 allowed_focus_minutes [5,10,...,60], default_focus_minutes 25, break_ratio 0.2,
-minimum_break_minutes 1, grace_active_seconds 60, happy_seconds 30 and sad_seconds 30.
+minimum_break_minutes 1, grace_active_seconds 60, happy_seconds 15 and sad_seconds 30.
 M24/M25 replace the current free `basic` definition with priced Food and Drink
 definitions denominated in yarn. Starting yarn, prices and reward values remain
 open and must be explicit validated configuration rather than scattered constants.
