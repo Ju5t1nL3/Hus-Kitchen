@@ -32,9 +32,15 @@ The Pico reuses this locked Ruff executable with its own provisional
 `../pico/ruff.toml`; follow the [Pico bring-up sequence](../pico/README.md) before
 treating that syntax target as verified.
 
-There is no runnable application entry point yet. The test command above is active;
-add real run/report commands as their tasks are completed instead of documenting
-placeholders as working software.
+Run the hardware application from this folder after connecting the configured Pico:
+
+```sh
+uv run python main.py
+```
+
+Use `--config PATH` or `--data PATH` to override the default `config.yaml` and
+`data/pet.db`. The application reports no matching or ambiguous serial devices
+instead of guessing. Development mode and report commands remain planned work.
 
 The planned [development and hardware profiles](../docs/development_modes.md) use
 one application and wire codec. Development supplies a clickable virtual Pico and

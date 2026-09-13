@@ -247,7 +247,8 @@ offers weekly(week_start, today) → WeeklyReport through the pure history query
 SerialDeviceLink receives a resolved port and serial backend; it owns handshake,
 heartbeat and connection IDs but no OS-specific selection logic. It emits connection
 changes before new-session inputs; callbacks only enqueue. Reconnect causes the
-application to reset render revision/epoch and publish current state. Fake ports,
+application to advance the control epoch and publish current state with a render
+revision greater than the retained snapshot. Fake ports,
 enumerators and backends have the same signatures. Static checking targets laptop
 code; runtime validation still guards every external boundary.
 

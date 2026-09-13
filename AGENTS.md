@@ -5,8 +5,8 @@ Raspberry Pi Pico displays the pet and reports buttons. The goal is to replace
 phone-checking with a pleasant, glanceable desk device.
 
 Current MVP: large home pet and clock, one free food, a 5–60-minute focus selector,
-large countdown with a small expressive face, End/Pause/Resume, and optional
-calculated breaks. Emotions come from events. Health/hunger/friendship are removed
+large countdown with a small expressive face, three context-labeled buttons,
+focus pause/resume, and optional calculated breaks. Emotions come from events. Health/hunger/friendship are removed
 from the product entirely. The first post-MVP milestone is XP, coins and level-up
 bonuses, followed by optional typing/head-tracking bonuses. Timer progress art is
 future idea #8, separate from the XP bar.
@@ -29,9 +29,10 @@ do not preassign people to modules or assume a permanent integration owner.
 
 ## Project status
 
-This repository contains planning documents and the initial laptop/Pico directory
-scaffold. Application and firmware features are not implemented yet. Do not
-describe planned modules or checks as working code.
+This repository contains implemented laptop rules, persistence, presentation,
+USB adapters and an application coordinator, alongside in-progress Pico firmware.
+Use [docs/todo.md](docs/todo.md) for exact verified status; do not describe planned
+modules or checks as working code.
 The user reports some board setup is already done; inspect and record it before
 repeating hardware work. The laptop runtime is CPython 3.14.6. An HP Windows laptop
 has successfully programmed/controlled the Pico over USB; keep application code
@@ -125,7 +126,7 @@ User instructions override the plan; document material deviations.
 - Keyboard and head tracking must have independent on/off controls. They add
   completion bonuses; disabling them cannot remove the base XP/coin reward.
 - Home emphasizes a large pet and top-right clock. Focus/break views emphasize a
-  legible central timer and small face at top right. Both physical buttons have
+  legible central timer and small face at top right. All three physical buttons have
   visible labels for their current action; no stat bars or progress art in MVP.
 - MicroPython is the planned firmware runtime. Verify actual hardware before
   choosing pins, drivers, or connector assumptions.

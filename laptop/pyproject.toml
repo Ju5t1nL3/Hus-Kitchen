@@ -41,5 +41,5 @@ line-ending = "lf"
 [tool.pyright]
 pythonVersion = "3.14"
 typeCheckingMode = "strict"
-include = ["src", "tests"]
+include = ["src", "tests", "main.py"]
 exclude = [".venv"]

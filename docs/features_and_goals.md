@@ -3,7 +3,7 @@
 Build a small, expressive desk pet that helps you focus without checking your
 phone. Keep the code modular, maintainable and easy to divide among teammates.
 This is the current small-screen design; it replaces the earlier stats/shop MVP.
-All behavior below is planned, not implemented.
+Use [todo.md](todo.md) for implementation and hardware-verification status.
 
 ## Screens and three-button controls
 

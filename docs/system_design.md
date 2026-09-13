@@ -216,7 +216,7 @@ mood are projections of state and explicit time, not per-second saved events.
 - RuntimeState: live monotonic anchor, selected setup duration, current screen and
   control epoch, connection state and animation bookkeeping. Not replayed.
 - RenderSnapshot: exactly what the Pico should draw: screen, mood, time values,
-  paused flag and an ID-tagged list of button labels (two in the default build).
+  paused flag and an ID-tagged list of button labels (three in the default build).
   No business-rule parameters.
 
 Reactions expire through an explicit clock query; focus duration changes only
