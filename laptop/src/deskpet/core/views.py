@@ -19,6 +19,7 @@ from deskpet.core.models import (
 
 class ControlContext(StrEnum):
     HOME = "home"
+    FEED = "feed"
     SETUP = "setup"
     FOCUS_RUNNING = "focus_running"
     FOCUS_PAUSED = "focus_paused"

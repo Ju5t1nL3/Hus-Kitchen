@@ -49,6 +49,7 @@ startup with an actionable error, not a silently reset database.
 | `pet_created` | `pet_id` | Initialize identity once; no numerical care stats |
 | `progression_initialized` | `policy_version`, `starting_yarn`, `xp_per_level` | Initialize XP 0, level 1 and recorded yarn exactly once; replay never substitutes newer config |
 | `pet_fed` | `food_id`, `reaction` (content) | Current M07 event; M25 versions/replaces it with resolved yarn price/balance facts for purchase-and-feed |
+| `item_purchased_and_fed` | `item_id`, `price_paid`, `yarn_balance_after`, `reaction` (happy) | Atomically spend the configured price and feed; retained facts make replay independent of later price edits |
 | `session_started` | `session_id`, `kind: focus\|break`, kind-specific `terms` | Start running at zero active time; focus updates last confirmed duration; break consumes matching offer |
 | `session_paused` | `session_id`, `kind: focus`, `active_ms` | Save cumulative progress and mark paused; focus only, break sessions cannot pause |
 | `session_resumed` | `session_id`, `kind: focus`, `active_ms` | Mark running; active_ms must equal preceding pause; focus only |

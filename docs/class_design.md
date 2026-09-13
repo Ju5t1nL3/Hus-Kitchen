@@ -23,7 +23,7 @@ Feedback = Literal["unavailable", "storage_error"]
 
 | Record | Fields / invariants |
 | --- | --- |
-| FoodDefinition | id: str, sprite_id: str, content_seconds: positive int; MVP only basic/food_basic |
+| FoodDefinition | id/display_name/sprite_id/consume_animation, positive price_yarn and reaction duration; configured M25 items are Jollof Rice and Coffee |
 | Reaction | mood restricted to content/happy/sad, expires_at: UTC datetime |
 | FocusTerms / BreakTerms / BreakOffer | Exact fields from the event model; durations in seconds |
 | Session | id: str, kind: SessionKind, matching typed terms, status: SessionStatus, committed_active_ms: int |
@@ -143,7 +143,7 @@ resume keeps that screen, break_skipped returns Home, and pet_created selects Ho
 ## Adding or changing buttons
 
 Use one small action-definition dictionary in app/controls.py, plus declarative
-bindings under controls in laptop/config.yaml. Contexts are home, setup,
+bindings under controls in laptop/config.yaml. Contexts are home, feed, setup,
 focus_running, focus_paused, break_offer and break_running; there is no
 break_paused context because break sessions cannot be paused. ActionId is a
 closed literal/enum matching the defined ControlIntents, not an executable
@@ -155,8 +155,12 @@ those two screens. Example binding subset (not a complete configuration):
 controls:
   bindings:
     home:
-      "1.press": feed_default
+      "1.press": open_feed
       "2.press": open_setup
+    feed:
+      "1.press": buy_jollof
+      "2.press": buy_coffee
+      "3.press": back_home
     focus_running:
       "1.press": show_time
       "2.press": pause_current

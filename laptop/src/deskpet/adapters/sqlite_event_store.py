@@ -24,6 +24,7 @@ from deskpet.core.events import (
     FocusSessionPaused,
     FocusSessionResumed,
     FocusSessionStarted,
+    ItemPurchasedAndFed,
     PetCreated,
     PetFed,
     ProgressionInitialized,
@@ -339,6 +340,13 @@ def _encode_draft(draft: EventDraft) -> JsonObject:
                 "food_id": draft.food_id,
                 "reaction": _encode_reaction(draft.reaction),
             }
+        case ItemPurchasedAndFed():
+            return {
+                "item_id": draft.item_id,
+                "price_paid": draft.price_paid,
+                "yarn_balance_after": draft.yarn_balance_after,
+                "reaction": _encode_reaction(draft.reaction),
+            }
         case FocusSessionStarted():
             return {
                 "session_id": draft.session_id,
@@ -474,6 +482,18 @@ def _decode_draft(
         return PetFed(
             **metadata,
             food_id=_text_field(payload, "food_id"),
+            reaction=_reaction(payload["reaction"]),
+        )
+    if event_type == "item_purchased_and_fed":
+        _keys(
+            payload,
+            {"item_id", "price_paid", "yarn_balance_after", "reaction"},
+        )
+        return ItemPurchasedAndFed(
+            **metadata,
+            item_id=_text_field(payload, "item_id"),
+            price_paid=_int_field(payload, "price_paid"),
+            yarn_balance_after=_int_field(payload, "yarn_balance_after"),
             reaction=_reaction(payload["reaction"]),
         )
     if event_type == "break_skipped":

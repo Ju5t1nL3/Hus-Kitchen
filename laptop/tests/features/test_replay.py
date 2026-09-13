@@ -16,6 +16,7 @@ from deskpet.core.events import (
     FocusSessionPaused,
     FocusSessionResumed,
     FocusSessionStarted,
+    ItemPurchasedAndFed,
     PetCreated,
     PetFed,
     ProgressionInitialized,
@@ -73,6 +74,61 @@ def started(seq: int = 2, session_id: str = "focus-1") -> DomainEvent:
 
 
 class ReplayHappyPathTests(unittest.TestCase):
+    def test_purchase_spends_recorded_yarn_and_replays_identically(self) -> None:
+        initialized = ProgressionInitialized(
+            source=EventSource.SYSTEM,
+            dedupe_key="progression-initialized",
+            policy_version=1,
+            starting_yarn=10,
+            xp_per_level=100,
+        )
+        purchase = ItemPurchasedAndFed(
+            source=EventSource.LOCAL_CONTROLS,
+            dedupe_key="button:c:1",
+            item_id="coffee",
+            price_paid=2,
+            yarn_balance_after=8,
+            reaction=Reaction(ReactionMood.HAPPY, NOW + timedelta(seconds=30)),
+        )
+
+        state = rebuild((created(), committed(2, initialized), committed(3, purchase)))
+
+        self.assertIsNotNone(state)
+        assert state is not None and state.progression is not None
+        self.assertEqual(state.progression.yarn_balance, 8)
+        self.assertIsNotNone(state.latest_reaction)
+        assert state.latest_reaction is not None
+        self.assertIs(state.latest_reaction.mood, ReactionMood.HAPPY)
+
+    def test_purchase_rejects_a_forged_after_balance(self) -> None:
+        state = rebuild(
+            (
+                created(),
+                committed(
+                    2,
+                    ProgressionInitialized(
+                        source=EventSource.SYSTEM,
+                        dedupe_key="progression-initialized",
+                        policy_version=1,
+                        starting_yarn=10,
+                        xp_per_level=100,
+                    ),
+                ),
+            )
+        )
+        assert state is not None
+        forged = ItemPurchasedAndFed(
+            source=EventSource.LOCAL_CONTROLS,
+            dedupe_key="button:c:1",
+            item_id="coffee",
+            price_paid=2,
+            yarn_balance_after=9,
+            reaction=Reaction(ReactionMood.HAPPY, NOW + timedelta(seconds=30)),
+        )
+
+        with self.assertRaisesRegex(ReplayError, "does not match"):
+            apply_event(state, committed(3, forged))
+
     def test_progression_initialization_is_durable_and_single_use(self) -> None:
         initialized = committed(
             2,

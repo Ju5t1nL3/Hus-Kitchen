@@ -180,6 +180,7 @@ class EncodeTests(unittest.TestCase):
                 encode(RenderMessage("c", 1, view), BUTTONS)
 
     def test_setup_and_timer_ranges_are_validated(self) -> None:
+        feed = replace(home(), screen=Screen.FEED, clock_text=None)
         setup = replace(
             home(),
             screen=Screen.SETUP,
@@ -198,6 +199,7 @@ class EncodeTests(unittest.TestCase):
         )
         clock_reveal = replace(timer, clock_text="14:32", timer_seconds=None)
 
+        encode(RenderMessage("c", 1, feed), BUTTONS)
         encode(RenderMessage("c", 1, setup), BUTTONS)
         encode(RenderMessage("c", 1, timer), BUTTONS)
         encode(RenderMessage("c", 1, clock_reveal), BUTTONS)

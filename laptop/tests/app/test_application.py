@@ -16,7 +16,7 @@ from deskpet.core.events import (
     FocusSessionPaused,
     FocusSessionResumed,
     FocusSessionStarted,
-    PetFed,
+    ItemPurchasedAndFed,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -129,6 +129,42 @@ class ApplicationTests(unittest.TestCase):
     def start_focus(self) -> None:
         self.press(2, 1)
         self.press(2, 2)
+
+    def test_feed_menu_buys_both_items_and_spends_yarn(self) -> None:
+        self.press(1, 1)
+        self.assertIs(self.app.runtime.screen, Screen.FEED)
+        self.assertEqual(
+            [label.label for label in self.device.published[-1].view.buttons],
+            ["Jollof 3Y", "Coffee 2Y", "Back"],
+        )
+        self.press(2, 2)
+        self.assertIs(self.app.runtime.screen, Screen.HOME)
+        assert self.app.state.progression is not None
+        self.assertEqual(self.app.state.progression.yarn_balance, 8)
+
+        self.press(1, 3)
+        self.press(1, 4)
+
+        assert self.app.state.progression is not None
+        self.assertEqual(self.app.state.progression.yarn_balance, 5)
+        self.assertEqual(self.device.published[-1].view.mood.value, "happy")
+
+    def test_insufficient_yarn_does_not_append_or_animate(self) -> None:
+        for index in range(5):
+            self.press(1, index * 2 + 1)
+            self.press(2, index * 2 + 2)
+        assert self.app.state.progression is not None
+        self.assertEqual(self.app.state.progression.yarn_balance, 0)
+        event_count = len(self.store.events)
+        cue_count = len(self.device.animations)
+
+        self.press(1, 11)
+        self.assertFalse(self.device.published[-1].view.buttons[1].enabled)
+        self.press(2, 12)
+
+        self.assertEqual(len(self.store.events), event_count)
+        self.assertEqual(len(self.device.animations), cue_count)
+        self.assertIs(self.app.runtime.screen, Screen.FEED)
 
     def test_home_setup_focus_vertical_slice_uses_three_button_labels(self) -> None:
         self.assertEqual(
@@ -431,9 +467,29 @@ class CommitOrderingTests(unittest.TestCase):
             ),
             clock.read(),
         )
+        app.handle(
+            ButtonInput(
+                "connection-1",
+                "boot-1",
+                2,
+                app.runtime.control_epoch,
+                ButtonId(1),
+                Gesture.PRESS,
+                clock.read(),
+            ),
+            clock.read(),
+        )
 
-        self.assertIsInstance(store.events[-1].event.draft, PetFed)
-        self.assertEqual(trace, ["append:pet_fed", "publish:home", "animate:feed"])
+        self.assertIsInstance(store.events[-1].event.draft, ItemPurchasedAndFed)
+        self.assertEqual(
+            trace,
+            [
+                "publish:feed",
+                "append:item_purchased_and_fed",
+                "publish:home",
+                "animate:feed",
+            ],
+        )
 
 
 if __name__ == "__main__":

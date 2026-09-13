@@ -8,12 +8,12 @@ navigation rules in docs/class_design.md.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import assert_never
 from zoneinfo import ZoneInfo
 
 from deskpet.app.controls import labels as resolve_labels
-from deskpet.core.commands import ActionId
+from deskpet.core.commands import ActionId, BuyItem
 from deskpet.core.events import (
     BreakSessionCompleted,
     BreakSessionEnded,
@@ -25,6 +25,7 @@ from deskpet.core.events import (
     FocusSessionPaused,
     FocusSessionResumed,
     FocusSessionStarted,
+    ItemPurchasedAndFed,
     PetCreated,
     PetFed,
     ProgressionInitialized,
@@ -34,6 +35,7 @@ from deskpet.core.models import (
     ClockReading,
     FoodDefinition,
     GameState,
+    Gesture,
     RuntimeState,
     Screen,
     SessionStatus,
@@ -42,6 +44,7 @@ from deskpet.core.models import (
 from deskpet.core.views import (
     ActionDefinition,
     AnimationName,
+    ButtonLabel,
     ControlBindings,
     ControlContext,
     CueRequest,
@@ -54,10 +57,17 @@ from deskpet.features.timers import BreakPolicy
 from deskpet.features.timers import break_minutes as compute_break_minutes
 
 
+def _empty_food_definitions() -> Mapping[str, FoodDefinition]:
+    return {}
+
+
 @dataclass(frozen=True, slots=True)
 class PresenterConfig:
     clock_timezone: str
     break_policy: BreakPolicy
+    food_definitions: Mapping[str, FoodDefinition] = field(
+        default_factory=_empty_food_definitions
+    )
 
 
 def build(
@@ -97,9 +107,13 @@ def build(
         if runtime.screen is Screen.SETUP
         else None,
         break_minutes=_break_minutes(runtime, state, config),
-        buttons=resolve_labels(context, state, device_buttons, bindings, actions),
+        buttons=_buttons(
+            context, state, device_buttons, bindings, actions, config, runtime.screen
+        ),
         feedback=runtime.feedback,
-        progression=_progression(state) if runtime.screen is Screen.HOME else None,
+        progression=_progression(state)
+        if runtime.screen in {Screen.HOME, Screen.FEED}
+        else None,
     )
 
 
@@ -136,6 +150,16 @@ def on_commit(
             sprite = definition.sprite_id if definition is not None else None
             cue = CueRequest(name=AnimationName.FEED, food_sprite=sprite)
             return PresentationResult(screen=Screen.HOME, cues=(cue,))
+        case ItemPurchasedAndFed():
+            definition = food_definitions.get(draft.item_id)
+            sprite = definition.sprite_id if definition is not None else None
+            animation = (
+                AnimationName(definition.consume_animation)
+                if definition is not None
+                else AnimationName.FEED
+            )
+            cue = CueRequest(name=animation, food_sprite=sprite)
+            return PresentationResult(screen=Screen.HOME, cues=(cue,))
         case _ as unreachable:
             assert_never(unreachable)
 
@@ -144,6 +168,8 @@ def _context(screen: Screen, paused: bool) -> ControlContext:
     match screen:
         case Screen.HOME:
             return ControlContext.HOME
+        case Screen.FEED:
+            return ControlContext.FEED
         case Screen.SETUP:
             return ControlContext.SETUP
         case Screen.FOCUS:
@@ -190,3 +216,38 @@ def _progression(state: GameState) -> ProgressionView | None:
         xp_for_next_level=value.xp_per_level,
         yarn_balance=value.yarn_balance,
     )
+
+
+def _buttons(
+    context: ControlContext,
+    state: GameState,
+    device_buttons: tuple[ButtonId, ...],
+    bindings: ControlBindings,
+    actions: Mapping[ActionId, ActionDefinition],
+    config: PresenterConfig,
+    screen: Screen,
+) -> tuple[ButtonLabel, ...]:
+    labels = resolve_labels(context, state, device_buttons, bindings, actions)
+    if screen is not Screen.FEED:
+        return labels
+    updated: list[ButtonLabel] = []
+    for label in labels:
+        action_id = bindings.get((context, label.button, Gesture.PRESS))
+        action = actions.get(action_id) if action_id is not None else None
+        if action is None or not isinstance(action.intent, BuyItem):
+            updated.append(label)
+            continue
+        item = config.food_definitions.get(action.intent.item_id)
+        if item is None:
+            updated.append(ButtonLabel(label.button, label.label, False))
+            continue
+        progression = state.progression
+        enabled = (
+            progression is not None and progression.yarn_balance >= item.price_yarn
+        )
+        display_name = item.display_name or item.id
+        short_name = "Jollof" if item.id == "jollof_rice" else display_name
+        updated.append(
+            ButtonLabel(label.button, f"{short_name} {item.price_yarn}Y", enabled)
+        )
+    return tuple(updated)

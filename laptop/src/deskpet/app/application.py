@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 from deskpet.app import controls, presenter, scheduling
 from deskpet.core.commands import (
     BackHome,
+    BuyItem,
     CompleteSession,
     ConfirmFocus,
     ControlIntent,
@@ -16,9 +17,9 @@ from deskpet.core.commands import (
     Decision,
     EndCurrent,
     EndSession,
-    FeedDefault,
     FeedPet,
     NoOp,
+    OpenFeed,
     OpenSetup,
     PauseCurrent,
     PauseSession,
@@ -292,7 +293,7 @@ class Application:
             return
 
         match intent:
-            case OpenSetup() | CycleDuration() | BackHome() | ShowTime():
+            case OpenFeed() | OpenSetup() | CycleDuration() | BackHome() | ShowTime():
                 self._runtime = controls.navigate(
                     runtime, intent, self._require_state(), self._config.focus, now
                 )
@@ -314,10 +315,10 @@ class Application:
         sample = self._current_sample(now)
         operation_key = f"button:{button.connection_id}:{button.seq}"
         match intent:
-            case FeedDefault():
+            case BuyItem(item_id):
                 return feeding.decide(
                     state,
-                    FeedPet(self._config.feeding.default_food_id, operation_key),
+                    FeedPet(item_id, operation_key),
                     self._config.feeding.definitions,
                     now.utc,
                 )
@@ -384,7 +385,12 @@ class Application:
                     now,
                 )
             case (
-                OpenSetup() | CycleDuration() | BackHome() | ShowTime() | RestartFocus()
+                OpenFeed()
+                | OpenSetup()
+                | CycleDuration()
+                | BackHome()
+                | ShowTime()
+                | RestartFocus()
             ):
                 raise ValueError("navigation intent cannot become a domain command")
             case _ as unreachable:
@@ -596,6 +602,7 @@ class Application:
                     self._config.focus.focus_minutes_per_break_minute,
                     self._config.focus.minimum_break_minutes,
                 ),
+                food_definitions=self._config.feeding.definitions,
             ),
             self._config.bindings,
             controls.ACTIONS,

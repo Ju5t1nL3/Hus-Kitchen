@@ -165,7 +165,7 @@ def _focus(raw: Mapping[str, object]) -> FocusConfig:
 
 
 def _feeding(raw: Mapping[str, object]) -> FeedingConfig:
-    _exact_keys(raw, {"default_food_id", "definitions"}, "feeding")
+    _exact_keys(raw, {"definitions"}, "feeding")
     definitions_raw = _mapping(
         _required(raw, "definitions", "feeding"), "feeding.definitions"
     )
@@ -174,7 +174,13 @@ def _feeding(raw: Mapping[str, object]) -> FeedingConfig:
         definition = _mapping(value, f"feeding.definitions.{food_id}")
         _exact_keys(
             definition,
-            {"sprite_id", "content_seconds"},
+            {
+                "display_name",
+                "sprite_id",
+                "price_yarn",
+                "happy_seconds",
+                "consume_animation",
+            },
             f"feeding.definitions.{food_id}",
         )
         definitions[food_id] = FoodDefinition(
@@ -185,17 +191,28 @@ def _feeding(raw: Mapping[str, object]) -> FeedingConfig:
             ),
             content_seconds=_integer(
                 _required(
-                    definition, "content_seconds", f"feeding.definitions.{food_id}"
+                    definition, "happy_seconds", f"feeding.definitions.{food_id}"
                 ),
-                f"feeding.definitions.{food_id}.content_seconds",
+                f"feeding.definitions.{food_id}.happy_seconds",
+            ),
+            display_name=_string(
+                _required(definition, "display_name", f"feeding.definitions.{food_id}"),
+                f"feeding.definitions.{food_id}.display_name",
+            ),
+            price_yarn=_integer(
+                _required(definition, "price_yarn", f"feeding.definitions.{food_id}"),
+                f"feeding.definitions.{food_id}.price_yarn",
+            ),
+            consume_animation=_string(
+                _required(
+                    definition,
+                    "consume_animation",
+                    f"feeding.definitions.{food_id}",
+                ),
+                f"feeding.definitions.{food_id}.consume_animation",
             ),
         )
-    return FeedingConfig(
-        default_food_id=_string(
-            _required(raw, "default_food_id", "feeding"), "feeding.default_food_id"
-        ),
-        definitions=MappingProxyType(definitions),
-    )
+    return FeedingConfig(definitions=MappingProxyType(definitions))
 
 
 def _progression(raw: Mapping[str, object]) -> ProgressionConfig:

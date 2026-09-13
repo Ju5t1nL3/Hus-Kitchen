@@ -91,7 +91,7 @@ penalties are discarded; co-op shared loss remains a separate product decision.
 | Sprite style/dimensions and actual redraw speed? | Full pet, small faces, food/animations; size to confirmed LCD and measure. |
 | Team size and task assignment? | Four people confirmed; possibly two on software. No assignments in advance; claim individual tasks on the board. |
 | Tuning? | Open-ended. Existing values are provisional, not final decisions. Maintain configurable rules and the agreed low-stress behavior. |
-| Food/Drink prices/reactions? | Feed-menu behavior is agreed; values and item-specific reactions/assets remain open. Starting yarn is provisionally 10 in validated config. |
+| Final item-price tuning and Happy frame count? | Jollof Rice is 3 yarn and Coffee is 2 for now. Both share three-frame Eat, then Happy for 30 seconds. Happy may be one or two PNG frames. Starting yarn is 10. |
 | Final mood catalog? | User will provide all moods, triggers, precedence and durations before M26. |
 | Reward rates, level thresholds and sensor/streak bonus caps? | Sources are agreed; amounts and whether non-base bonuses also affect XP remain open. |
 | Focus-chain and daily-streak reset/eligibility rules? | Concepts are agreed; exact boundaries/timezone require user decisions before M10/M30. |

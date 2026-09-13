@@ -113,10 +113,17 @@ seconds elapse, the laptop publishes another new revision restoring
 `clock_text: null` and the current `timer_seconds`, still under that same
 epoch.
 
+Feed-menu example (labels carry the configured display choice and price while the
+laptop remains authoritative for affordability and spending):
+
+```json
+{"v":2,"type":"render","connection_id":"link-001","revision":8,"view":{"screen":"feed","control_epoch":8,"mood":"calm","clock_text":null,"timer_seconds":null,"paused":false,"focus_minutes":null,"break_minutes":null,"buttons":[{"button":1,"label":"Jollof 3Y","enabled":true},{"button":2,"label":"Coffee 2Y","enabled":true},{"button":3,"label":"Back","enabled":true}],"feedback":null,"progression":{"level":1,"xp_into_level":0,"xp_for_next_level":100,"yarn_balance":10}}}
+```
+
 | Field | Contract |
 | --- | --- |
 | revision | Positive increasing per connection; ignore duplicate/older snapshots; gaps allowed |
-| screen | home, setup, focus, break_offer, break |
+| screen | home, feed, setup, focus, break_offer, break |
 | control_epoch | Positive, nondecreasing across accepted snapshots; changes when button meanings change, not each countdown tick |
 | mood | calm, content, happy, sad, focused, resting; laptop chooses |
 | clock_text | Valid 24-hour HH:MM on home, or on focus while the laptop is revealing the real time; null elsewhere |
@@ -126,7 +133,7 @@ epoch.
 | break_minutes | Integer 1–60 on setup/break_offer; null elsewhere |
 | buttons | One {button, label, enabled} per advertised ID, in advertised physical order; label is printable ASCII 1–12 characters, enabled is boolean |
 | feedback | null, unavailable, or storage_error |
-| progression | On Home: `{level, xp_into_level, xp_for_next_level, yarn_balance}`; null on every other screen |
+| progression | On Home and Feed: `{level, xp_into_level, xp_for_next_level, yarn_balance}`; null on every other screen |
 
 All keys are required, with null for absent content. Reject inconsistent fields
 and decreasing epochs. Swapping the validated desired view is atomic in RAM;

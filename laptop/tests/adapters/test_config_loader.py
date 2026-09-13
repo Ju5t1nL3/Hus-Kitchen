@@ -16,8 +16,8 @@ class ConfigLoaderTests(unittest.TestCase):
         config = load(CONFIG_PATH)
 
         self.assertEqual(config.focus.default_minutes, 25)
-        self.assertEqual(config.feeding.default_food_id, "basic")
-        self.assertEqual(config.feeding.definitions["basic"].sprite_id, "food_basic")
+        self.assertEqual(config.feeding.definitions["jollof_rice"].price_yarn, 3)
+        self.assertEqual(config.feeding.definitions["coffee"].price_yarn, 2)
         self.assertEqual(config.device.usb_vid, 0x2E8A)
         self.assertEqual(config.progression.starting_yarn, 10)
         self.assertEqual(config.progression.xp_per_level, 100)
@@ -29,7 +29,7 @@ class ConfigLoaderTests(unittest.TestCase):
 
     def test_unknown_action_has_a_field_specific_error(self) -> None:
         text = CONFIG_PATH.read_text(encoding="utf-8").replace(
-            "1.press: feed_default", "1.press: nonexistent_action", 1
+            "1.press: open_feed", "1.press: nonexistent_action", 1
         )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.yaml"
@@ -51,8 +51,8 @@ class ConfigLoaderTests(unittest.TestCase):
 
     def test_duplicate_yaml_key_is_rejected_instead_of_overwritten(self) -> None:
         text = CONFIG_PATH.read_text(encoding="utf-8").replace(
-            "    home:\n      1.press: feed_default",
-            "    home:\n      1.press: feed_default\n      1.press: open_setup",
+            "    home:\n      1.press: open_feed",
+            "    home:\n      1.press: open_feed\n      1.press: open_setup",
             1,
         )
         with tempfile.TemporaryDirectory() as directory:

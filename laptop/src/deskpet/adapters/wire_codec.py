@@ -334,8 +334,10 @@ def _encode_animate(message: AnimateMessage) -> JsonObject:
         raise EncodeError("after_revision must be positive")
     if not _printable_ascii(cue.animation_id, 96):
         raise EncodeError("invalid animation_id length")
-    if name == "feed" and cue.food_sprite != "food_basic":
-        raise EncodeError("feed animation requires food_basic")
+    if name == "feed" and (
+        cue.food_sprite is None or not _printable_ascii(cue.food_sprite, 64)
+    ):
+        raise EncodeError("feed animation requires a valid item sprite")
     if name == "celebrate" and cue.food_sprite is not None:
         raise EncodeError("celebrate animation cannot include food_sprite")
 
@@ -377,8 +379,10 @@ def _validate_view(
             raise EncodeError("focus clock reveal requires a valid clock_text")
     elif view.clock_text is not None:
         raise EncodeError("clock_text is only valid on home")
-    if view.screen is not Screen.HOME and view.progression is not None:
-        raise EncodeError("progression is only valid on home")
+    if view.screen is Screen.FEED and view.progression is None:
+        raise EncodeError("feed menu requires progression")
+    if view.screen not in {Screen.HOME, Screen.FEED} and view.progression is not None:
+        raise EncodeError("progression is only valid on home or feed")
     if is_timer:
         if revealing_clock and view.timer_seconds is not None:
             raise EncodeError("focus clock reveal cannot include timer_seconds")

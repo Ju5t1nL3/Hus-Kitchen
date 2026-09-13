@@ -7,11 +7,12 @@ from types import MappingProxyType
 from deskpet.core.commands import (
     ActionId,
     BackHome,
+    BuyItem,
     ConfirmFocus,
     ControlIntent,
     CycleDuration,
     EndCurrent,
-    FeedDefault,
+    OpenFeed,
     OpenSetup,
     PauseCurrent,
     RestartFocus,
@@ -74,8 +75,14 @@ def _can_restart_focus(state: GameState) -> bool:
 
 ACTIONS: Mapping[ActionId, ActionDefinition] = MappingProxyType(
     {
-        ActionId.FEED_DEFAULT: ActionDefinition(
-            ActionId.FEED_DEFAULT, "Feed", FeedDefault(), _idle
+        ActionId.OPEN_FEED: ActionDefinition(
+            ActionId.OPEN_FEED, "Feed", OpenFeed(), _idle
+        ),
+        ActionId.BUY_JOLLOF: ActionDefinition(
+            ActionId.BUY_JOLLOF, "Jollof", BuyItem("jollof_rice"), _idle
+        ),
+        ActionId.BUY_COFFEE: ActionDefinition(
+            ActionId.BUY_COFFEE, "Coffee", BuyItem("coffee"), _idle
         ),
         ActionId.OPEN_SETUP: ActionDefinition(
             ActionId.OPEN_SETUP, "Focus", OpenSetup(), _idle
@@ -157,13 +164,19 @@ _CLOCK_REVEAL_MS = 5_000
 
 def navigate(
     runtime: RuntimeState,
-    intent: OpenSetup | CycleDuration | BackHome | ShowTime,
+    intent: OpenFeed | OpenSetup | CycleDuration | BackHome | ShowTime,
     state: GameState,
     config: FocusConfig,
     now: ClockReading | None = None,
 ) -> RuntimeState:
     """Apply navigation-only intents without changing durable game state."""
     match intent:
+        case OpenFeed():
+            return replace(
+                runtime,
+                screen=Screen.FEED,
+                control_epoch=runtime.control_epoch + 1,
+            )
         case OpenSetup():
             selected = state.last_focus_minutes or config.default_minutes
             return replace(
@@ -205,6 +218,8 @@ def context_for(screen: Screen, state: GameState) -> ControlContext:
     match screen:
         case Screen.HOME:
             return ControlContext.HOME
+        case Screen.FEED:
+            return ControlContext.FEED
         case Screen.SETUP:
             return ControlContext.SETUP
         case Screen.FOCUS:
@@ -240,7 +255,12 @@ def validate_bindings(
             raise ValueError(f"binding references unknown action {action_id}")
 
     required_routes = {
-        ControlContext.HOME: {ActionId.OPEN_SETUP},
+        ControlContext.HOME: {ActionId.OPEN_SETUP, ActionId.OPEN_FEED},
+        ControlContext.FEED: {
+            ActionId.BUY_JOLLOF,
+            ActionId.BUY_COFFEE,
+            ActionId.BACK_HOME,
+        },
         ControlContext.SETUP: {ActionId.CONFIRM_FOCUS, ActionId.BACK_HOME},
         ControlContext.FOCUS_RUNNING: {
             ActionId.END_CURRENT,

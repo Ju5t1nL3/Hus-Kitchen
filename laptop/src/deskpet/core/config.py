@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from deskpet.core.models import FoodDefinition
-from deskpet.core.views import ControlBindings
+from deskpet.core.views import AnimationName, ControlBindings
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,18 +56,20 @@ class FocusConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeedingConfig:
-    default_food_id: str
     definitions: Mapping[str, FoodDefinition]
 
     def __post_init__(self) -> None:
-        _text(self.default_food_id, "feeding.default_food_id")
-        if self.default_food_id not in self.definitions:
-            raise ValueError("feeding.default_food_id must reference a definition")
         if not self.definitions:
             raise ValueError("feeding.definitions must not be empty")
         for food_id, definition in self.definitions.items():
             if food_id != definition.id:
                 raise ValueError("feeding definition key and id must match")
+            if definition.display_name is None or definition.price_yarn <= 0:
+                raise ValueError("configured feeding items require a name and price")
+            try:
+                AnimationName(definition.consume_animation)
+            except ValueError as error:
+                raise ValueError("feeding item has an unknown animation") from error
 
 
 @dataclass(frozen=True, slots=True)

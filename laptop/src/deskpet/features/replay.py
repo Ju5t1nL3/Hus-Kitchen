@@ -17,6 +17,7 @@ from deskpet.core.events import (
     FocusSessionPaused,
     FocusSessionResumed,
     FocusSessionStarted,
+    ItemPurchasedAndFed,
     PetCreated,
     PetFed,
     ProgressionInitialized,
@@ -86,6 +87,28 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                     "pet_fed is unavailable during a session or break offer"
                 )
             return _advance(state, event, latest_reaction=draft.reaction)
+        case ItemPurchasedAndFed():
+            if state.active_session is not None or state.pending_break is not None:
+                raise ReplayError(
+                    "purchase is unavailable during a session or break offer"
+                )
+            progression = state.progression
+            if not draft.item_id:
+                raise ReplayError("purchase item_id must not be empty")
+            if progression is None:
+                raise ReplayError("purchase requires initialized progression")
+            if draft.price_paid <= 0:
+                raise ReplayError("purchase price must be positive")
+            expected_balance = progression.yarn_balance - draft.price_paid
+            if expected_balance < 0 or draft.yarn_balance_after != expected_balance:
+                raise ReplayError("purchase yarn balance does not match recorded price")
+            _require_reaction(draft.reaction, ReactionMood.HAPPY, "purchase")
+            return _advance(
+                state,
+                event,
+                progression=replace(progression, yarn_balance=draft.yarn_balance_after),
+                latest_reaction=draft.reaction,
+            )
         case FocusSessionStarted():
             _require_available(state, "focus session start")
             if draft.terms.duration_seconds % 60 != 0:

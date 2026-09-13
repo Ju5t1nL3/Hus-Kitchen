@@ -123,7 +123,8 @@ User instructions override the plan; document material deviations.
 ## Product principles
 
 - No death, irreversible loss, or punishment for pausing or taking a break.
-  Early-ended focus can cause brief sadness; feeding is always free on Home.
+  Early-ended focus can cause brief sadness. Feed opens a priced purchase menu;
+  insufficient yarn leaves state unchanged.
 - Local-first: MVP data stays on the laptop. Future network or sensor features
   must have a clear purpose and explicit opt-in.
 - Keyboard and camera tracking must have independent on/off controls. They add

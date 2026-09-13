@@ -7,8 +7,8 @@ code or UI. Health, hunger and friendship remain permanently removed.
 ## Delivery order
 
 1. Add durable XP, level and yarn state plus the top-screen presentation contract.
-2. Replace immediate free feeding with a Feed menu: Food, Drink and Back. Food and
-   Drink cost yarn and the chosen item is purchased and fed immediately.
+2. Feed opens Jollof Rice (3 yarn), Coffee (2 yarn), and Back. A choice is
+   purchased and fed immediately.
 3. Have the user define the complete mood list, triggers, precedence and durations;
    then implement that catalog consistently across laptop and Pico contracts.
 4. Decide and implement base XP and yarn for completed focus sessions.
@@ -38,15 +38,16 @@ Home's Feed action opens a three-button menu:
 
 | Button | Action |
 | --- | --- |
-| 1 | Buy and feed Food for its displayed yarn price |
-| 2 | Buy and feed Drink for its displayed yarn price |
+| 1 | Buy and feed Jollof Rice for 3 yarn |
+| 2 | Buy and feed Coffee for 2 yarn |
 | 3 | Back to Home without an event |
 
 The current direction is an immediate purchase-and-feed operation, not a separate
 inventory. One committed event must contain the resolved item, price paid, balance
 change and reaction facts needed for deterministic replay. Insufficient yarn is a
-rejection: do not feed, animate or mutate state. Item prices remain open choices
-and belong in validated configuration.
+rejection: do not feed, animate or mutate state. Both choices use the shared
+three-frame eating animation (`feed` manifest ID) and then set Happy for a
+configured 30 seconds.
 
 ## Reward calculation
 
@@ -129,8 +130,8 @@ user explicitly changes that policy.
 
 ## Open decisions
 
-- Food/Drink prices (starting yarn is provisionally 10 and configurable).
-- Food/Drink names, reactions and animation/assets.
+- Final price tuning (current configured values are 3 and 2 yarn).
+- Happy artwork may use one or two individual PNG frames; eating uses three.
 - Complete mood catalog, triggers, precedence and durations.
 - Base XP/yarn rates, duration scaling, rounding and caps.
 - Final level thresholds and yarn per crossed level (100 XP/level is provisional).

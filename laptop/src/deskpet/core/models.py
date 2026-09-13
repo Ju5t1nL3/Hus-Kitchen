@@ -10,6 +10,7 @@ ButtonId = NewType("ButtonId", int)
 
 class Screen(StrEnum):
     HOME = "home"
+    FEED = "feed"
     SETUP = "setup"
     FOCUS = "focus"
     BREAK_OFFER = "break_offer"
@@ -50,6 +51,7 @@ class RejectionCode(StrEnum):
     UNAVAILABLE = "unavailable"
     INVALID_DURATION = "invalid_duration"
     INVALID_FOOD = "invalid_food"
+    INSUFFICIENT_YARN = "insufficient_yarn"
     NO_SESSION = "no_session"
     WRONG_SESSION_STATE = "wrong_session_state"
     NO_BREAK_OFFER = "no_break_offer"
@@ -71,11 +73,22 @@ class FoodDefinition:
     id: str
     sprite_id: str
     content_seconds: int
+    display_name: str | None = None
+    price_yarn: int = 0
+    consume_animation: str = "eat"
 
     def __post_init__(self) -> None:
         _require_text(self.id, "food id")
         _require_text(self.sprite_id, "sprite id")
         _require_positive(self.content_seconds, "content_seconds")
+        if self.display_name is not None:
+            _require_text(self.display_name, "food display_name")
+        _require_nonnegative(self.price_yarn, "price_yarn")
+        _require_text(self.consume_animation, "consume_animation")
+
+    @property
+    def happy_seconds(self) -> int:
+        return self.content_seconds
 
 
 @dataclass(frozen=True, slots=True)

@@ -8,7 +8,10 @@ from deskpet.core.models import RejectionCode
 
 
 class ActionId(StrEnum):
-    FEED_DEFAULT = "feed_default"
+    OPEN_FEED = "open_feed"
+    FEED_DEFAULT = "open_feed"  # compatibility alias for pre-M25 callers
+    BUY_JOLLOF = "buy_jollof"
+    BUY_COFFEE = "buy_coffee"
     OPEN_SETUP = "open_setup"
     CYCLE_DURATION = "cycle_duration"
     CONFIRM_FOCUS = "confirm_focus"
@@ -24,7 +27,15 @@ class ActionId(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class FeedDefault: ...
+class OpenFeed: ...
+
+
+FeedDefault = OpenFeed
+
+
+@dataclass(frozen=True, slots=True)
+class BuyItem:
+    item_id: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +83,8 @@ class RestartFocus: ...
 
 
 type ControlIntent = (
-    FeedDefault
+    OpenFeed
+    | BuyItem
     | OpenSetup
     | CycleDuration
     | ConfirmFocus

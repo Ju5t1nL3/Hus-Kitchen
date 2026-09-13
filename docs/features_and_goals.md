@@ -115,6 +115,10 @@ records the resolved price/reaction; insufficient yarn changes nothing. Back
 returns Home without an event. The current direction is immediate purchase and
 feeding, with no inventory, quantities, cooldown or shop browsing.
 
+The configured catalog is Jollof Rice for 3 yarn and Coffee for 2 yarn. Both use
+the same three-frame eating animation and then leave the pet Happy for 30 seconds.
+Prices, reaction duration and manifest IDs are configuration rather than rule code.
+
 Define consumable data separately from feeding logic. Required assets now include
 Food and Drink sprites/feeding frames plus the mood and celebration art. Artwork
 production remains coordinated with M16. Source frames are individual PNGs grouped

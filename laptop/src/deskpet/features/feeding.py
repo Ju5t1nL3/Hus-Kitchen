@@ -1,10 +1,10 @@
-"""Pure feeding decisions for the one-food MVP."""
+"""Pure, atomic purchase-and-feed decisions."""
 
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 
 from deskpet.core.commands import Accepted, Decision, FeedPet, Rejected
-from deskpet.core.events import EventSource, PetFed
+from deskpet.core.events import EventSource, ItemPurchasedAndFed
 from deskpet.core.models import (
     FoodDefinition,
     GameState,
@@ -20,7 +20,7 @@ def decide(
     food_definitions: Mapping[str, FoodDefinition],
     now_utc: datetime,
 ) -> Decision:
-    """Validate a feed request and return one free feeding event draft."""
+    """Resolve price, spend yarn and feed in one replayable event draft."""
     _require_aware(now_utc)
     if state.active_session is not None or state.pending_break is not None:
         return Rejected(RejectionCode.UNAVAILABLE)
@@ -30,15 +30,22 @@ def decide(
         return Rejected(RejectionCode.INVALID_FOOD)
     if food.id != command.food_id:
         raise ValueError("food definition key and id do not match")
+    progression = state.progression
+    if progression is None:
+        return Rejected(RejectionCode.UNAVAILABLE)
+    if progression.yarn_balance < food.price_yarn:
+        return Rejected(RejectionCode.INSUFFICIENT_YARN)
 
     return Accepted(
-        PetFed(
+        ItemPurchasedAndFed(
             source=EventSource.LOCAL_CONTROLS,
             dedupe_key=command.operation_key,
-            food_id=food.id,
+            item_id=food.id,
+            price_paid=food.price_yarn,
+            yarn_balance_after=progression.yarn_balance - food.price_yarn,
             reaction=Reaction(
-                mood=ReactionMood.CONTENT,
-                expires_at=now_utc + timedelta(seconds=food.content_seconds),
+                mood=ReactionMood.HAPPY,
+                expires_at=now_utc + timedelta(seconds=food.happy_seconds),
             ),
         )
     )

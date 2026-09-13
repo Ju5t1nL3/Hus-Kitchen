@@ -14,11 +14,19 @@ focus:
   report_timezone: America/Chicago
 
 feeding:
-  default_food_id: basic
   definitions:
-    basic:
-      sprite_id: food_basic
-      content_seconds: 20
+    jollof_rice:
+      display_name: Jollof Rice
+      sprite_id: jollof_rice
+      price_yarn: 3
+      happy_seconds: 30
+      consume_animation: feed
+    coffee:
+      display_name: Coffee
+      sprite_id: coffee
+      price_yarn: 2
+      happy_seconds: 30
+      consume_animation: feed
 
 progression:
   policy_version: 1
@@ -28,8 +36,12 @@ progression:
 controls:
   bindings:
     home:
-      1.press: feed_default
+      1.press: open_feed
       2.press: open_setup
+    feed:
+      1.press: buy_jollof
+      2.press: buy_coffee
+      3.press: back_home
     setup:
       1.press: cycle_duration
       2.press: confirm_focus

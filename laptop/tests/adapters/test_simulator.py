@@ -141,6 +141,23 @@ class SimulatorTests(unittest.TestCase):
         self.assertTrue(any(entry.message_type == "render" for entry in entries))
         self.assertTrue(all('": ' not in entry.raw for entry in entries))
 
+    def test_feed_menu_purchase_traverses_production_json_codec(self) -> None:
+        self._press(1, Screen.FEED)
+        view = cast_view(self._state())
+        buttons = cast(list[dict[str, object]], view["buttons"])
+        self.assertEqual(
+            [button["label"] for button in buttons],
+            ["Jollof 3Y", "Coffee 2Y", "Back"],
+        )
+
+        self._press(2, Screen.HOME)
+
+        progression = cast(dict[str, object], cast_view(self._state())["progression"])
+        self.assertEqual(progression["yarn_balance"], 8)
+        self.assertTrue(
+            any(entry.message_type == "animate" for entry in self.trace.snapshot())
+        )
+
     def test_invalid_oversized_disconnect_and_reconnect_are_visible(self) -> None:
         initial_connection = self._state()["connection_id"]
         self.device.inject("{bad json")
