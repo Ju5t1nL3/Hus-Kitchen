@@ -353,13 +353,21 @@ def _validate_view(
     if not _is_positive_int(view.control_epoch):
         raise EncodeError("control_epoch must be positive")
     is_timer = view.screen in {Screen.FOCUS, Screen.BREAK}
+    revealing_clock = view.screen is Screen.FOCUS and view.clock_text is not None
     if view.screen is Screen.HOME:
         if view.clock_text is None or _CLOCK_PATTERN.fullmatch(view.clock_text) is None:
             raise EncodeError("home requires a valid clock_text")
+    elif revealing_clock:
+        if _CLOCK_PATTERN.fullmatch(view.clock_text or "") is None:
+            raise EncodeError("focus clock reveal requires a valid clock_text")
     elif view.clock_text is not None:
         raise EncodeError("clock_text is only valid on home")
     if is_timer:
-        if not _is_int(view.timer_seconds) or not 0 <= view.timer_seconds <= 3_600:
+        if revealing_clock and view.timer_seconds is not None:
+            raise EncodeError("focus clock reveal cannot include timer_seconds")
+        if not revealing_clock and (
+            not _is_int(view.timer_seconds) or not 0 <= view.timer_seconds <= 3_600
+        ):
             raise EncodeError("timer screen requires valid timer_seconds")
     elif view.timer_seconds is not None or view.paused:
         raise EncodeError("non-timer screen cannot have timer state")

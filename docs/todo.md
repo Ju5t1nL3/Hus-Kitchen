@@ -66,7 +66,7 @@ Reference: [development and hardware modes](development_modes.md).
 
 | Owner | Status | ID | Task / completion check | Needs | Notes |
 | --- | --- | --- | --- | --- | --- |
-| — | [ ] Todo | M23 | Implement explicit `dev`/`hardware` composition profiles and a clickable virtual Pico with screen, dynamic buttons, fake-time controls and bounded bidirectional JSON trace; a full focus/break flow and invalid/reconnect cases traverse the production codec. | M11–M14, M18 | Same rules/presenter/codec in both profiles. Dev storage is temporary by default; browser UI binds loopback only. No direct button-to-feature calls or gameplay events for diagnostics. |
+| justinle2006 | [x] Done | M23 | Implement explicit `dev`/`hardware` composition profiles and a clickable virtual Pico with screen, dynamic buttons, fake-time controls and bounded bidirectional JSON trace; a full focus/break flow and invalid/reconnect cases traverse the production codec. | M11–M14, M18 | Added explicit profiles, temporary dev SQLite, loopback browser UI, protocol-validating virtual Pico, controllable time and bounded trace. Full focus/Time/pause/resume/break, malformed/oversized/stale and reconnect cases traverse the serial link/codec. Hands-on fixes keep buttons stable across polling, show focus/break minutes on Setup and preserve manual trace scrolling. Actual loopback state API, Ruff, strict Pyright, CLI help and all 131 tests pass. |
 
 ## Pico and artwork
 

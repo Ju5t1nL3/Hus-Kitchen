@@ -23,8 +23,8 @@ Development mode opens a small local UI representing the physical setup:
 - Pico/USB connection indicator and connect, disconnect and reboot controls.
 - LCD-sized screen preview using the current render snapshot.
 - One clickable control for every button ID advertised by the simulated device;
-  default IDs are 1 and 2, while tests can advertise a third button.
-- Separate Press and Hold gestures, plus the current button labels and enabled state.
+  the MVP defaults to IDs 1, 2 and 3.
+- One normal clickable press per button, with its current label and enabled state.
 - Optional fake-clock controls to advance a long focus or break quickly.
 - A chronological trace with direction, timestamp, raw JSON line, decoded message
   type and accepted/rejected reason.
@@ -56,12 +56,12 @@ sensitive sensor data before display/export.
 
 | Component/API | Input | Output |
 | --- | --- | --- |
-| `build_application(profile, config)` | Valid profile and config | One application composed with matching adapters |
-| `SimulatorTransport.send_from_device(line)` | One bounded JSON line | Bytes delivered to the production laptop decoder |
-| `SimulatorTransport.send_from_laptop(line)` | One bounded JSON line | Bytes delivered to the virtual Pico decoder/UI |
-| `VirtualPico.press(button, gesture)` | Advertised button ID and press/hold | Versioned button JSON with connection, boot, sequence and control epoch |
-| `VirtualPico.accept(message)` | Valid laptop hello/ping/render/animate | Updated connection/screen/animation state or explicit rejection |
-| `TraceSink.record(entry)` | Direction, timestamp, raw line and parse result | Bounded ordered diagnostic entry |
+| `build_application(profile, config_path, data_path)` | Explicit profile, validated config path and optional storage path | One application composed with matching adapters |
+| `SimulatorPort.push_from_device(data)` | One bounded JSON byte line | Bytes delivered to the production laptop decoder |
+| `SimulatorPort.write(data)` | Bytes from the real laptop serial link | Bytes validated and applied by the virtual Pico |
+| `VirtualPico.press(button, gesture)` | Advertised button ID and normal press | Versioned button JSON with connection, boot, sequence and control epoch |
+| `VirtualPico.accept_host_bytes(data)` | Laptop hello/ping/render/animate bytes | Updated connection/screen/animation state or traced rejection |
+| `TraceSink.record(...)` | Direction, raw line, message type and result | Bounded ordered diagnostic entry |
 
 ## Completion checks
 
@@ -71,3 +71,11 @@ break. Confirm that both trace directions show the same compact JSON Lines used 
 the shared fixtures. Disconnect/reconnect, stale epoch and malformed/oversized-line
 scenarios must use the real codec behavior. Run the same application tests under
 both profiles where hardware can be replaced by an in-memory transport.
+
+## Current commands
+
+From `laptop/`, run `uv run python main.py --profile dev`, then open the printed
+`127.0.0.1` URL. This uses a temporary SQLite database unless `--data PATH` is
+provided. `--simulator-port PORT` changes only the loopback UI port. Run hardware
+explicitly with `uv run python main.py --profile hardware`; neither profile falls
+back to the other.

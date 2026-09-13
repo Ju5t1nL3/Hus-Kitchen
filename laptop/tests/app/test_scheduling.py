@@ -79,6 +79,21 @@ class WakeSchedulingTests(unittest.TestCase):
 
         self.assertEqual(result, InterruptedSchedule("focus-1"))
 
+    def test_expired_reaction_does_not_create_a_zero_delay_busy_loop(self) -> None:
+        state = GameState(
+            "user-1",
+            "pet-1",
+            latest_reaction=Reaction(
+                ReactionMood.HAPPY, NOW.utc - timedelta(milliseconds=1)
+            ),
+        )
+
+        result = advance(state, runtime(), NOW)
+
+        self.assertIsInstance(result, NormalSchedule)
+        assert isinstance(result, NormalSchedule)
+        self.assertEqual(result.next_wake_mono_ms, NOW.monotonic_ms + 1_000)
+
 
 if __name__ == "__main__":
     unittest.main()

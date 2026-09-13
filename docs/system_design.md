@@ -129,7 +129,7 @@ laptop/                           # CPython 3.14.6 uv project
   uv.lock                         # reproducible laptop dependency lock
   .python-version                 # laptop CPython selection only
   README.md                       # laptop setup/check instructions
-  main.py                         # future laptop composition root and CLI
+  main.py                         # explicit dev/hardware composition root and CLI
   config.yaml                     # validated user-tunable laptop rules/settings
   src/deskpet/
     core/
@@ -151,18 +151,17 @@ laptop/                           # CPython 3.14.6 uv project
       scheduling.py               # timer samples/deadlines, interruption handling
       presenter.py                # state/runtime -> screen snapshot
     adapters/
-      serial_link.py              # portable discovery, queued I/O, connection/heartbeat
+      serial_discovery.py         # portable serial enumeration and selection
+      serial_device_link.py       # queued I/O, reconnect and heartbeat
       wire_codec.py               # laptop message validation and encoding
       sqlite_event_store.py       # durable append/read and single-writer lock
       system_clock.py             # UTC and monotonic time, resume detection
       config_loader.py            # YAML -> typed configuration
+      simulator.py                # virtual Pico, in-memory serial, clock and trace
+      simulator_web.py            # loopback-only clickable development UI
+      temporary_event_store.py    # disposable SQLite storage for development
       text_report.py              # read-only report formatting
       fakes.py                    # fake store/device/clock
-    devtools/
-      virtual_pico.py             # simulated device state and button messages
-      transport.py                # in-memory encoded-byte connection
-      trace.py                    # bounded bidirectional protocol diagnostics
-      ui.py                       # clickable local virtual-device view
   tests/                          # laptop unit/integration tests
 pico/
   README.md                       # firmware/hardware setup and flashing notes

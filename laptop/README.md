@@ -35,14 +35,27 @@ treating that syntax target as verified.
 Run the hardware application from this folder after connecting the configured Pico:
 
 ```sh
-uv run python main.py
+uv run python main.py --profile hardware
 ```
 
 Use `--config PATH` or `--data PATH` to override the default `config.yaml` and
 `data/pet.db`. The application reports no matching or ambiguous serial devices
-instead of guessing. Development mode and report commands remain planned work.
+instead of guessing.
 
-The planned [development and hardware profiles](../docs/development_modes.md) use
+Run the clickable virtual Pico without hardware:
+
+```sh
+uv run python main.py --profile dev
+```
+
+Open the printed loopback URL (normally `http://127.0.0.1:8765`). Development
+storage is temporary unless `--data PATH` is supplied. Use `--simulator-port`
+to choose another local port. The simulator exposes connect/reboot controls,
+three clickable buttons, fake-time advancement, invalid-line injection and a
+bounded copyable JSON trace. Both runtime profiles use the same application,
+rules, presenter, wire codec and event-store contract.
+
+The [development and hardware profiles](../docs/development_modes.md) use
 one application and wire codec. Development supplies a clickable virtual Pico and
 safe temporary storage; hardware supplies the USB adapter and local SQLite store.
 

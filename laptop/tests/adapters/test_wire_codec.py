@@ -192,13 +192,17 @@ class EncodeTests(unittest.TestCase):
             timer_seconds=60,
             mood=Mood.FOCUSED,
         )
+        clock_reveal = replace(timer, clock_text="14:32", timer_seconds=None)
 
         encode(RenderMessage("c", 1, setup), BUTTONS)
         encode(RenderMessage("c", 1, timer), BUTTONS)
+        encode(RenderMessage("c", 1, clock_reveal), BUTTONS)
         for view in (
             replace(setup, focus_minutes=7),
             replace(setup, break_minutes=0),
             replace(timer, timer_seconds=3_601),
+            replace(clock_reveal, clock_text="25:00"),
+            replace(clock_reveal, timer_seconds=60),
         ):
             with self.subTest(view=view), self.assertRaises(EncodeError):
                 encode(RenderMessage("c", 1, view), BUTTONS)

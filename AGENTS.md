@@ -30,7 +30,8 @@ do not preassign people to modules or assume a permanent integration owner.
 ## Project status
 
 This repository contains implemented laptop rules, persistence, presentation,
-USB adapters and an application coordinator, alongside in-progress Pico firmware.
+USB adapters, application coordination/recovery and a development simulator,
+alongside in-progress Pico firmware.
 Use [docs/todo.md](docs/todo.md) for exact verified status; do not describe planned
 modules or checks as working code.
 The user reports some board setup is already done; inspect and record it before

@@ -63,7 +63,7 @@ def advance(
     if runtime.clock_reveal_until_mono_ms is not None:
         next_wake = min(next_wake, runtime.clock_reveal_until_mono_ms)
     reaction = state.latest_reaction
-    if reaction is not None:
+    if reaction is not None and reaction.expires_at > now.utc:
         expiry_ms = _utc_deadline_to_mono_ms(reaction.expires_at, now)
         next_wake = min(next_wake, expiry_ms)
 
