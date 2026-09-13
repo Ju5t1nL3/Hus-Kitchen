@@ -47,6 +47,7 @@ from deskpet.core.events import (
     FocusSessionResumed,
     FocusSessionStarted,
     PetCreated,
+    ProgressionInitialized,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -146,6 +147,19 @@ class Application:
             connection_id=None,
             boot_id=None,
         )
+        if state.progression is None:
+            policy = self._config.progression
+            initialized = ProgressionInitialized(
+                source=EventSource.SYSTEM,
+                dedupe_key="progression-initialized",
+                policy_version=policy.policy_version,
+                starting_yarn=policy.starting_yarn,
+                xp_per_level=policy.xp_per_level,
+            )
+            self._state = replay.apply_event(
+                state, self._append(initialized, now).event
+            )
+            state = self._state
         if state.active_session is not None:
             self._end_replayed_session(now, RequestedEndReason.APP_RESTART)
         self._started = True

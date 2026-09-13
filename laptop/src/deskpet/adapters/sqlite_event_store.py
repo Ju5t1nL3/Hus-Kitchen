@@ -26,6 +26,7 @@ from deskpet.core.events import (
     FocusSessionStarted,
     PetCreated,
     PetFed,
+    ProgressionInitialized,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -327,6 +328,12 @@ def _encode_draft(draft: EventDraft) -> JsonObject:
     match draft:
         case PetCreated():
             return {"pet_id": draft.pet_id}
+        case ProgressionInitialized():
+            return {
+                "policy_version": draft.policy_version,
+                "starting_yarn": draft.starting_yarn,
+                "xp_per_level": draft.xp_per_level,
+            }
         case PetFed():
             return {
                 "food_id": draft.food_id,
@@ -454,6 +461,14 @@ def _decode_draft(
     if event_type == "pet_created":
         _keys(payload, {"pet_id"})
         return PetCreated(**metadata, pet_id=_text_field(payload, "pet_id"))
+    if event_type == "progression_initialized":
+        _keys(payload, {"policy_version", "starting_yarn", "xp_per_level"})
+        return ProgressionInitialized(
+            **metadata,
+            policy_version=_int_field(payload, "policy_version"),
+            starting_yarn=_int_field(payload, "starting_yarn"),
+            xp_per_level=_int_field(payload, "xp_per_level"),
+        )
     if event_type == "pet_fed":
         _keys(payload, {"food_id", "reaction"})
         return PetFed(

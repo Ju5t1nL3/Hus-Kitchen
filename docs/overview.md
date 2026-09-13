@@ -1,7 +1,7 @@
 # Desk pet: the simple explanation
 
-This is the current plan, not built code. Start here; the other docs are references
-for implementing specific parts.
+This summarizes both implemented foundations and the newly approved work still on
+the task board. Start here; the other docs are task-specific references.
 
 ## What does it do?
 
@@ -9,7 +9,8 @@ When you first plug it in, you see a big pet, a clock at the top right, and
 labels above two of the three buttons: **Feed** and **Focus** (the third does
 nothing here and shows a dash).
 
-Feed gives it one kind of food and plays a cute animation. Focus opens a screen
+Feed opens Food/Drink/Back. Food and Drink show a yarn price; choosing one spends
+yarn and feeds the pet immediately if you can afford it. Focus opens a screen
 where the first button cycles through 5, 10, 15 … 60 minutes and back to 5, the
 second (**Set**) confirms, and the third (**Back**) returns home without
 starting anything. The first selection is 25 minutes; later it remembers your
@@ -50,10 +51,9 @@ content; a completed focus makes it happy; ending focus after the grace period
 makes it briefly sad. The latest applicable reaction wins and fades after a short
 time. Otherwise the pet looks calm, focused or resting according to what you do.
 
-Health, hunger and friendship are removed entirely, including hidden meters.
-Coins and XP arrive immediately after this MVP.
-It never dies. Daily streaks and a weekly text summary use the same saved diary
-and stay on the laptop.
+Health, hunger and friendship are removed entirely, including hidden meters. XP
+raises levels; yarn is earned and spent on Food/Drink. It never dies. Daily streaks
+and a weekly text summary use the same saved diary and stay on the laptop.
 
 ## How do we pick up work?
 
@@ -72,10 +72,9 @@ verified. Coordinate shared files with other task claimants; the
 
 ## What should we build first?
 
-Make the home/setup/timer screens work, then connect one complete focus session
-to a saved completion and a break offer. Add pause/end behavior, feeding and
-emotions, and test with the real device. A simulated device lets laptop work begin
-before the hardware is ready.
+The base home/setup/timer/recovery slice and simulator now exist. Next follow the
+progression/economy, Feed menu, user-defined moods, rewards, optional sensors and
+streak/report order in [todo.md](todo.md), then verify with the real device.
 
 Food definitions, emotion rules and sprite drawing are separate, so adding another
 food or changing the artwork later does not require rewriting the timer.
@@ -86,13 +85,14 @@ reuse the scanner and USB messages rather than needing new game logic.
 
 ## What comes next?
 
-First add an XP bar and coin total at the top. Finishing focus earns XP and coins;
-gaining a level gives extra coins. Next, keyboard activity and webcam head tracking
-can earn coin bonuses. You can turn either sensor on or off independently.
-Reward amounts and level thresholds still need to be chosen.
+First add XP, levels and yarn plus purchasable Food/Drink. After the user defines
+the mood catalog, finishing focus earns base XP/yarn. Optional keyboard counts and
+local camera attention add yarn; level gains, uninterrupted focus chains and daily
+streaks can add more. Reward amounts and exact streak rules still need choices.
 
-The future-feature order starts keyboard, head tracking, sound, then a weekly
-dashboard. Pixel-art timer progress is later, at #8; it is not the XP bar.
+Keyboard and camera bonuses are now active tasks. The remaining future-feature
+order continues with sound and then a weekly dashboard. Pixel-art timer progress
+remains at original priority #8; it is not the XP bar.
 See the [ordered roadmap](nice_to_haves.md) and [reward plan](progression_design.md).
 
 ## What should I review to agree on the plan?

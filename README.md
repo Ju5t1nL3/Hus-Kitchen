@@ -22,7 +22,7 @@ Start with [`AGENTS.md`](AGENTS.md) for contributor rules and the documentation 
 Read [`docs/overview.md`](docs/overview.md) for the short product explanation and
 [`docs/todo.md`](docs/todo.md) before claiming implementation work.
 
-The planned [`dev` profile](docs/development_modes.md) provides a clickable virtual
+The implemented [`dev` profile](docs/development_modes.md) provides a clickable virtual
 Pico and bidirectional JSON trace. The `hardware` profile runs the same application
 and rules against the real USB device and persistent database.
 
@@ -37,5 +37,6 @@ laptop/                CPython application and laptop tooling
 pico/                  MicroPython firmware and hardware notes
 ```
 
-The application is still at the scaffold/planning stage. Setup and run commands
-will grow as the corresponding MVP tasks are implemented.
+The laptop foundation and simulator are implemented; progression/economy expansion
+and Pico hardware integration remain on the task board. Use the per-runtime READMEs
+for verified commands rather than assuming planned work already runs.

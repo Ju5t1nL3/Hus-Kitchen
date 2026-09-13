@@ -101,6 +101,19 @@ class DeviceConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ProgressionConfig:
+    policy_version: int
+    starting_yarn: int
+    xp_per_level: int
+
+    def __post_init__(self) -> None:
+        _positive(self.policy_version, "progression.policy_version")
+        if self.starting_yarn < 0:
+            raise ValueError("progression.starting_yarn must be nonnegative")
+        _positive(self.xp_per_level, "progression.xp_per_level")
+
+
+@dataclass(frozen=True, slots=True)
 class AppConfig:
     identity: IdentityConfig
     focus: FocusConfig
@@ -108,6 +121,7 @@ class AppConfig:
     bindings: ControlBindings
     ui: UiConfig
     device: DeviceConfig
+    progression: ProgressionConfig
 
 
 def _text(value: str, path: str) -> None:

@@ -27,12 +27,13 @@ Feedback = Literal["unavailable", "storage_error"]
 | Reaction | mood restricted to content/happy/sad, expires_at: UTC datetime |
 | FocusTerms / BreakTerms / BreakOffer | Exact fields from the event model; durations in seconds |
 | Session | id: str, kind: SessionKind, matching typed terms, status: SessionStatus, committed_active_ms: int |
-| GameState | user_id: str, pet_id: str, active_session: Session or None, pending_break: BreakOffer or None, last_focus_minutes: int or None, latest_reaction: Reaction or None, focus_dates: frozenset[date], last_seq: int |
+| ProgressionState | total_xp: nonnegative int, derived level: positive int, yarn_balance: nonnegative int, policy_version/xp_per_level: positive ints |
+| GameState | user_id: str, pet_id: str, active_session: Session or None, pending_break: BreakOffer or None, last_focus_minutes: int or None, latest_reaction: Reaction or None, progression: ProgressionState or None for pre-M24 history, focus_dates: frozenset[date], last_seq: int |
 | ClockReading | utc: aware datetime, monotonic_ms: int, resumed: bool |
 | RuntimeState | screen: Screen, selected_focus_minutes: int, run_anchor_mono_ms: int or None, previous_clock: ClockReading or None, control_epoch: int, connection_id/boot_id: str or None, clock_reveal_until_mono_ms: int or None |
 | TimerSample | session_id: str, active_ms: int, remaining_seconds: int, due: bool; explicit trusted laptop sample |
 | ButtonInput | connection_id, boot_id, seq, control_epoch, button: ButtonId (positive int advertised by device), action: Gesture; internal received clock sample |
-| RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration fields, paused, tuple of ButtonLabels, feedback |
+| RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration/progression fields, paused, tuple of ButtonLabels, feedback |
 | ButtonLabel | button: ButtonId, label: str, enabled: bool |
 | ActionDefinition | id: typed ActionId, label: str, intent: ControlIntent, available: pure predicate on GameState |
 | ControlBindings | Mapping from (context, ButtonId, Gesture) to ActionId; context distinguishes running/paused screens |
@@ -81,7 +82,7 @@ Where a fixed enum is specified, use that type rather than an unrestricted strin
 
 | API | Inputs → output | Contract |
 | --- | --- | --- |
-| feeding.decide(state, command, food_definitions, now_utc) → Decision | State, FeedPet, immutable ID→definition mapping, explicit time | Validate food and idle availability; one free feed event with resolved reaction |
+| feeding.decide(state, command, food_definitions, now_utc) → Decision | State, FeedPet, immutable ID→definition mapping, explicit time | Current M07 free-feed API; M25 replaces it with balance/price validation and an atomic purchase/feed event |
 | timers.break_minutes(focus_minutes, policy) → int | Selected duration and validated break policy | Pure proportional calculation; no Pico involvement |
 | timers.decide(state, command, sample, rules, now) → Decision | Immutable state, timer command, TimerSample or None, validated rules and clock reading | Validate transition, pin terms on start, classify early end, build one event |
 | emotions.select(state, now_utc) → Mood | Event-derived state and explicit UTC | Latest unexpired reaction, then activity default; no I/O or event append |
@@ -99,8 +100,9 @@ it to Home. Pure functions cannot produce random IDs or inspect clocks implicitl
 
 The application creates pet_created on an empty log using configured pet identity.
 The small replay module owns the fixed event dispatch; split transition handlers by feature
-only if its size warrants it. Progression modules are added after MVP as described
-in [progression design](progression_design.md); no numerical care model is planned.
+only if its size warrants it. Progression modules are added in the approved M24–M30
+stages described in [progression design](progression_design.md); no numerical care
+model is planned.
 
 ## Application and UI APIs
 

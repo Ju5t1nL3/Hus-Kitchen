@@ -19,10 +19,12 @@ from deskpet.core.events import (
     FocusSessionStarted,
     PetCreated,
     PetFed,
+    ProgressionInitialized,
 )
 from deskpet.core.models import (
     FocusTerms,
     GameState,
+    ProgressionState,
     Reaction,
     ReactionMood,
     Session,
@@ -62,6 +64,22 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
     match draft:
         case PetCreated():
             raise ReplayError("history contains more than one pet_created event")
+        case ProgressionInitialized():
+            if state.progression is not None:
+                raise ReplayError("progression can only be initialized once")
+            try:
+                progression = ProgressionState(
+                    total_xp=0,
+                    level=1,
+                    yarn_balance=draft.starting_yarn,
+                    policy_version=draft.policy_version,
+                    xp_per_level=draft.xp_per_level,
+                )
+            except ValueError as error:
+                raise ReplayError(
+                    f"invalid progression initialization: {error}"
+                ) from error
+            return _advance(state, event, progression=progression)
         case PetFed():
             if state.active_session is not None or state.pending_break is not None:
                 raise ReplayError(

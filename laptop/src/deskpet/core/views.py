@@ -77,6 +77,22 @@ class ButtonLabel:
     enabled: bool
 
 
+@dataclass(frozen=True, slots=True)
+class ProgressionView:
+    level: int
+    xp_into_level: int
+    xp_for_next_level: int
+    yarn_balance: int
+
+    def __post_init__(self) -> None:
+        if self.level <= 0 or self.xp_for_next_level <= 0:
+            raise ValueError("progression level and threshold must be positive")
+        if not 0 <= self.xp_into_level < self.xp_for_next_level:
+            raise ValueError("xp_into_level must be within the current level")
+        if self.yarn_balance < 0:
+            raise ValueError("yarn_balance must be nonnegative")
+
+
 type AvailabilityPredicate = Callable[[GameState], bool]
 
 
@@ -104,6 +120,7 @@ class RenderSnapshot:
     break_minutes: int | None
     buttons: tuple[ButtonLabel, ...]
     feedback: Feedback | None
+    progression: ProgressionView | None = None
 
 
 class AnimationName(StrEnum):

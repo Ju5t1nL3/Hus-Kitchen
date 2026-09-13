@@ -1,7 +1,7 @@
 # Decisions, preferences and open questions
 
-Status: planning only. The small-screen emotion-first design below supersedes the
-earlier stats/shop proposal. No implementation or hardware verification is claimed.
+Status: living decision record. Use [todo.md](todo.md) for implementation and
+hardware-verification status.
 
 ## User preferences to preserve
 
@@ -15,8 +15,9 @@ earlier stats/shop proposal. No implementation or hardware verification is claim
   requiring their implementation now.
 - Adding buttons or changing their functions should be a small, localized change.
 - Health/hunger/friendship are permanently removed; do not retain them as future work.
-- After MVP, prioritize XP/coins and level bonuses, then optional keyboard/head
-  bonuses. Preserve the exact [future-feature order](nice_to_haves.md).
+- Before final verification, add XP/levels/yarn and purchasable Food/Drink, then
+  user-defined moods, base rewards, optional keyboard/camera yarn, and
+  level/focus-chain/daily-streak bonuses with weekly recap work.
 - Four team members are confirmed, but possibly only two will work on software.
   Do not assign roles in advance: contributors pick tasks from [todo.md](todo.md),
   record their handle and update progress/completion there.
@@ -32,7 +33,7 @@ earlier stats/shop proposal. No implementation or hardware verification is claim
 | Three default physical buttons; configurable bindings and ID-based input | The third button gives most screens a real Back/secondary action (Setup's Back, focus's Time reveal, break's Again) without special-casing button counts; Home and break_running still only bind two and leave the third disabled. |
 | Break sessions cannot be paused | Break offers only two actions (Again, Home), both of which end the break; keeping a third pause/resume pair added no value once ending was always one press away. |
 | Again: skip/end a break and immediately start a new focus session at the last confirmed duration | Lets a user keep working without revisiting Setup, while remaining an explicit press rather than an automatic continuation. |
-| One free food with a separate definition and sprite | Small MVP with room for more foods later. |
+| Feed opens Food/Drink/Back; Food and Drink cost yarn and are immediately fed | Yarn has an understandable use without adding inventory management. Prices remain open. |
 | Individual PNG source frames plus a small ordered animation manifest | Two-frame animations do not justify sprite-sheet slicing; separate files are easier to replace and reduce artwork merge conflicts, while the manifest makes grouping, order and timing explicit. PNGs are converted to firmware bitmap data before deployment. |
 | 5–60-minute focus in five-minute steps; default 25, remember last confirmation | Simple adjustable duration. “5s” is interpreted as five-minute increments, as discussed with the user. |
 | Break = one-fifth of focus, rounded to whole minutes, minimum one | Transparent proposed product rule; not a universal Pomodoro requirement. |
@@ -40,14 +41,15 @@ earlier stats/shop proposal. No implementation or hardware verification is claim
 | Large countdown, small expressive face at top right | Prioritizes readability; removes progress art from MVP. |
 | End and Pause/Resume during focus | Supports accidental starts and interruptions; breaks deliberately cannot pause. |
 | Grace below 60 seconds of actual focus; brief sadness after that | Pauses do not consume grace; no lasting punishment. |
-| Emotions from saved events and explicit time | Predictable content/happy/sad reactions without hidden numerical stats. |
+| Emotions from saved events and explicit time; catalog pending user specification | Keeps reactions deterministic without hidden numerical stats while allowing the user to choose the final moods/timing. |
 | Laptop-only streak/weekly text report | Keeps useful history without cluttering the Pico. |
-| First post-MVP: top XP bar/coin total, focus-completion XP/coins, level bonus coins | Progression is now the next committed milestone, not an unspecified economy idea. |
-| Keyboard and head-tracking coin bonuses with separate on/off settings | Both inputs are priorities; base rewards remain available without sensing. |
+| XP raises levels; yarn is spendable currency | Separates progression from Food/Drink purchasing and replaces all product-facing coin terminology. |
+| Keyboard and camera-attention yarn bonuses with separate on/off settings | Both inputs are active planned tasks; base rewards remain available without sensing. |
+| Level, uninterrupted focus-chain and daily-streak yarn bonuses | Rewards continued work while requiring deduplicated, explainable history facts. |
 
-Reaction durations (content 20s, happiness 30s, sadness 30s), setup hold-to-back,
-and neutral break ending are documented defaults that can be tuned. The exact
-screen/control behavior is owned by [MVP goals](features_and_goals.md).
+Existing reaction durations are provisional until M26. Neutral break ending
+remains agreed. Exact screen/control behavior is owned by
+[product goals](features_and_goals.md).
 
 ## Architecture decisions retained or revised
 
@@ -67,8 +69,9 @@ screen/control behavior is owned by [MVP goals](features_and_goals.md).
 
 ## Superseded requirements
 
-Health/hunger/friendship are removed from the product, not deferred. Coins/XP are
-the first post-MVP milestone, specified in [progression design](progression_design.md).
+Health/hunger/friendship are removed from the product, not deferred. XP/levels/yarn
+are an approved pre-verification expansion specified in
+[progression design](progression_design.md).
 The former grouped “deferred MVP” backlog is removed. Pixel-art timer progress is
 only future idea #8. The old fixed-duration/no-pause focus flow is also superseded.
 
@@ -88,8 +91,11 @@ penalties are discarded; co-op shared loss remains a separate product decision.
 | Sprite style/dimensions and actual redraw speed? | Full pet, small faces, food/animations; size to confirmed LCD and measure. |
 | Team size and task assignment? | Four people confirmed; possibly two on software. No assignments in advance; claim individual tasks on the board. |
 | Tuning? | Open-ended. Existing values are provisional, not final decisions. Maintain configurable rules and the agreed low-stress behavior. |
-| Reward rates, level thresholds and sensor bonus caps? | Sources are agreed; amounts and whether sensor bonuses also affect XP remain open. |
-| XP/coin strip placement? | At the top; resolve space alongside clock/small face during the progression milestone. |
+| Food/Drink prices/reactions? | Feed-menu behavior is agreed; values and item-specific reactions/assets remain open. Starting yarn is provisionally 10 in validated config. |
+| Final mood catalog? | User will provide all moods, triggers, precedence and durations before M26. |
+| Reward rates, level thresholds and sensor/streak bonus caps? | Sources are agreed; amounts and whether non-base bonuses also affect XP remain open. |
+| Focus-chain and daily-streak reset/eligibility rules? | Concepts are agreed; exact boundaries/timezone require user decisions before M10/M30. |
+| XP/yarn strip placement? | Home-only top strip with level, XP within its threshold, and yarn; styling remains adjustable. |
 
 The record of user intent belongs here, behavior in MVP goals, APIs in class
 design, and wire/storage details in their own specs. Update affected documents

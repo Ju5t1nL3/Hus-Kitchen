@@ -34,7 +34,7 @@ and label-layout slot per button in hardware_config.py. Iterate that table for
 scanning, advertising capabilities and drawing label positions. Adding or removing
 a button needs a real pin/placement check and a laptop binding, not new feeding or
 timer logic.
-The post-MVP top XP/coin strip needs a layout pass alongside the clock/face;
+The XP/level/yarn strip needs a layout pass alongside the clock/face;
 it does not introduce numerical care stats or timer-progress artwork.
 
 Provide full-body and small-face sprites for `calm`, `content`, `happy`, `sad`,

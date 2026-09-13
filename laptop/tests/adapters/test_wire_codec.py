@@ -34,6 +34,7 @@ from deskpet.core.views import (
     Invalid,
     Parsed,
     Pong,
+    ProgressionView,
     RenderSnapshot,
 )
 
@@ -58,6 +59,7 @@ def home() -> RenderSnapshot:
             ButtonLabel(ButtonId(3), "-", False),
         ),
         feedback=None,
+        progression=ProgressionView(1, 0, 100, 10),
     )
 
 
@@ -184,6 +186,7 @@ class EncodeTests(unittest.TestCase):
             clock_text=None,
             focus_minutes=25,
             break_minutes=5,
+            progression=None,
         )
         timer = replace(
             home(),
@@ -191,6 +194,7 @@ class EncodeTests(unittest.TestCase):
             clock_text=None,
             timer_seconds=60,
             mood=Mood.FOCUSED,
+            progression=None,
         )
         clock_reveal = replace(timer, clock_text="14:32", timer_seconds=None)
 

@@ -31,6 +31,7 @@ from deskpet.core.events import (
     FocusSessionStarted,
     PetCreated,
     PetFed,
+    ProgressionInitialized,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -76,6 +77,12 @@ def every_draft() -> tuple[EventDraft, ...]:
     content = Reaction(ReactionMood.CONTENT, NOW + timedelta(seconds=20))
     return (
         PetCreated(**metadata("pet-created"), pet_id="pet-1"),
+        ProgressionInitialized(
+            **metadata("progression-initialized"),
+            policy_version=1,
+            starting_yarn=10,
+            xp_per_level=100,
+        ),
         PetFed(
             source=EventSource.LOCAL_CONTROLS,
             dedupe_key="button:c:1",
@@ -151,7 +158,7 @@ class SqliteEventStoreTests(unittest.TestCase):
             restored = reopened.read_after()
 
         self.assertEqual(restored, committed)
-        self.assertEqual([event.seq for event in restored], list(range(1, 12)))
+        self.assertEqual([event.seq for event in restored], list(range(1, 13)))
 
     def test_semantic_retry_ignores_new_id_and_timestamp(self) -> None:
         draft = every_draft()[0]

@@ -27,6 +27,7 @@ from deskpet.core.events import (
     FocusSessionStarted,
     PetCreated,
     PetFed,
+    ProgressionInitialized,
 )
 from deskpet.core.models import (
     ButtonId,
@@ -45,6 +46,7 @@ from deskpet.core.views import (
     ControlContext,
     CueRequest,
     PresentationResult,
+    ProgressionView,
     RenderSnapshot,
 )
 from deskpet.features import emotions
@@ -97,6 +99,7 @@ def build(
         break_minutes=_break_minutes(runtime, state, config),
         buttons=resolve_labels(context, state, device_buttons, bindings, actions),
         feedback=runtime.feedback,
+        progression=_progression(state) if runtime.screen is Screen.HOME else None,
     )
 
 
@@ -126,6 +129,8 @@ def on_commit(
             return PresentationResult(screen=Screen.HOME, cues=())
         case PetCreated():
             return PresentationResult(screen=Screen.HOME, cues=())
+        case ProgressionInitialized():
+            return PresentationResult(screen=runtime.screen, cues=())
         case PetFed():
             definition = food_definitions.get(draft.food_id)
             sprite = definition.sprite_id if definition is not None else None
@@ -173,3 +178,15 @@ def _break_minutes(
     if runtime.screen is Screen.BREAK_OFFER and state.pending_break is not None:
         return state.pending_break.duration_seconds // 60
     return None
+
+
+def _progression(state: GameState) -> ProgressionView | None:
+    value = state.progression
+    if value is None:
+        return None
+    return ProgressionView(
+        level=value.level,
+        xp_into_level=value.total_xp % value.xp_per_level,
+        xp_for_next_level=value.xp_per_level,
+        yarn_balance=value.yarn_balance,
+    )

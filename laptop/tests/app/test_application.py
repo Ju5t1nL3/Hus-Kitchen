@@ -169,7 +169,7 @@ class ApplicationTests(unittest.TestCase):
 
         self.assertIs(self.app.runtime.screen, Screen.BREAK_OFFER)
         self.assertIsInstance(self.store.events[-1].event.draft, FocusSessionCompleted)
-        self.assertEqual(len(self.store.events), 3)
+        self.assertEqual(len(self.store.events), 4)
         self.assertEqual(len(self.device.animations), 1)
 
     def test_focus_pause_resume_and_clock_reveal_are_runtime_driven(self) -> None:

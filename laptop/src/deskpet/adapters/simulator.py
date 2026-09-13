@@ -35,6 +35,7 @@ from deskpet.core.views import (
     DeviceReady,
     Parsed,
     Pong,
+    ProgressionView,
     RenderSnapshot,
     Shutdown,
     Tick,
@@ -627,6 +628,18 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
         raise ValueError("bad_paused")
     feedback_value = value.get("feedback")
     feedback = None if feedback_value is None else Feedback(str(feedback_value))
+    progression_value = value.get("progression")
+    progression = None
+    if progression_value is not None:
+        if not isinstance(progression_value, dict):
+            raise ValueError("bad_progression")
+        raw_progression = cast(dict[str, object], progression_value)
+        progression = ProgressionView(
+            level=_required_int(raw_progression, "level"),
+            xp_into_level=_required_int(raw_progression, "xp_into_level"),
+            xp_for_next_level=_required_int(raw_progression, "xp_for_next_level"),
+            yarn_balance=_required_int(raw_progression, "yarn_balance"),
+        )
     return RenderSnapshot(
         screen=Screen(_required_str(value, "screen")),
         control_epoch=_required_int(value, "control_epoch"),
@@ -638,6 +651,7 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
         break_minutes=_optional_int(value, "break_minutes"),
         buttons=tuple(labels),
         feedback=feedback,
+        progression=progression,
     )
 
 
@@ -664,6 +678,14 @@ def _view_json(view: RenderSnapshot) -> dict[str, object]:
             for item in view.buttons
         ],
         "feedback": view.feedback.value if view.feedback else None,
+        "progression": None
+        if view.progression is None
+        else {
+            "level": view.progression.level,
+            "xp_into_level": view.progression.xp_into_level,
+            "xp_for_next_level": view.progression.xp_for_next_level,
+            "yarn_balance": view.progression.yarn_balance,
+        },
     }
 
 

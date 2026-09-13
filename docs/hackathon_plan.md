@@ -50,10 +50,11 @@ laptop libraries into MicroPython.
 3. Pick remaining tasks for pause/resume/end, feeding/emotions, reports/recovery,
    artwork/screens, controls, breaks and reconnect. Independent work can proceed
    against fakes; the board records who is doing each piece.
-4. Run acceptance scenarios on the actual device, then tune readability/reactions.
-5. Only after MVP works, select a backlog feature if time permits.
-   The next planned milestone is [XP/coins/levels](progression_design.md), followed
-   by keyboard and head-tracking bonuses in the [roadmap order](nice_to_haves.md).
+4. Follow the approved [progression task order](progression_design.md): XP/level/yarn
+   foundation, priced Food/Drink, user-defined moods, base rewards, keyboard,
+   camera, then level/focus-chain/daily bonuses with weekly recap.
+5. Run fake-device and actual-device acceptance only after that expansion; select
+   any remaining [future idea](nice_to_haves.md) afterward if time permits.
 
 Accelerate a fake clock to exercise long sessions quickly. A test harness can
 advance time while retaining the real 5–60-minute choices and grace calculation;
@@ -77,7 +78,7 @@ do not add an undocumented seconds-mode shortcut to production firmware.
 | Controls/UI | Every three-button action per screen, setup wrap/default/remembering, paused labels, no automatic break start, Home/break_running's unbound third button shows a disabled dash |
 | Control modularity | Remap an action and simulate an added fourth button through the same path; matching labels; invalid bindings rejected; no timer-rule edits |
 | Timer | Multiple pause/resume segments (focus only), paused End, 59.999s vs 60s grace, deadline wins over End/Pause, break end/skip neutral, break pause/resume rejected, Time reveal reverts after 5s without changing the timer or epoch, Again starts a new focus session at the last confirmed duration |
-| Emotion/feeding | One free food, correct assets, newest reaction wins, expiry does not revive older reactions, no hidden stats |
+| Emotion/feeding/economy | Food/Drink spend the displayed yarn price atomically, insufficient funds do nothing, final user-defined moods expire correctly, no hidden care stats |
 | Replay/storage | Incremental/rebuilt state match; duplicate/conflicting terminal and break-choice keys; pinned terms after config change; commit-before-render crash |
 | History | No pause/break time credited as focus; cumulative samples not double counted; completion dates and today/yesterday streak |
 | Recovery | Running/paused session interrupted neutrally; pending break restored; unsaved elapsed labeled unknown; no replayed animations |

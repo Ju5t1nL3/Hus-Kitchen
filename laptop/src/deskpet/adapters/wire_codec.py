@@ -20,6 +20,7 @@ from deskpet.core.views import (
     Parsed,
     ParseResult,
     Pong,
+    ProgressionView,
     RenderSnapshot,
 )
 
@@ -291,6 +292,7 @@ def _encode_render(
         "break_minutes": view.break_minutes,
         "buttons": buttons,
         "feedback": view.feedback.value if view.feedback is not None else None,
+        "progression": _encode_progression(view.progression),
     }
     return {
         "v": PROTOCOL_VERSION,
@@ -307,6 +309,17 @@ def _encode_button_label(label: ButtonLabel) -> JsonObject:
     if not _is_int(label.button) or not 1 <= label.button <= 255:
         raise EncodeError("invalid button ID")
     return {"button": int(label.button), "label": label.label, "enabled": label.enabled}
+
+
+def _encode_progression(value: ProgressionView | None) -> JsonObject | None:
+    if value is None:
+        return None
+    return {
+        "level": value.level,
+        "xp_into_level": value.xp_into_level,
+        "xp_for_next_level": value.xp_for_next_level,
+        "yarn_balance": value.yarn_balance,
+    }
 
 
 def _encode_animate(message: AnimateMessage) -> JsonObject:
@@ -357,11 +370,15 @@ def _validate_view(
     if view.screen is Screen.HOME:
         if view.clock_text is None or _CLOCK_PATTERN.fullmatch(view.clock_text) is None:
             raise EncodeError("home requires a valid clock_text")
+        if view.progression is None:
+            raise EncodeError("home requires progression")
     elif revealing_clock:
         if _CLOCK_PATTERN.fullmatch(view.clock_text or "") is None:
             raise EncodeError("focus clock reveal requires a valid clock_text")
     elif view.clock_text is not None:
         raise EncodeError("clock_text is only valid on home")
+    if view.screen is not Screen.HOME and view.progression is not None:
+        raise EncodeError("progression is only valid on home")
     if is_timer:
         if revealing_clock and view.timer_seconds is not None:
             raise EncodeError("focus clock reveal cannot include timer_seconds")

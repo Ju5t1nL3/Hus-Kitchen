@@ -49,6 +49,14 @@ class PetCreated(DraftMetadata):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class ProgressionInitialized(DraftMetadata):
+    event_type: ClassVar[Literal["progression_initialized"]] = "progression_initialized"
+    policy_version: int
+    starting_yarn: int
+    xp_per_level: int
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PetFed(DraftMetadata):
     event_type: ClassVar[Literal["pet_fed"]] = "pet_fed"
     food_id: str
@@ -133,6 +141,7 @@ class BreakSkipped(DraftMetadata):
 
 type EventDraft = (
     PetCreated
+    | ProgressionInitialized
     | PetFed
     | FocusSessionStarted
     | BreakSessionStarted

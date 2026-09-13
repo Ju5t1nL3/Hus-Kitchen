@@ -21,6 +21,7 @@ from deskpet.core.views import (
     DeviceReady,
     InputMessage,
     Pong,
+    ProgressionView,
     RenderSnapshot,
 )
 
@@ -103,6 +104,7 @@ def view(clock: str = "14:32") -> RenderSnapshot:
             ButtonLabel(ButtonId(2), "Focus", True),
         ),
         None,
+        ProgressionView(1, 0, 100, 10),
     )
 
 

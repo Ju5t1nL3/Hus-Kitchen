@@ -15,6 +15,7 @@ from deskpet.core.config import (
     FeedingConfig,
     FocusConfig,
     IdentityConfig,
+    ProgressionConfig,
     UiConfig,
 )
 from deskpet.core.models import ButtonId, FoodDefinition, Gesture
@@ -79,11 +80,14 @@ def load(path: Path) -> AppConfig:
 
 def _parse(raw: Mapping[str, object]) -> AppConfig:
     _exact_keys(
-        raw, {"identity", "focus", "feeding", "controls", "ui", "device"}, "config"
+        raw,
+        {"identity", "focus", "feeding", "progression", "controls", "ui", "device"},
+        "config",
     )
     identity = _mapping(_required(raw, "identity", "config"), "identity")
     focus = _mapping(_required(raw, "focus", "config"), "focus")
     feeding = _mapping(_required(raw, "feeding", "config"), "feeding")
+    progression = _mapping(_required(raw, "progression", "config"), "progression")
     controls = _mapping(_required(raw, "controls", "config"), "controls")
     ui = _mapping(_required(raw, "ui", "config"), "ui")
     device = _mapping(_required(raw, "device", "config"), "device")
@@ -95,6 +99,7 @@ def _parse(raw: Mapping[str, object]) -> AppConfig:
         bindings=_bindings(controls),
         ui=_ui(ui),
         device=_device(device),
+        progression=_progression(progression),
     )
     configured_buttons = tuple(
         sorted({button for _context, button, _gesture in config.bindings})
@@ -190,6 +195,24 @@ def _feeding(raw: Mapping[str, object]) -> FeedingConfig:
             _required(raw, "default_food_id", "feeding"), "feeding.default_food_id"
         ),
         definitions=MappingProxyType(definitions),
+    )
+
+
+def _progression(raw: Mapping[str, object]) -> ProgressionConfig:
+    _exact_keys(raw, {"policy_version", "starting_yarn", "xp_per_level"}, "progression")
+    return ProgressionConfig(
+        policy_version=_integer(
+            _required(raw, "policy_version", "progression"),
+            "progression.policy_version",
+        ),
+        starting_yarn=_integer(
+            _required(raw, "starting_yarn", "progression"),
+            "progression.starting_yarn",
+        ),
+        xp_per_level=_integer(
+            _required(raw, "xp_per_level", "progression"),
+            "progression.xp_per_level",
+        ),
     )
 
 

@@ -17,7 +17,8 @@ focus). Unbound buttons show a disabled dash, per the button-labeling rule in
 
 | Screen | What is visible | Button 1 | Button 2 | Button 3 |
 | --- | --- | --- | --- | --- |
-| Home | Large central pet; clock at top right | Feed | Focus: open setup | *(unbound)* |
+| Home | Large central pet; clock and XP/level/yarn strip without crowding the pet | Feed: open menu | Focus: open setup | *(unbound)* |
+| Feed menu | Current yarn balance; Food and Drink with their configured yarn prices | Buy/feed Food | Buy/feed Drink | Back: cancel to Home |
 | Setup | Selected focus minutes; smaller calculated break duration | Up: next duration | Set: start focus | Back: cancel to Home |
 | Focus, running | Large central countdown; small expressive face at top right | Time: show the real clock | Pause | End |
 | Focus, paused | Frozen countdown; “Paused”; small face at top right | Time: show the real clock | Resume | End |
@@ -73,7 +74,9 @@ at exactly 60 seconds or later, an early exit produces brief sadness. Completion
 wins if the timer is already due when an End/Pause input is handled.
 
 The pet reacts to recorded events, with no hidden hunger, health or friendship
-meters. Proposed configurable reaction durations:
+meters. The table below describes the currently implemented provisional catalog;
+M26 will replace or confirm it after the user supplies every desired mood, trigger,
+precedence rule and duration:
 
 | Event or situation | Appearance |
 | --- | --- |
@@ -99,17 +102,23 @@ continue to Home. This is a presentation-only addition (a new Screen value and a
 runtime auto-advance timer, same shape as the focus-screen clock reveal); it
 changes no rule, event, or emotion duration and is not required for MVP.
 
-## Feeding and assets
+## Progression, feeding and assets
 
-Home's Feed action immediately offers one free food, `basic`. No shop, cost,
-quantity, cooldown, or food-selection screen in MVP. Every accepted press records
-one feeding; animation requests can coalesce under rapid presses. Feeding again
-refreshes the content reaction rather than accumulating a hidden stat.
+XP increases toward configured levels and cannot be spent. Yarn is the spendable
+currency. Completing focus will grant base XP and yarn; later tasks add optional
+keystroke/camera yarn and level/focus-chain/daily-streak yarn bonuses. All numerical
+rates and thresholds remain open until their scheduled decisions.
 
-Define food data separately from feeding logic so another food can be added later.
-Required sprites: one pet's full-body poses, matching small faces for the six moods,
-one food sprite (`food_basic`), a feeding animation, and a celebration.
-Artwork production remains implementation work; these docs do not provide assets.
+Home's Feed action opens the Feed menu. Food and Drink each display a configured
+yarn price. Choosing an affordable item atomically spends yarn, feeds the pet and
+records the resolved price/reaction; insufficient yarn changes nothing. Back
+returns Home without an event. The current direction is immediate purchase and
+feeding, with no inventory, quantities, cooldown or shop browsing.
+
+Define consumable data separately from feeding logic. Required assets now include
+Food and Drink sprites/feeding frames plus the mood and celebration art. Artwork
+production remains coordinated with M16. Source frames are individual PNGs grouped
+by an ordered manifest and converted to Pico bitmap data before deployment.
 
 ## History and recovery
 
@@ -129,20 +138,18 @@ installation starts on Home.
 Health/hunger/friendship are permanently removed, including hidden values and
 decay; they are not a deferred feature. Feeding and expressions remain.
 
-Immediately after MVP, add a top XP bar and coin total, completion XP/coins and
-bonus coins for gaining levels. Optional keyboard and head tracking supply
-additional coin bonuses, with independent on/off settings. Rates/thresholds still
-need values; see [progression design](progression_design.md).
-
-The ordered [future ideas](nice_to_haves.md) begin keyboard → head tracking → sound
-→ weekly dashboard. Pixel-art timer progress belongs only at #8 in that list;
-it is separate from the next milestone's XP bar.
+The approved pre-verification expansion is XP, levels, yarn and purchasable
+Food/Drink, followed by the user-defined mood catalog, base rewards, optional
+keyboard/camera yarn, then level/focus-chain/daily-streak bonuses and weekly recap.
+See [progression design](progression_design.md). Pixel-art timer progress remains a
+later idea separate from the XP bar.
 
 ## Acceptance checks
 
-1. Home shows a large pet, top-right clock and Feed/Focus labels on the real LCD,
-   with a disabled dash on the unbound third button.
-2. Feed displays the food sprite/animation and a content reaction, without costs.
+1. Home shows a large pet, clock, readable XP/level/yarn information and Feed/Focus
+   labels on the real LCD, with a disabled dash on the unbound third button.
+2. Feed opens Food/Drink/Back; an affordable choice spends its displayed yarn cost
+   and feeds once, while Back and insufficient funds make no durable change.
 3. Setup cycles 5–60 minutes, wraps, shows the derived break and confirms
    correctly; Back returns to Home without starting a session or an event.
 4. Pause/resume preserves remaining time for focus; paused time cannot consume
@@ -157,10 +164,13 @@ it is separate from the next milestone's XP bar.
 8. Time, pressed during a running or paused focus session, shows the real clock
    for 5 seconds and then automatically reverts to the countdown, without
    changing the timer, pausing it, or bumping the control epoch.
-9. Emotions expire and can change through later events; no permanent negative state.
+9. The user-approved mood catalog triggers and expires exactly as specified; no
+   permanent negative state or care meter exists.
 10. Restart/reconnect preserves history without duplicate completions or replayed
     animations. Pending breaks and interrupted sessions follow the policy above.
-11. Test rules using a fake device/clock, then measure actual LCD/button behavior.
+11. Completed focus grants one deduplicated XP/yarn breakdown; optional sensor and
+    streak/level bonuses remain explainable, additive and independently testable.
+12. Test rules using a fake device/clock, then measure actual LCD/button behavior.
 
 Target under 50 ms from a recognized debounced gesture to the start of its screen
 update. Measure gesture recognition and full redraw separately; hardware performance

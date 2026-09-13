@@ -182,11 +182,25 @@ def _replace_once(source: str, old: str, new: str) -> str:
 # transformations as checked, readable fragments.
 _html = _replace_once(
     _HTML_TEMPLATE,
+    '<div class="lcd"><div id="clock"></div>',
+    '<div class="lcd"><div id="clock"></div><div id="progression"></div>',
+)
+_html = _replace_once(
+    _html,
     "const hold=document.createElement('button');hold.textContent='Hold';"
     "hold.disabled=!current.connected||!b?.enabled;"
     "hold.onclick=()=>post('/api/press',{button:id,gesture:'hold'});"
     "wrap.append(press,hold);",
     "wrap.append(press);",
+)
+_html = _replace_once(
+    _html,
+    "document.getElementById('clock').textContent=view?.clock_text||'';",
+    "document.getElementById('clock').textContent=view?.clock_text||'';"
+    "const progression=view?.progression;"
+    "document.getElementById('progression').textContent=progression?"
+    "'Lv '+progression.level+' · XP '+progression.xp_into_level+'/' +"
+    "progression.xp_for_next_level+' · '+progression.yarn_balance+' yarn':'';",
 )
 _html = _replace_once(
     _html,

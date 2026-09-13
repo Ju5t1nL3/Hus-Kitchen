@@ -47,7 +47,8 @@ startup with an actionable error, not a silently reset database.
 | Event | Required payload | Meaning |
 | --- | --- | --- |
 | `pet_created` | `pet_id` | Initialize identity once; no numerical care stats |
-| `pet_fed` | `food_id`, `reaction` (content) | Record free feeding and resolved expression expiry |
+| `progression_initialized` | `policy_version`, `starting_yarn`, `xp_per_level` | Initialize XP 0, level 1 and recorded yarn exactly once; replay never substitutes newer config |
+| `pet_fed` | `food_id`, `reaction` (content) | Current M07 event; M25 versions/replaces it with resolved yarn price/balance facts for purchase-and-feed |
 | `session_started` | `session_id`, `kind: focus\|break`, kind-specific `terms` | Start running at zero active time; focus updates last confirmed duration; break consumes matching offer |
 | `session_paused` | `session_id`, `kind: focus`, `active_ms` | Save cumulative progress and mark paused; focus only, break sessions cannot pause |
 | `session_resumed` | `session_id`, `kind: focus`, `active_ms` | Mark running; active_ms must equal preceding pause; focus only |
@@ -62,6 +63,7 @@ unfinished focus at/above it; `user_break` for ending a break; or
 Semantic keys:
 
 - Initialization: `pet-created`.
+- Progression initialization: `progression-initialized`.
 - Feeding: source local_controls, `button:<connection_id>:<button_seq>`.
 - Session start: source system, `session-start:<session_id>`.
 - Pause/resume: source system, `button:<connection_id>:<button_seq>`.
@@ -153,7 +155,7 @@ Queries are read-only. A future dashboard or integration reuses them rather than
 mutating history. Version future schema changes explicitly; local seq and origin
 tags alone are not a co-op synchronization/conflict policy.
 
-The first post-MVP extension is [XP/coins and optional activity bonuses](progression_design.md).
-It adds versioned policy/summary data and a deduplicated reward event. Keep the
-MVP schema above unchanged until that milestone; keyboard/head adapters do not
-write balances directly. Numerical care stats are permanently excluded.
+The approved expansion is [XP, levels, yarn, purchases and reward inputs](progression_design.md).
+It adds versioned purchase/reward policy and summary data plus deduplicated economy
+events. M24 must version the schema deliberately; keyboard/camera adapters never
+write balances directly. Numerical care stats remain permanently excluded.

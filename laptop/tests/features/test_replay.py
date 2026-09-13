@@ -18,6 +18,7 @@ from deskpet.core.events import (
     FocusSessionStarted,
     PetCreated,
     PetFed,
+    ProgressionInitialized,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -72,6 +73,29 @@ def started(seq: int = 2, session_id: str = "focus-1") -> DomainEvent:
 
 
 class ReplayHappyPathTests(unittest.TestCase):
+    def test_progression_initialization_is_durable_and_single_use(self) -> None:
+        initialized = committed(
+            2,
+            ProgressionInitialized(
+                source=EventSource.SYSTEM,
+                dedupe_key="progression-initialized",
+                policy_version=1,
+                starting_yarn=10,
+                xp_per_level=100,
+            ),
+        )
+
+        state = rebuild((created(), initialized))
+
+        self.assertIsNotNone(state)
+        assert state is not None
+        self.assertIsNotNone(state.progression)
+        assert state.progression is not None
+        self.assertEqual(state.progression.yarn_balance, 10)
+        self.assertEqual(state.progression.level, 1)
+        with self.assertRaisesRegex(ReplayError, "only be initialized once"):
+            apply_event(state, committed(3, initialized.event.draft))
+
     def test_incremental_and_rebuilt_state_match(self) -> None:
         happy = Reaction(ReactionMood.HAPPY, NOW + timedelta(seconds=40))
         offer = BreakOffer("focus-1", 60, "America/Chicago")

@@ -19,6 +19,8 @@ class ConfigLoaderTests(unittest.TestCase):
         self.assertEqual(config.feeding.default_food_id, "basic")
         self.assertEqual(config.feeding.definitions["basic"].sprite_id, "food_basic")
         self.assertEqual(config.device.usb_vid, 0x2E8A)
+        self.assertEqual(config.progression.starting_yarn, 10)
+        self.assertEqual(config.progression.xp_per_level, 100)
         validate_bindings(
             config.bindings,
             (ButtonId(1), ButtonId(2), ButtonId(3)),

@@ -266,11 +266,13 @@ its own discard/handshake policy.
 
 ## Configuration
 
-Use namespaced sections: identity, focus, feeding, controls, ui and device. Defaults include
+Use namespaced sections: identity, focus, feeding, progression, rewards, activity,
+controls, ui and device. Existing defaults include
 allowed_focus_minutes [5,10,...,60], default_focus_minutes 25, break_ratio 0.2,
 minimum_break_minutes 1, grace_active_seconds 60, happy_seconds 30 and sad_seconds 30.
-Feeding has default_food_id basic and a definitions mapping containing basic's
-sprite_id food_basic and content_seconds 20. One free food is the entire MVP.
+M24/M25 replace the current free `basic` definition with priced Food and Drink
+definitions denominated in yarn. Starting yarn, prices and reward values remain
+open and must be explicit validated configuration rather than scattered constants.
 
 Validate that the default is allowed, durations fit protocol limits, reaction
 durations are positive, and referenced food/assets exist. Store resolved focus/
@@ -280,11 +282,12 @@ Action definitions supply labels and availability to input handling and presenta
 layout stays in rendering. Hardware ID/pin/layout entries stay on Pico.
 See the [button extension recipe](class_design.md). Protocol constants are versioned contracts.
 
-## First post-MVP extension
+## Approved expansion before final verification
 
-Add progression and optional keyboard/camera adapters through existing ports and
-event processing. XP/coins and level-up bonuses belong on the laptop; Pico receives
-display values for a top strip. Keyboard/head inputs have independent on/off settings.
-[Progression design](progression_design.md) owns calculation, persisted policies/
-summaries and retry behavior. Do not add these to MVP state or event schemas early.
-There is no future health/hunger/friendship subsystem.
+Add progression, priced feeding and optional keyboard/camera adapters through the
+existing decide/save/apply/present path. XP, levels, yarn and all reward calculations
+belong on the laptop; Pico receives only display facts and animation IDs. Keyboard
+and camera inputs have independent on/off settings. [Progression design](progression_design.md)
+owns task order, persisted policies/summaries and retry behavior. Implement only the
+claimed stage so unresolved later values are not guessed. There is no future
+health/hunger/friendship subsystem.

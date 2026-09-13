@@ -4,12 +4,14 @@ A physical productivity companion: a laptop owns the game; a USB-connected
 Raspberry Pi Pico displays the pet and reports buttons. The goal is to replace
 phone-checking with a pleasant, glanceable desk device.
 
-Current MVP: large home pet and clock, one free food, a 5–60-minute focus selector,
-large countdown with a small expressive face, three context-labeled buttons,
-focus pause/resume, and optional calculated breaks. Emotions come from events. Health/hunger/friendship are removed
-from the product entirely. The first post-MVP milestone is XP, coins and level-up
-bonuses, followed by optional typing/head-tracking bonuses. Timer progress art is
-future idea #8, separate from the XP bar.
+Current scope: large home pet and clock, a 5–60-minute focus selector, countdown,
+three context-labeled buttons, focus pause/resume and calculated break offers. The
+approved expansion before final verification adds XP, levels and spendable `yarn`;
+a Feed menu sells Food and Drink for yarn. It then adds a user-specified mood
+catalog, base completion rewards, optional keystroke/camera yarn, and
+level/focus-chain/daily-streak bonuses alongside weekly recap work.
+Health/hunger/friendship remain removed. Timer progress art is a separate future
+idea, not the XP bar.
 
 For a short, plain-language introduction, read [the overview](docs/overview.md).
 Use the detailed specifications as task-specific references, not a required
@@ -68,7 +70,7 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 | [event_model.md](docs/event_model.md) | Durable events, pause timing, emotion selection, replay and streaks | Game rules, persistence, reports |
 | [hackathon_plan.md](docs/hackathon_plan.md) | Task-based coordination, integration order and verification | Picking up or integrating work |
 | [nice_to_haves.md](docs/nice_to_haves.md) | Ordered future ideas and extension points | Considering future scope |
-| [progression_design.md](docs/progression_design.md) | Next milestone: XP, coins, levels and optional activity bonuses | Reviewing or implementing progression |
+| [progression_design.md](docs/progression_design.md) | Active expansion: XP, levels, yarn, priced feeding, rewards and optional activity inputs | Reviewing or implementing progression |
 | [design_decisions.md](docs/design_decisions.md) | User preferences, resolved conflicts, assumptions, open questions | Reconsidering a decision |
 
 Start with this file and the MVP goals; then read the documents relevant to the
@@ -124,8 +126,9 @@ User instructions override the plan; document material deviations.
   Early-ended focus can cause brief sadness; feeding is always free on Home.
 - Local-first: MVP data stays on the laptop. Future network or sensor features
   must have a clear purpose and explicit opt-in.
-- Keyboard and head tracking must have independent on/off controls. They add
-  completion bonuses; disabling them cannot remove the base XP/coin reward.
+- Keyboard and camera tracking must have independent on/off controls. They add
+  completion yarn; disabling them cannot remove base XP/yarn rewards. Never store
+  key identities, typed text, camera frames, video, identity or face recognition.
 - Home emphasizes a large pet and top-right clock. Focus/break views emphasize a
   legible central timer and small face at top right. All three physical buttons have
   visible labels for their current action; no stat bars or progress art in MVP.

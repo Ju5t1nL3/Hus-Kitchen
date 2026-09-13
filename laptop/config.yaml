@@ -20,6 +20,11 @@ feeding:
       sprite_id: food_basic
       content_seconds: 20
 
+progression:
+  policy_version: 1
+  starting_yarn: 10
+  xp_per_level: 100
+
 controls:
   bindings:
     home:

@@ -153,6 +153,25 @@ class Session:
 
 
 @dataclass(frozen=True, slots=True)
+class ProgressionState:
+    total_xp: int
+    level: int
+    yarn_balance: int
+    policy_version: int
+    xp_per_level: int
+
+    def __post_init__(self) -> None:
+        _require_nonnegative(self.total_xp, "total_xp")
+        _require_positive(self.level, "level")
+        _require_nonnegative(self.yarn_balance, "yarn_balance")
+        _require_positive(self.policy_version, "policy_version")
+        _require_positive(self.xp_per_level, "xp_per_level")
+        expected_level = self.total_xp // self.xp_per_level + 1
+        if self.level != expected_level:
+            raise ValueError("level does not match total_xp and xp_per_level")
+
+
+@dataclass(frozen=True, slots=True)
 class GameState:
     user_id: str
     pet_id: str
@@ -160,6 +179,7 @@ class GameState:
     pending_break: BreakOffer | None = None
     last_focus_minutes: int | None = None
     latest_reaction: Reaction | None = None
+    progression: ProgressionState | None = None
     focus_dates: frozenset[date] = field(default_factory=lambda: frozenset[date]())
     last_seq: int = 0
 

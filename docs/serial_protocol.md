@@ -126,6 +126,7 @@ epoch.
 | break_minutes | Integer 1–60 on setup/break_offer; null elsewhere |
 | buttons | One {button, label, enabled} per advertised ID, in advertised physical order; label is printable ASCII 1–12 characters, enabled is boolean |
 | feedback | null, unavailable, or storage_error |
+| progression | On Home: `{level, xp_into_level, xp_for_next_level, yarn_balance}`; null on every other screen |
 
 All keys are required, with null for absent content. Reject inconsistent fields
 and decreasing epochs. Swapping the validated desired view is atomic in RAM;
@@ -135,8 +136,8 @@ It may format seconds as MM:SS; remaining time is always laptop-supplied.
 
 Storage_error displays an overlay hiding a potentially stale countdown. Disabled
 buttons are styling; raw gestures may still be reported and the laptop rejects
-gameplay while storage is unavailable. There are no stat, wallet, food-price,
-accessory or progress-stage fields.
+gameplay while storage is unavailable. There are no care-stat, food-price,
+accessory or timer-progress-art fields.
 
 Publish on connection, navigation, accepted actions, and visible clock/timer/mood
 changes. While a timer runs, publish when its visible whole-second value changes,
@@ -179,11 +180,10 @@ garbage-collection spikes. Identify which stage dominates before shortening fiel
 or replacing the format. Store the results in the Pico README's table and reference
 them when completing M21.
 
-## Progression extension after MVP
+## Progression/economy contract expansion
 
-The current render schema has no XP/coin fields. Add the top strip through a
-coordinated UI/schema update when implementing [progression](progression_design.md);
-Pico receives XP progress, level and coin display values but never sensor streams
-or reward rules. Ordinary button remapping or adding a declared button does not
-require this kind of schema change. This v2 spec is still unreleased; all current
-fixtures now include explicit button IDs.
+M24 adds the required nullable `progression` field shown above; the shared fixture
+exercises its Home form. M25 must add Feed-menu item names/prices through a
+coordinated schema/UI update. Pico receives display-ready values and animation IDs,
+but never sensor streams, reward rules or authority to spend yarn. Update fixtures
+and both validators together for future incompatible fields.
