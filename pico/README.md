@@ -52,16 +52,63 @@ newline-delimited protocol stays clean alongside REPL traffic once `main.py`
 runs the application loop instead of Thonny's interactive session.
 
 Display: 1.8-inch SPI TFT LCD, 128x160 resolution, full color, ST7735S
-controller. Bus pins (SCK/MOSI/CS/DC/RST/backlight) are not yet assigned —
-confirm and record before implementing `lcd_driver.py`.
+controller. Bus pins below are a PROPOSED assignment on RP2040's SPI0
+alternate-function pins (`hardware_config.DISPLAY_PINS`), chosen to avoid the
+confirmed button GPIOs (10, 11) and the GPIO2 test LED — not yet physically
+wired or verified on-device. Confirm and record actual wiring here before
+trusting `lcd_driver.py` end-to-end.
 
-Record wiring compactly:
+Display driver: [`russhughes/st7789_mpy`](https://github.com/russhughes/st7789_mpy)
+— a compiled C MicroPython module (the same module covers ST7789/ST7735/
+ILI9341-family panels via its init table; despite the repo name it has
+built-in default rotation/offset config for 128x160 ST7735 panels, matching
+what `lcd_driver.py` passes: `width=128, height=160, color_order=st7789.RGB,
+inversion=False`, no `custom_init` needed). Chosen over the pure-Python
+`boochow/MicroPython-ST7735` for redraw speed on the once-a-second Pomodoro
+countdown. The board has been reflashed with a russhughes RP2040 build (see
+`MICROPYTHON_VERSION`) and USB CDC/buttons still work fine afterward.
+
+**Display bring-up status: BLOCKED on an unreliable physical connection, not
+wiring/config/driver.** Extensive on-device debugging (see git history for
+`lcd_driver.py`/`hardware_config.py` and this section) ruled out, in order:
+- Wrong pin assignment (confirmed and corrected DC/RESET swap, and backlight
+  moved from the originally-guessed GPIO22 to the actual GPIO16).
+- SPI clock mode: tried all 4 (polarity, phase) combinations, no change.
+- Baud rate/signal integrity: tried 40MHz and 2MHz, no change.
+- Driver correctness: an independent second driver
+  (`boochow/MicroPython-ST7735`, pure Python, different init sequence
+  entirely) was deployed on the exact same wiring and also showed nothing —
+  rules out a russhughes-specific driver bug.
+- Power/ground: confirmed VCC on 3V3(OUT) (physical pin 36) and GND correct.
+- Backlight control (GPIO16): confirmed working via direct on/off toggle —
+  the panel visibly dims/brightens, so that specific line/pin is solid.
+
+What's still unresolved: with CS grounded directly instead of GPIO-controlled
+(bypassing GPIO17/GPIO22 entirely), the panel showed real pixel noise once —
+the only time any SPI-driven content has ever appeared — but this did **not**
+reproduce on a later identical-config retry. That inconsistency under
+unchanged software config is the signature of a marginal/intermittent
+physical connection (bad jumper wire or breadboard row), not a fixable
+software issue. Next actual steps for whoever picks this up: rewire with
+fresh, shorter jumpers or a different breadboard section (not just reseating
+the same ones), solder the connection if at all possible, or get access to a
+multimeter for a real continuity check — none of which could be done
+remotely in this session. Do not spend more time on driver/pin-mapping/SPI-
+mode changes; those are already ruled out.
+
+Record wiring compactly (GPIO numbers reflect the actual physical wiring
+confirmed during bring-up, not the original guess):
 
 | Logical component | Board pin/GPIO | Direction | Pull/polarity or bus role | Verified |
 | --- | --- | --- | --- | --- |
 | Button 1 (left) | GPIO10 | Input | Active-low, internal pull-up | Yes |
 | Button 2 (right) | GPIO11 | Input | Active-low, internal pull-up | Yes |
-| Display | TBD (SPI bus) | Output/bus | ST7735S, 128x160, SPI | No |
+| Display SCK (SCL) | GPIO18 | Output | SPI0 clock | Unreliable |
+| Display MOSI (SDA) | GPIO19 | Output | SPI0 data out | Unreliable |
+| Display CS | GPIO17 (tried GPIO22 too) | Output | SPI0 chip select | **No — suspected fault** |
+| Display DC | GPIO21 | Output | Data/command select | Unreliable |
+| Display RESET | GPIO20 | Output | Active-low reset | Unreliable |
+| Display Backlight | GPIO16 | Output | Backlight enable | Yes |
 
 This is a project-relevant inventory, not a board encyclopedia. Omit peripherals
 the desk pet will never use, but do not omit a capability on which the display,

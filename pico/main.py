@@ -19,8 +19,9 @@ import time
 import machine
 import micropython
 from buttons import ButtonScanner
-from display import NullDisplayDriver, Renderer
-from hardware_config import BUTTONS, DEBOUNCE_MS, HOLD_MS
+from display import Renderer
+from hardware_config import BUTTONS, DEBOUNCE_MS, DISPLAY_PINS, HOLD_MS
+from lcd_driver import DisplayDriver
 from protocol import Protocol
 
 _HEARTBEAT_TIMEOUT_MS = 6000
@@ -114,7 +115,7 @@ def main():
 
     protocol = Protocol(_make_boot_id(), tuple(button["id"] for button in BUTTONS))
     scanner = ButtonScanner(BUTTONS, DEBOUNCE_MS, HOLD_MS)
-    renderer = Renderer(NullDisplayDriver())
+    renderer = Renderer(DisplayDriver(DISPLAY_PINS))
     app = FirmwareApp(protocol, scanner, renderer)
 
     _write(protocol.encode_ready())
