@@ -4,20 +4,59 @@ One laptop Python application owns game decisions and history. A separate Pico
 MicroPython program reports buttons and renders complete screen descriptions.
 This is a proposed implementation; see [class_design.md](class_design.md) for APIs.
 
-## The data flow
+## Product flow
+
+This first view is the demo-level story: the physical pet collects input and shows
+feedback, while the laptop decides what happens and saves the history locally.
 
 ```mermaid
 flowchart LR
+    User[User presses a button] --> Pico[Pico desk pet]
+    Pico -->|button event over USB| Laptop[Laptop application]
+    Laptop --> Rules[Focus and pet rules]
+    Rules -->|result| Laptop
+    Laptop -->|save accepted events| History[(Local history)]
+    Laptop --> Screen[Screen and emotion]
+    Screen -->|display update over USB| Pico
+```
+
+## Engineering data flow
+
+The implementation uses one coordinator and a save-before-presentation sequence.
+Ordinary events update the current state incrementally through `apply_event`;
+`rebuild` replays the same events during startup, recovery and verification.
+
+```mermaid
+flowchart LR
+    %% Inputs
     Pico[Pico buttons and display] -->|physical gestures| USB[USB adapter]
     USB --> App[Application coordinator]
-    App --> Rules[Timer and feeding rules]
+    Clock[System Clock / Ticks] --> App
+    Config[config.yaml] --> Rules
+    Config --> View
+
+    %% Logic & Rejection
+    App -->|command / input| Rules[Timer and feeding rules]
     Rules -->|proposed event| App
+    Rules -.->|rejection / no-op| App
+
+    %% State & Storage
     App -->|save first| DB[(SQLite events)]
-    DB -->|committed event| State[Rebuilt game state]
-    State --> View[Emotion selection and screen presenter]
-    View -->|complete screen| USB
-    USB -->|render and animate| Pico
+    DB -->|committed event| App
+    App -->|apply_event| State[GameState]
+    DB -->|startup/recovery replay| Rebuild[rebuild]
+    Rebuild --> State
     DB --> Reports[Laptop recap]
+
+    %% Presentation & Emotion
+    App -->|update runtime| Runtime
+    State --> View[Emotion selection and screen presenter]
+    Runtime[RuntimeState and timer sample] --> View
+    View -->|RenderSnapshot| USB
+    View -.->|AnimationCue| USB
+
+    %% Output
+    USB -->|render and animate| Pico
 ```
 
 The application receives a button, resolves its meaning on the current screen,
