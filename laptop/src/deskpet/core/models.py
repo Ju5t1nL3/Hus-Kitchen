@@ -178,6 +178,7 @@ class ProgressionState:
     yarn_balance: int
     policy_version: int
     xp_per_level: int
+    xp_level_increment: int = 0
 
     def __post_init__(self) -> None:
         _require_nonnegative(self.total_xp, "total_xp")
@@ -185,7 +186,10 @@ class ProgressionState:
         _require_nonnegative(self.yarn_balance, "yarn_balance")
         _require_positive(self.policy_version, "policy_version")
         _require_positive(self.xp_per_level, "xp_per_level")
-        expected_level = self.total_xp // self.xp_per_level + 1
+        _require_nonnegative(self.xp_level_increment, "xp_level_increment")
+        expected_level = level_for_xp(
+            self.total_xp, self.xp_per_level, self.xp_level_increment
+        )
         if self.level != expected_level:
             raise ValueError("level does not match total_xp and xp_per_level")
 
@@ -240,6 +244,9 @@ class RuntimeState:
     feedback: Feedback | None = None
     sad_pet_count: int = 0
     attention_lost: bool = False
+    focus_chain_count: int = 0
+    last_earned_xp: int | None = None
+    last_earned_yarn: int | None = None
 
     def __post_init__(self) -> None:
         _require_positive(self.selected_focus_minutes, "selected_focus_minutes")
@@ -251,6 +258,12 @@ class RuntimeState:
                 self.clock_reveal_until_mono_ms, "clock_reveal_until_mono_ms"
             )
         _require_nonnegative(self.sad_pet_count, "sad_pet_count")
+        _require_nonnegative(self.focus_chain_count, "focus_chain_count")
+        if (self.last_earned_xp is None) != (self.last_earned_yarn is None):
+            raise ValueError("earned XP and yarn must both be present or absent")
+        if self.last_earned_xp is not None:
+            _require_nonnegative(self.last_earned_xp, "last_earned_xp")
+            _require_nonnegative(self.last_earned_yarn or 0, "last_earned_yarn")
 
 
 @dataclass(frozen=True, slots=True)
@@ -292,6 +305,30 @@ class WeeklyReport:
 def _require_text(value: str, name: str) -> None:
     if not value:
         raise ValueError(f"{name} must not be empty")
+
+
+def level_for_xp(total_xp: int, base_threshold: int, increment: int) -> int:
+    """Return the unbounded level for a linearly increasing XP curve."""
+    _require_nonnegative(total_xp, "total_xp")
+    _require_positive(base_threshold, "base_threshold")
+    _require_nonnegative(increment, "increment")
+    remaining = total_xp
+    level = 1
+    while remaining >= base_threshold + increment * (level - 1):
+        remaining -= base_threshold + increment * (level - 1)
+        level += 1
+    return level
+
+
+def xp_into_level(total_xp: int, base_threshold: int, increment: int) -> int:
+    level = level_for_xp(total_xp, base_threshold, increment)
+    spent = (level - 1) * base_threshold + increment * (level - 1) * (level - 2) // 2
+    return total_xp - spent
+
+
+def xp_for_next_level(level: int, base_threshold: int, increment: int) -> int:
+    _require_positive(level, "level")
+    return base_threshold + increment * (level - 1)
 
 
 def _require_positive(value: int, name: str) -> None:

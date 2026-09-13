@@ -30,9 +30,14 @@ feeding:
       consume_animation: feed
 
 progression:
-  policy_version: 1
+  policy_version: 2
   starting_yarn: 10
-  xp_per_level: 100
+  xp_per_level: 75
+  xp_level_increment: 25
+  xp_per_focus_minute: 3
+  yarn_minutes_per_unit: 10
+  chain_xp_percent: 15
+  chain_yarn_per_step: 1
 
 controls:
   bindings:

@@ -20,6 +20,7 @@ from deskpet.core.events import (
     BreakSessionStarted,
     BreakSkipped,
     DomainEvent,
+    FocusRewardGranted,
     FocusSessionCompleted,
     FocusSessionEnded,
     FocusSessionPaused,
@@ -41,6 +42,8 @@ from deskpet.core.models import (
     Screen,
     SessionStatus,
     TimerSample,
+    xp_for_next_level,
+    xp_into_level,
 )
 from deskpet.core.views import (
     ActionDefinition,
@@ -49,6 +52,7 @@ from deskpet.core.views import (
     ControlBindings,
     ControlContext,
     CueRequest,
+    EarnedRewardsView,
     PresentationResult,
     ProgressionView,
     RenderSnapshot,
@@ -123,6 +127,9 @@ def build(
         progression=_progression(state)
         if runtime.screen in {Screen.HOME, Screen.FEED}
         else None,
+        earned_rewards=_earned_rewards(runtime)
+        if runtime.screen is Screen.BREAK_OFFER
+        else None,
     )
 
 
@@ -155,6 +162,8 @@ def on_commit(
         case PetComforted():
             return PresentationResult(screen=Screen.HOME, cues=())
         case ProgressionInitialized():
+            return PresentationResult(screen=runtime.screen, cues=())
+        case FocusRewardGranted():
             return PresentationResult(screen=runtime.screen, cues=())
         case PetFed():
             definition = food_definitions.get(draft.food_id)
@@ -223,10 +232,20 @@ def _progression(state: GameState) -> ProgressionView | None:
         return None
     return ProgressionView(
         level=value.level,
-        xp_into_level=value.total_xp % value.xp_per_level,
-        xp_for_next_level=value.xp_per_level,
+        xp_into_level=xp_into_level(
+            value.total_xp, value.xp_per_level, value.xp_level_increment
+        ),
+        xp_for_next_level=xp_for_next_level(
+            value.level, value.xp_per_level, value.xp_level_increment
+        ),
         yarn_balance=value.yarn_balance,
     )
+
+
+def _earned_rewards(runtime: RuntimeState) -> EarnedRewardsView | None:
+    if runtime.last_earned_xp is None or runtime.last_earned_yarn is None:
+        return None
+    return EarnedRewardsView(runtime.last_earned_xp, runtime.last_earned_yarn)
 
 
 def _buttons(

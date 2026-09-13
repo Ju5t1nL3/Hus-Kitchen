@@ -54,6 +54,7 @@ class ProgressionInitialized(DraftMetadata):
     policy_version: int
     starting_yarn: int
     xp_per_level: int
+    xp_level_increment: int = 0
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -76,6 +77,25 @@ class ItemPurchasedAndFed(DraftMetadata):
 class PetComforted(DraftMetadata):
     event_type: ClassVar[Literal["pet_comforted"]] = "pet_comforted"
     reaction: Reaction
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FocusRewardGranted(DraftMetadata):
+    event_type: ClassVar[Literal["focus_reward_granted"]] = "focus_reward_granted"
+    focus_session_id: str
+    policy_version: int
+    chain_number: int
+    focus_minutes: int
+    base_xp: int
+    chain_xp: int
+    base_yarn: int
+    chain_yarn: int
+    total_xp_before: int
+    total_xp_after: int
+    level_before: int
+    level_after: int
+    yarn_before: int
+    yarn_after: int
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -160,6 +180,7 @@ type EventDraft = (
     | PetFed
     | ItemPurchasedAndFed
     | PetComforted
+    | FocusRewardGranted
     | FocusSessionStarted
     | BreakSessionStarted
     | FocusSessionPaused

@@ -44,6 +44,9 @@ hardware-verification status.
 | Emotions from saved events and explicit time; catalog pending user specification | Keeps reactions deterministic without hidden numerical stats while allowing the user to choose the final moods/timing. |
 | Laptop-only streak/weekly text report | Keeps useful history without cluttering the Pico. |
 | XP raises levels; yarn is spendable currency | Separates progression from Food/Drink purchasing and replaces all product-facing coin terminology. |
+| Completed focus earns 3 XP/minute and ceil(minutes/10) yarn; chain position N adds 15% × (N−1) XP (floored) and N−1 yarn, uncapped | Duration-proportional base rewards make every supported timer worthwhile, while a transparent increasing chain bonus encourages “one more” session without punishing a stop. |
+| Level thresholds are 75, 100, 125, ... XP with no maximum level | Early levels arrive quickly enough for a demo and first-session reinforcement; linear growth preserves long-term progression without an arbitrary endpoint or explosive grind. |
+| Physical Home shows level and yarn, while dev diagnostics may show exact XP | The small production screen stays glanceable and avoids a noisy progress bar; developers retain visibility for balancing and debugging. |
 | Keyboard and camera-attention yarn bonuses with separate on/off settings | Both inputs are active planned tasks; base rewards remain available without sensing. |
 | Level, uninterrupted focus-chain and daily-streak yarn bonuses | Rewards continued work while requiring deduplicated, explainable history facts. |
 
@@ -93,9 +96,9 @@ penalties are discarded; co-op shared loss remains a separate product decision.
 | Tuning? | Open-ended. Existing values are provisional, not final decisions. Maintain configurable rules and the agreed low-stress behavior. |
 | Final item-price tuning? | Jollof Rice is 3 yarn and Coffee is 2 for now. Both share three-frame Eat, then two-frame Happy for 15 seconds. Starting yarn is 10. |
 | Final mood catalog? | User will provide all moods, triggers, precedence and durations before M26. |
-| Reward rates, level thresholds and sensor/streak bonus caps? | Sources are agreed; amounts and whether non-base bonuses also affect XP remain open. |
-| Focus-chain and daily-streak reset/eligibility rules? | Concepts are agreed; exact boundaries/timezone require user decisions before M10/M30. |
-| XP/yarn strip placement? | Home-only top strip with level, XP within its threshold, and yarn; styling remains adjustable. |
+| Sensor/daily-streak/level-up bonus rates and caps? | M27 base and focus-chain rates are fixed above; later bonus values remain open. |
+| Daily-streak reset/eligibility rules? | Focus-chain boundaries are fixed in progression design; daily timezone and qualification still require a decision before M10/M30. |
+| XP/yarn strip placement? | Home-only top strip showing level and yarn in production; exact XP is dev-only. Styling remains adjustable. |
 
 The record of user intent belongs here, behavior in MVP goals, APIs in class
 design, and wire/storage details in their own specs. Update affected documents

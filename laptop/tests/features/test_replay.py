@@ -1,6 +1,7 @@
 """Tests for pure event replay and incremental state reduction."""
 
 import unittest
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from deskpet.core.events import (
     EndReason,
     EventDraft,
     EventSource,
+    FocusRewardGranted,
     FocusSessionCompleted,
     FocusSessionEnded,
     FocusSessionPaused,
@@ -74,6 +76,60 @@ def started(seq: int = 2, session_id: str = "focus-1") -> DomainEvent:
 
 
 class ReplayHappyPathTests(unittest.TestCase):
+    def test_focus_reward_applies_recorded_totals_and_rejects_forgery(self) -> None:
+        initialized = committed(
+            2,
+            ProgressionInitialized(
+                source=EventSource.SYSTEM,
+                dedupe_key="progression-initialized",
+                policy_version=2,
+                starting_yarn=10,
+                xp_per_level=75,
+                xp_level_increment=25,
+            ),
+        )
+        completion = committed(
+            4,
+            FocusSessionCompleted(
+                source=EventSource.SYSTEM,
+                dedupe_key="session-terminal:focus-1",
+                session_id="focus-1",
+                active_ms=300_000,
+                credit_date=date(2026, 9, 12),
+                break_offer=BreakOffer("focus-1", 60, "America/Chicago"),
+                reaction=Reaction(ReactionMood.HAPPY, NOW + timedelta(seconds=30)),
+            ),
+        )
+        before_reward = rebuild((created(), initialized, started(3), completion))
+        assert before_reward is not None
+        reward = FocusRewardGranted(
+            source=EventSource.SYSTEM,
+            dedupe_key="focus-reward:focus-1",
+            focus_session_id="focus-1",
+            policy_version=2,
+            chain_number=1,
+            focus_minutes=5,
+            base_xp=15,
+            chain_xp=0,
+            base_yarn=1,
+            chain_yarn=0,
+            total_xp_before=0,
+            total_xp_after=15,
+            level_before=1,
+            level_after=1,
+            yarn_before=10,
+            yarn_after=11,
+        )
+
+        updated = apply_event(before_reward, committed(5, reward))
+
+        assert updated.progression is not None
+        self.assertEqual(updated.progression.total_xp, 15)
+        self.assertEqual(updated.progression.yarn_balance, 11)
+        forged = replace(reward, total_xp_after=16)
+        with self.assertRaisesRegex(ReplayError, "before totals|does not add up"):
+            apply_event(updated, committed(6, forged))
+
     def test_purchase_spends_recorded_yarn_and_replays_identically(self) -> None:
         initialized = ProgressionInitialized(
             source=EventSource.SYSTEM,

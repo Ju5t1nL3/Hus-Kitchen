@@ -12,6 +12,7 @@ from deskpet.core.events import (
     BreakSkipped,
     DomainEvent,
     EndReason,
+    FocusRewardGranted,
     FocusSessionCompleted,
     FocusSessionEnded,
     FocusSessionPaused,
@@ -32,6 +33,7 @@ from deskpet.core.models import (
     Session,
     SessionKind,
     SessionStatus,
+    level_for_xp,
 )
 
 
@@ -77,6 +79,7 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                     yarn_balance=draft.starting_yarn,
                     policy_version=draft.policy_version,
                     xp_per_level=draft.xp_per_level,
+                    xp_level_increment=draft.xp_level_increment,
                 )
             except ValueError as error:
                 raise ReplayError(
@@ -121,6 +124,57 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 event,
                 needs_comfort=False,
                 latest_reaction=draft.reaction,
+            )
+        case FocusRewardGranted():
+            progression = state.progression
+            offer = state.pending_break
+            if progression is None or offer is None:
+                raise ReplayError("focus reward requires progression and break offer")
+            if offer.parent_focus_id != draft.focus_session_id:
+                raise ReplayError("focus reward does not match latest completion")
+            values = (
+                draft.policy_version,
+                draft.chain_number,
+                draft.focus_minutes,
+                draft.base_xp,
+                draft.base_yarn,
+            )
+            if any(value <= 0 for value in values):
+                raise ReplayError("focus reward positive fields are invalid")
+            if draft.chain_xp < 0 or draft.chain_yarn < 0:
+                raise ReplayError("focus reward chain fields are invalid")
+            if (
+                draft.total_xp_before != progression.total_xp
+                or draft.level_before != progression.level
+                or draft.yarn_before != progression.yarn_balance
+            ):
+                raise ReplayError("focus reward before totals do not match state")
+            if (
+                draft.total_xp_after
+                != draft.total_xp_before + draft.base_xp + draft.chain_xp
+            ):
+                raise ReplayError("focus reward XP breakdown does not add up")
+            if (
+                draft.yarn_after
+                != draft.yarn_before + draft.base_yarn + draft.chain_yarn
+            ):
+                raise ReplayError("focus reward yarn breakdown does not add up")
+            expected_level = level_for_xp(
+                draft.total_xp_after,
+                progression.xp_per_level,
+                progression.xp_level_increment,
+            )
+            if draft.level_after != expected_level:
+                raise ReplayError("focus reward level does not match XP")
+            return _advance(
+                state,
+                event,
+                progression=replace(
+                    progression,
+                    total_xp=draft.total_xp_after,
+                    level=draft.level_after,
+                    yarn_balance=draft.yarn_after,
+                ),
             )
         case FocusSessionStarted():
             _require_available(state, "focus session start")

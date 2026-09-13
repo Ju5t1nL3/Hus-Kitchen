@@ -221,7 +221,20 @@ def _feeding(raw: Mapping[str, object]) -> FeedingConfig:
 
 
 def _progression(raw: Mapping[str, object]) -> ProgressionConfig:
-    _exact_keys(raw, {"policy_version", "starting_yarn", "xp_per_level"}, "progression")
+    _exact_keys(
+        raw,
+        {
+            "policy_version",
+            "starting_yarn",
+            "xp_per_level",
+            "xp_level_increment",
+            "xp_per_focus_minute",
+            "yarn_minutes_per_unit",
+            "chain_xp_percent",
+            "chain_yarn_per_step",
+        },
+        "progression",
+    )
     return ProgressionConfig(
         policy_version=_integer(
             _required(raw, "policy_version", "progression"),
@@ -234,6 +247,26 @@ def _progression(raw: Mapping[str, object]) -> ProgressionConfig:
         xp_per_level=_integer(
             _required(raw, "xp_per_level", "progression"),
             "progression.xp_per_level",
+        ),
+        xp_level_increment=_integer(
+            _required(raw, "xp_level_increment", "progression"),
+            "progression.xp_level_increment",
+        ),
+        xp_per_focus_minute=_integer(
+            _required(raw, "xp_per_focus_minute", "progression"),
+            "progression.xp_per_focus_minute",
+        ),
+        yarn_minutes_per_unit=_integer(
+            _required(raw, "yarn_minutes_per_unit", "progression"),
+            "progression.yarn_minutes_per_unit",
+        ),
+        chain_xp_percent=_integer(
+            _required(raw, "chain_xp_percent", "progression"),
+            "progression.chain_xp_percent",
+        ),
+        chain_yarn_per_step=_integer(
+            _required(raw, "chain_yarn_per_step", "progression"),
+            "progression.chain_yarn_per_step",
         ),
     )
 

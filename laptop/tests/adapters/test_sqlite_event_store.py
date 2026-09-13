@@ -24,6 +24,7 @@ from deskpet.core.events import (
     EndReason,
     EventDraft,
     EventSource,
+    FocusRewardGranted,
     FocusSessionCompleted,
     FocusSessionEnded,
     FocusSessionPaused,
@@ -124,6 +125,23 @@ def every_draft() -> tuple[EventDraft, ...]:
             break_offer=BreakOffer("focus-complete", 60, "America/Chicago"),
             reaction=happy,
         ),
+        FocusRewardGranted(
+            **metadata("focus-reward:focus-complete"),
+            focus_session_id="focus-complete",
+            policy_version=2,
+            chain_number=1,
+            focus_minutes=5,
+            base_xp=15,
+            chain_xp=0,
+            base_yarn=1,
+            chain_yarn=0,
+            total_xp_before=0,
+            total_xp_after=15,
+            level_before=1,
+            level_after=1,
+            yarn_before=10,
+            yarn_after=11,
+        ),
         BreakSessionCompleted(
             **metadata("session-terminal:break-complete"),
             session_id="break-complete",
@@ -169,7 +187,7 @@ class SqliteEventStoreTests(unittest.TestCase):
             restored = reopened.read_after()
 
         self.assertEqual(restored, committed)
-        self.assertEqual([event.seq for event in restored], list(range(1, 15)))
+        self.assertEqual([event.seq for event in restored], list(range(1, 16)))
 
     def test_semantic_retry_ignores_new_id_and_timestamp(self) -> None:
         draft = every_draft()[0]

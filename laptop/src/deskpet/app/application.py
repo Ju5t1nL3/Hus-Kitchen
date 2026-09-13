@@ -43,8 +43,10 @@ from deskpet.core.events import (
     BreakSessionCompleted,
     BreakSessionEnded,
     BreakSessionStarted,
+    BreakSkipped,
     EventDraft,
     EventSource,
+    FocusRewardGranted,
     FocusSessionCompleted,
     FocusSessionEnded,
     FocusSessionPaused,
@@ -88,7 +90,7 @@ from deskpet.core.views import (
     Shutdown,
     Tick,
 )
-from deskpet.features import feeding, replay, timers
+from deskpet.features import feeding, replay, rewards, timers
 
 UuidFactory = Callable[[], UUID]
 
@@ -162,6 +164,7 @@ class Application:
                 policy_version=policy.policy_version,
                 starting_yarn=policy.starting_yarn,
                 xp_per_level=policy.xp_per_level,
+                xp_level_increment=policy.xp_level_increment,
             )
             self._state = replay.apply_event(
                 state, self._append(initialized, now).event
@@ -459,8 +462,10 @@ class Application:
             )
         else:
             return
+        chain_count = self.runtime.focus_chain_count
         if not self._commit(first, now, render=False):
             return
+        self._runtime = replace(self.runtime, focus_chain_count=chain_count)
         second = timers.decide(
             self._require_state(),
             StartFocus(str(self._uuid_factory()), minutes),
@@ -512,6 +517,12 @@ class Application:
         current = self._require_state()
         if result.event.seq <= current.last_seq:
             return False
+        completed_minutes = (
+            current.active_session.terms.duration_seconds // 60
+            if isinstance(result.event.event.draft, FocusSessionCompleted)
+            and current.active_session is not None
+            else None
+        )
         updated = replay.apply_event(current, result.event)
         presentation = presenter.on_commit(
             result.event, self.runtime, self._config.feeding.definitions
@@ -520,12 +531,52 @@ class Application:
         self._update_runtime_after_event(
             result.event.event.draft, presentation.screen, now
         )
+        if isinstance(result.event.event.draft, FocusSessionCompleted) and (
+            completed_minutes is None
+            or not self._grant_focus_reward(
+                result.event.event.draft.session_id, completed_minutes, now
+            )
+        ):
+            return False
         if render:
             self._render(
                 now,
                 presentation.cues if result.inserted else (),
                 result.event.event.event_id,
             )
+        return True
+
+    def _grant_focus_reward(
+        self, focus_session_id: str, focus_minutes: int, now: ClockReading
+    ) -> bool:
+        """Persist and apply a completion reward before exposing the party screen."""
+        chain_number = self.runtime.focus_chain_count + 1
+        decision = rewards.decide(
+            self.state,
+            focus_session_id,
+            focus_minutes,
+            chain_number,
+            self._reward_policy(),
+        )
+        if not isinstance(decision, Accepted):
+            return False
+        try:
+            result = self._append(decision.event, now)
+        except EventStoreError:
+            self._freeze_for_storage_error(now)
+            return False
+        if result.event.seq <= self.state.last_seq:
+            return False
+        self._state = replay.apply_event(self.state, result.event)
+        draft = result.event.event.draft
+        if not isinstance(draft, FocusRewardGranted):
+            raise TypeError("reward decision returned the wrong event")
+        self._runtime = replace(
+            self.runtime,
+            focus_chain_count=chain_number,
+            last_earned_xp=draft.base_xp + draft.chain_xp,
+            last_earned_yarn=draft.base_yarn + draft.chain_yarn,
+        )
         return True
 
     def _end_replayed_session(
@@ -610,12 +661,31 @@ class Application:
             anchor = None
         if isinstance(draft, FocusSessionPaused | FocusSessionResumed):
             meaning_changed = True
+        chain_count = runtime.focus_chain_count
+        last_xp = runtime.last_earned_xp
+        last_yarn = runtime.last_earned_yarn
+        if isinstance(draft, FocusSessionStarted | BreakSessionStarted):
+            last_xp = None
+            last_yarn = None
+        if isinstance(
+            draft,
+            FocusSessionEnded
+            | BreakSessionEnded
+            | BreakSessionCompleted
+            | BreakSkipped,
+        ):
+            chain_count = 0
+            last_xp = None
+            last_yarn = None
         self._runtime = replace(
             runtime,
             screen=screen,
             run_anchor_mono_ms=anchor,
             control_epoch=runtime.control_epoch + int(meaning_changed),
             clock_reveal_until_mono_ms=None,
+            focus_chain_count=chain_count,
+            last_earned_xp=last_xp,
+            last_earned_yarn=last_yarn,
         )
 
     def _render(
@@ -679,6 +749,16 @@ class Application:
             sad_seconds=focus.sad_seconds,
             happy_seconds=focus.happy_seconds,
             report_timezone=focus.report_timezone,
+        )
+
+    def _reward_policy(self) -> rewards.RewardPolicy:
+        progression = self._config.progression
+        return rewards.RewardPolicy(
+            version=progression.policy_version,
+            xp_per_focus_minute=progression.xp_per_focus_minute,
+            yarn_minutes_per_unit=progression.yarn_minutes_per_unit,
+            chain_xp_percent=progression.chain_xp_percent,
+            chain_yarn_per_step=progression.chain_yarn_per_step,
         )
 
     def _wait_seconds(self, now: ClockReading) -> float:

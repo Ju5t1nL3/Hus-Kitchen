@@ -19,6 +19,7 @@ from deskpet.core.events import (
     EndReason,
     EventDraft,
     EventSource,
+    FocusRewardGranted,
     FocusSessionCompleted,
     FocusSessionEnded,
     FocusSessionPaused,
@@ -335,6 +336,7 @@ def _encode_draft(draft: EventDraft) -> JsonObject:
                 "policy_version": draft.policy_version,
                 "starting_yarn": draft.starting_yarn,
                 "xp_per_level": draft.xp_per_level,
+                "xp_level_increment": draft.xp_level_increment,
             }
         case PetFed():
             return {
@@ -350,6 +352,23 @@ def _encode_draft(draft: EventDraft) -> JsonObject:
             }
         case PetComforted():
             return {"reaction": _encode_reaction(draft.reaction)}
+        case FocusRewardGranted():
+            return {
+                "focus_session_id": draft.focus_session_id,
+                "policy_version": draft.policy_version,
+                "chain_number": draft.chain_number,
+                "focus_minutes": draft.focus_minutes,
+                "base_xp": draft.base_xp,
+                "chain_xp": draft.chain_xp,
+                "base_yarn": draft.base_yarn,
+                "chain_yarn": draft.chain_yarn,
+                "total_xp_before": draft.total_xp_before,
+                "total_xp_after": draft.total_xp_after,
+                "level_before": draft.level_before,
+                "level_after": draft.level_after,
+                "yarn_before": draft.yarn_before,
+                "yarn_after": draft.yarn_after,
+            }
         case FocusSessionStarted():
             return {
                 "session_id": draft.session_id,
@@ -473,12 +492,21 @@ def _decode_draft(
         _keys(payload, {"pet_id"})
         return PetCreated(**metadata, pet_id=_text_field(payload, "pet_id"))
     if event_type == "progression_initialized":
-        _keys(payload, {"policy_version", "starting_yarn", "xp_per_level"})
+        _keys(
+            payload,
+            {
+                "policy_version",
+                "starting_yarn",
+                "xp_per_level",
+                "xp_level_increment",
+            },
+        )
         return ProgressionInitialized(
             **metadata,
             policy_version=_int_field(payload, "policy_version"),
             starting_yarn=_int_field(payload, "starting_yarn"),
             xp_per_level=_int_field(payload, "xp_per_level"),
+            xp_level_increment=_int_field(payload, "xp_level_increment"),
         )
     if event_type == "pet_fed":
         _keys(payload, {"food_id", "reaction"})
@@ -502,6 +530,41 @@ def _decode_draft(
     if event_type == "pet_comforted":
         _keys(payload, {"reaction"})
         return PetComforted(**metadata, reaction=_reaction(payload["reaction"]))
+    if event_type == "focus_reward_granted":
+        fields = {
+            "focus_session_id",
+            "policy_version",
+            "chain_number",
+            "focus_minutes",
+            "base_xp",
+            "chain_xp",
+            "base_yarn",
+            "chain_yarn",
+            "total_xp_before",
+            "total_xp_after",
+            "level_before",
+            "level_after",
+            "yarn_before",
+            "yarn_after",
+        }
+        _keys(payload, fields)
+        return FocusRewardGranted(
+            **metadata,
+            focus_session_id=_text_field(payload, "focus_session_id"),
+            policy_version=_int_field(payload, "policy_version"),
+            chain_number=_int_field(payload, "chain_number"),
+            focus_minutes=_int_field(payload, "focus_minutes"),
+            base_xp=_int_field(payload, "base_xp"),
+            chain_xp=_int_field(payload, "chain_xp"),
+            base_yarn=_int_field(payload, "base_yarn"),
+            chain_yarn=_int_field(payload, "chain_yarn"),
+            total_xp_before=_int_field(payload, "total_xp_before"),
+            total_xp_after=_int_field(payload, "total_xp_after"),
+            level_before=_int_field(payload, "level_before"),
+            level_after=_int_field(payload, "level_after"),
+            yarn_before=_int_field(payload, "yarn_before"),
+            yarn_after=_int_field(payload, "yarn_after"),
+        )
     if event_type == "break_skipped":
         _keys(payload, {"parent_focus_id"})
         return BreakSkipped(

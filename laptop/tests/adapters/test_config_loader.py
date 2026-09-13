@@ -20,7 +20,9 @@ class ConfigLoaderTests(unittest.TestCase):
         self.assertEqual(config.feeding.definitions["coffee"].price_yarn, 2)
         self.assertEqual(config.device.usb_vid, 0x2E8A)
         self.assertEqual(config.progression.starting_yarn, 10)
-        self.assertEqual(config.progression.xp_per_level, 100)
+        self.assertEqual(config.progression.xp_per_level, 75)
+        self.assertEqual(config.progression.xp_level_increment, 25)
+        self.assertEqual(config.progression.xp_per_focus_minute, 3)
         validate_bindings(
             config.bindings,
             (ButtonId(1), ButtonId(2), ButtonId(3)),

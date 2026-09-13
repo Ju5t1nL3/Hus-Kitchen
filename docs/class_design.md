@@ -27,10 +27,10 @@ Feedback = Literal["unavailable", "storage_error"]
 | Reaction | mood restricted to content/happy/sad, expires_at: UTC datetime |
 | FocusTerms / BreakTerms / BreakOffer | Exact fields from the event model; durations in seconds |
 | Session | id: str, kind: SessionKind, matching typed terms, status: SessionStatus, committed_active_ms: int |
-| ProgressionState | total_xp: nonnegative int, derived level: positive int, yarn_balance: nonnegative int, policy_version/xp_per_level: positive ints |
+| ProgressionState | total_xp/yarn_balance: nonnegative ints, derived positive level, positive policy_version/xp_per_level, nonnegative xp_level_increment |
 | GameState | user_id: str, pet_id: str, active_session: Session or None, pending_break: BreakOffer or None, last_focus_minutes: int or None, latest_reaction: Reaction or None, progression: ProgressionState or None for pre-M24 history, focus_dates: frozenset[date], last_seq: int |
 | ClockReading | utc: aware datetime, monotonic_ms: int, resumed: bool |
-| RuntimeState | screen/timer/connection fields plus runtime-only sad_pet_count and attention_lost; neither is durable gameplay history |
+| RuntimeState | screen/timer/connection fields plus runtime-only sad_pet_count, attention_lost, focus_chain_count and last-earned XP/yarn for the Party view |
 | TimerSample | session_id: str, active_ms: int, remaining_seconds: int, due: bool; explicit trusted laptop sample |
 | ButtonInput | connection_id, boot_id, seq, control_epoch, button: ButtonId (positive int advertised by device), action: Gesture; internal received clock sample |
 | RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration/progression fields, paused, tuple of ButtonLabels, feedback |
@@ -85,6 +85,7 @@ Where a fixed enum is specified, use that type rather than an unrestricted strin
 | feeding.decide(state, command, food_definitions, now_utc) → Decision | State, FeedPet, immutable ID→definition mapping, explicit time | Current M07 free-feed API; M25 replaces it with balance/price validation and an atomic purchase/feed event |
 | timers.break_minutes(focus_minutes, policy) → int | Selected duration and validated break policy | Pure proportional calculation; no Pico involvement |
 | timers.decide(state, command, sample, rules, now) → Decision | Immutable state, timer command, TimerSample or None, validated rules and clock reading | Validate transition, pin terms on start, classify early end, build one event |
+| rewards.decide(state, focus_session_id, focus_minutes, chain_number, policy) → Decision | Completed focus/break offer, prior totals, runtime chain position and versioned integer rates | Return one deduplicated, fully resolved reward event; no I/O or current-clock dependency |
 | emotions.select(state, now_utc) → Mood | Event-derived state and explicit UTC | Latest unexpired reaction, then activity default; no I/O or event append |
 | replay.apply_event(state, event) → GameState | GameState or None, committed event | Pure reducer: return new state, validate transition and advance last_seq; do not mutate input |
 | replay.rebuild(events) → GameState or None | Ordered committed history | Repeatedly call apply_event; empty log returns None, invalid/unsupported history raises ReplayError |

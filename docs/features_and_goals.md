@@ -17,7 +17,7 @@ focus). Unbound buttons show a disabled dash, per the button-labeling rule in
 
 | Screen | What is visible | Button 1 | Button 2 | Button 3 |
 | --- | --- | --- | --- | --- |
-| Home | Large central pet; clock and XP/level/yarn strip without crowding the pet | Feed: open menu | Focus: open setup | *(unbound)* |
+| Home | Large central pet; clock plus compact level/yarn strip (exact XP is dev-only) | Feed: open menu | Focus: open setup | *(unbound)* |
 | Feed menu | Current yarn balance; Food and Drink with their configured yarn prices | Buy/feed Food | Buy/feed Drink | Back: cancel to Home |
 | Setup | Selected focus minutes; smaller calculated break duration | Up: next duration | Set: start focus | Back: cancel to Home |
 | Focus, running | Large central countdown; small expressive face at top right | Time: show the real clock | Pause | End |
@@ -104,10 +104,11 @@ changes no rule, event, or emotion duration and is not required for MVP.
 
 ## Progression, feeding and assets
 
-XP increases toward configured levels and cannot be spent. Yarn is the spendable
-currency. Completing focus will grant base XP and yarn; later tasks add optional
-keystroke/camera yarn and level/focus-chain/daily-streak yarn bonuses. All numerical
-rates and thresholds remain open until their scheduled decisions.
+XP increases toward progressively harder, uncapped levels and cannot be spent.
+Yarn is the spendable currency. Completed focus grants the approved duration and
+focus-chain XP/yarn breakdown from progression design; later tasks add optional
+keystroke/camera yarn plus level-up and daily-streak yarn bonuses. Those later
+bonus rates remain open; M27's base/chain rates and level curve are fixed.
 
 Home's Feed action opens the Feed menu. Food and Drink each display a configured
 yarn price. Choosing an affordable item atomically spends yarn, feeds the pet and

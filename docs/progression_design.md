@@ -25,9 +25,10 @@ earlier code to guess unresolved product values.
 ## Economy and feeding
 
 GameState retains an immutable `ProgressionState` with nonnegative total XP and
-yarn balance, a derived positive level, the recorded XP threshold and its policy
-version. The provisional configured foundation is 10 starting yarn and 100 XP per
-level. XP advances levels and is not spendable; yarn is.
+yarn balance, a derived positive level, the recorded level curve and its policy
+version. The configured foundation is 10 starting yarn, a 75-XP first threshold,
+and 25 more required XP for each successive level. XP advances levels and is not
+spendable; yarn is.
 
 `progression_initialized` is appended once after `pet_created`. Replay applies its
 recorded values rather than current configuration, and its stable dedupe key makes
@@ -49,41 +50,49 @@ rejection: do not feed, animate or mutate state. Both choices use the shared
 three-frame eating animation (`feed` manifest ID) and then set Happy for a
 configured 15 seconds.
 
-## Reward calculation
+## Completed-focus rewards
 
-The reward sources are agreed, but rates, thresholds, caps and scaling remain open.
-A versioned policy should eventually produce an explainable breakdown shaped like:
+M27 uses this approved, versioned policy. Let `N` be the one-based number of the
+completion in the current uninterrupted focus chain:
 
 ```text
-base_xp = base_xp_for(completed_focus_duration)
-base_yarn = base_yarn_for(completed_focus_duration)
-typing_yarn = typing_bonus(eligible_typing_summary)
-attention_yarn = attention_bonus(eligible_attention_summary)
-chain_yarn = focus_chain_bonus(chain_length)
-daily_yarn = daily_streak_bonus(streak_day, first_qualifying_completion)
-
-new_total_xp = previous_total_xp + base_xp
-new_level = level_for(new_total_xp)
-level_yarn = level_bonus(previous_level, new_level)
-total_yarn = base_yarn + typing_yarn + attention_yarn
-           + chain_yarn + daily_yarn + level_yarn
+base_xp = 3 * selected_focus_minutes
+chain_xp = floor(base_xp * 15 * (N - 1) / 100)
+base_yarn = ceil(selected_focus_minutes / 10)
+chain_yarn = N - 1
+awarded_xp = base_xp + chain_xp
+awarded_yarn = base_yarn + chain_yarn
 ```
 
-Only completed focus sessions qualify by default. Pauses, breaks and manually
-ended focus sessions do not earn completion rewards. Sensor bonuses add to the
-base reward; disabled, unavailable or denied sensors never reduce it. Whether any
-non-base source can add XP remains open; do not assume it does.
+There is no reward cap. Examples: a first 5-minute completion earns 15 XP/1 yarn;
+25-minute chain positions 1, 2 and 3 earn 75/3, 86/4 and 97/5; a 60-minute chain
+position 3 earns 234/8. Only completed focus sessions qualify. Pauses, breaks and
+manually ended focus sessions earn nothing.
 
-Award each crossed level bonus exactly once if one completion spans multiple
-levels. Define all integer rounding and caps explicitly. A durable reward event is
+The XP required to advance from current `level` is
+`75 + 25 * (level - 1)`. Thresholds therefore grow 75, 100, 125, ... with no
+maximum level. Keep total XP durably, derive level and within-level progress, and
+never use floating-point arithmetic.
+
+The chain continues through Pause, Again from the break offer, or taking the
+offered break and selecting Again before leaving its screen. It resets on Home,
+completed/quit break into Home, early End, application restart, or recovery
+interruption. The current chain is runtime-only; earned XP and yarn are durable.
+
+Production Home displays only level and yarn to keep the small screen calm. Exact
+within-level XP remains in the render contract for the development simulator and
+diagnostics, but the physical renderer must not draw it. The Party/break-offer
+screen shows the just-earned `+XP` and `+yarn` amounts.
+
+Later sensor, daily-streak and crossed-level yarn bonuses extend this breakdown;
+they do not change M27's base award. A durable reward event is
 deduplicated by focus session ID and stores component amounts and before/after
 totals; replay applies recorded values instead of recalculating with current config.
 
 ## Focus-chain and daily streak meanings
 
-The user describes a focus chain as consecutive completed Pomodoros in the current
-run without clicking End. Exact reset behavior for Home, app restart, sleep,
-skipped breaks and calendar changes is still open and must be resolved before M30.
+The M27 focus-chain boundaries are defined above. M30 may add level/daily-streak
+yarn components, but must not redefine or double-award the M27 chain components.
 
 The daily bonus applies only to the first qualifying completion of a day when the
 user is continuing a daily streak. Exact timezone, minimum streak day and bonus
@@ -133,9 +142,7 @@ user explicitly changes that policy.
 - Final price tuning (current configured values are 3 and 2 yarn).
 - Happy artwork may use one or two individual PNG frames; eating uses three.
 - Complete mood catalog, triggers, precedence and durations.
-- Base XP/yarn rates, duration scaling, rounding and caps.
-- Final level thresholds and yarn per crossed level (100 XP/level is provisional).
+- Yarn awarded for crossing levels.
 - Keystroke and attention thresholds, coverage rules and caps.
-- Exact focus-chain reset conditions.
 - Daily-streak timezone, eligibility and bonus curve.
 - Exact strip styling; M24 places it on Home only so timers stay readable.

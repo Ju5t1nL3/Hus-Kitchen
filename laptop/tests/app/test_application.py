@@ -11,6 +11,7 @@ from deskpet.app.application import Application
 from deskpet.core.events import (
     BreakSkipped,
     EndReason,
+    FocusRewardGranted,
     FocusSessionCompleted,
     FocusSessionEnded,
     FocusSessionPaused,
@@ -233,9 +234,18 @@ class ApplicationTests(unittest.TestCase):
         self.app.handle(old_end, self.clock.read())
 
         self.assertIs(self.app.runtime.screen, Screen.BREAK_OFFER)
-        self.assertIsInstance(self.store.events[-1].event.draft, FocusSessionCompleted)
-        self.assertEqual(len(self.store.events), 4)
+        self.assertIsInstance(self.store.events[-2].event.draft, FocusSessionCompleted)
+        self.assertIsInstance(self.store.events[-1].event.draft, FocusRewardGranted)
+        self.assertEqual(len(self.store.events), 5)
         self.assertEqual(len(self.device.animations), 1)
+        assert self.app.state.progression is not None
+        self.assertEqual(self.app.state.progression.total_xp, 75)
+        self.assertEqual(self.app.state.progression.level, 2)
+        self.assertEqual(self.app.state.progression.yarn_balance, 13)
+        self.assertEqual(self.app.runtime.focus_chain_count, 1)
+        rewards = self.device.published[-1].view.earned_rewards
+        assert rewards is not None
+        self.assertEqual((rewards.xp, rewards.yarn), (75, 3))
 
     def test_focus_pause_resume_and_clock_reveal_are_runtime_driven(self) -> None:
         self.start_focus()
@@ -276,6 +286,23 @@ class ApplicationTests(unittest.TestCase):
         self.assertIsInstance(self.store.events[-2].event.draft, BreakSkipped)
         self.assertIsInstance(self.store.events[-1].event.draft, FocusSessionStarted)
         self.assertEqual(len(self.device.published), renders_before + 1)
+        self.assertEqual(self.app.runtime.focus_chain_count, 1)
+        self.assertIsNone(self.app.runtime.last_earned_xp)
+
+        self.clock.advance(1_500_000)
+        self.app.handle(Tick(self.clock.read()), self.clock.read())
+
+        reward = self.store.events[-1].event.draft
+        self.assertIsInstance(reward, FocusRewardGranted)
+        assert isinstance(reward, FocusRewardGranted)
+        self.assertEqual(reward.chain_number, 2)
+        self.assertEqual((reward.base_xp + reward.chain_xp), 86)
+        self.assertEqual((reward.base_yarn + reward.chain_yarn), 4)
+        self.assertEqual(self.app.runtime.focus_chain_count, 2)
+
+        self.press(3, 4)
+        self.assertIs(self.app.runtime.screen, Screen.HOME)
+        self.assertEqual(self.app.runtime.focus_chain_count, 0)
 
     def test_reconnect_keeps_render_revisions_increasing(self) -> None:
         previous_revision = self.device.published[-1].revision

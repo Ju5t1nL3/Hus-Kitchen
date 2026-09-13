@@ -109,12 +109,23 @@ class ProgressionConfig:
     policy_version: int
     starting_yarn: int
     xp_per_level: int
+    xp_level_increment: int
+    xp_per_focus_minute: int
+    yarn_minutes_per_unit: int
+    chain_xp_percent: int
+    chain_yarn_per_step: int
 
     def __post_init__(self) -> None:
         _positive(self.policy_version, "progression.policy_version")
         if self.starting_yarn < 0:
             raise ValueError("progression.starting_yarn must be nonnegative")
         _positive(self.xp_per_level, "progression.xp_per_level")
+        if self.xp_level_increment < 0 or self.chain_xp_percent < 0:
+            raise ValueError("progression increments must be nonnegative")
+        _positive(self.xp_per_focus_minute, "progression.xp_per_focus_minute")
+        _positive(self.yarn_minutes_per_unit, "progression.yarn_minutes_per_unit")
+        if self.chain_yarn_per_step < 0:
+            raise ValueError("progression.chain_yarn_per_step must be nonnegative")
 
 
 @dataclass(frozen=True, slots=True)
