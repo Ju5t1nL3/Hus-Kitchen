@@ -34,7 +34,7 @@ def empty_state() -> GameState:
         "user-1",
         "pet-1",
         progression=ProgressionState(0, 1, 10, 1, 100),
-        last_fed_at=NOW - timedelta(seconds=300),
+        last_fed_at=NOW,
     )
 
 

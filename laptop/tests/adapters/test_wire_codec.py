@@ -54,7 +54,7 @@ def home() -> RenderSnapshot:
         focus_minutes=None,
         break_minutes=None,
         buttons=(
-            ButtonLabel(ButtonId(1), "Feed", False),
+            ButtonLabel(ButtonId(1), "Feed", True),
             ButtonLabel(ButtonId(2), "Focus", True),
             ButtonLabel(ButtonId(3), "-", False),
         ),

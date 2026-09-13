@@ -12,7 +12,6 @@ from deskpet.core.models import (
     ReactionMood,
     RejectionCode,
 )
-from deskpet.features.emotions import is_hungry
 
 
 def decide(
@@ -20,7 +19,6 @@ def decide(
     command: FeedPet,
     food_definitions: Mapping[str, FoodDefinition],
     now_utc: datetime,
-    hunger_seconds: int = 300,
 ) -> Decision:
     """Resolve price, spend yarn and feed in one replayable event draft."""
     _require_aware(now_utc)
@@ -39,8 +37,6 @@ def decide(
         return Rejected(RejectionCode.UNAVAILABLE)
     if progression.yarn_balance < food.price_yarn:
         return Rejected(RejectionCode.INSUFFICIENT_YARN)
-    if not is_hungry(state, now_utc, hunger_seconds):
-        return Rejected(RejectionCode.UNAVAILABLE)
 
     return Accepted(
         ItemPurchasedAndFed(

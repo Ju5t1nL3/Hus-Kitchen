@@ -130,6 +130,9 @@ Hungry, then a live Happy reaction, then Idle. Sad persists until `pet_comforted
 Hungry begins five minutes after creation/last feed and remains until feeding;
 feeding restarts that deadline. Paused focus displays Idle. Expired reactions do
 not revive older ones.
+
+Feeding is allowed from Idle, Happy, or Hungry and always restarts the hunger
+deadline. Sad blocks feeding until the five-tap comfort transition completes.
 This makes the emotion a simple query over recorded facts and current time;
 the projection avoids rescanning the entire history on every redraw.
 

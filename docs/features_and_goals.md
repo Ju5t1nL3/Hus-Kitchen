@@ -115,6 +115,9 @@ records the resolved price/reaction; insufficient yarn changes nothing. Back
 returns Home without an event. The current direction is immediate purchase and
 feeding, with no inventory, quantities, cooldown or shop browsing.
 
+Feed is available while Idle, Happy, or Hungry. Sad disables Feed until five Pet
+taps clear Sad. Any successful feeding resets the five-minute hunger deadline.
+
 The configured catalog is Jollof Rice for 3 yarn and Coffee for 2 yarn. Both use
 the same three-frame eating animation and then leave the pet Happy for 15 seconds.
 Prices, reaction duration and manifest IDs are configuration rather than rule code.

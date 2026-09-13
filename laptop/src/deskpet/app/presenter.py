@@ -241,7 +241,6 @@ def _buttons(
 ) -> tuple[ButtonLabel, ...]:
     labels = resolve_labels(context, state, device_buttons, bindings, actions)
     if screen is Screen.HOME:
-        hungry = emotions.is_hungry(state, now.utc, config.hunger_seconds)
         updated_home: list[ButtonLabel] = []
         for label in labels:
             action_id = bindings.get((context, label.button, Gesture.PRESS))
@@ -250,8 +249,7 @@ def _buttons(
                     ButtonLabel(
                         label.button,
                         label.label,
-                        (state.last_fed_at is None or hungry)
-                        and not state.needs_comfort,
+                        not state.needs_comfort,
                     )
                 )
             elif action_id is ActionId.PET:

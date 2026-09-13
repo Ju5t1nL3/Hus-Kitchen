@@ -88,7 +88,7 @@ from deskpet.core.views import (
     Shutdown,
     Tick,
 )
-from deskpet.features import emotions, feeding, replay, timers
+from deskpet.features import feeding, replay, timers
 
 UuidFactory = Callable[[], UUID]
 
@@ -300,9 +300,7 @@ class Application:
 
         match intent:
             case OpenFeed():
-                if self.state.needs_comfort or not emotions.is_hungry(
-                    self.state, now.utc, self._config.feeding.hunger_seconds
-                ):
+                if self.state.needs_comfort:
                     return
                 self._runtime = controls.navigate(
                     runtime, intent, self.state, self._config.focus, now
@@ -338,7 +336,6 @@ class Application:
                     FeedPet(item_id, operation_key),
                     self._config.feeding.definitions,
                     now.utc,
-                    self._config.feeding.hunger_seconds,
                 )
             case ConfirmFocus():
                 return timers.decide(
