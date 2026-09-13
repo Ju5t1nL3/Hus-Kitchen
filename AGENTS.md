@@ -1,15 +1,15 @@
 # Tamagotchi Desk Pet — start here
 
 A physical productivity companion: a laptop owns the game; a USB-connected
-Raspberry Pi Pico displays the pet and reports buttons. The goal is to replace
-phone-checking with a pleasant, glanceable desk device.
+TinyCircuits TinyScreen+ displays the pet and reports buttons. The goal is to
+replace phone-checking with a pleasant, glanceable desk device.
 
 Current scope: large home pet and clock, a 5–60-minute focus selector, countdown,
-three context-labeled buttons, focus pause/resume and calculated break offers. The
+four context-labeled buttons, focus pause/resume and calculated break offers. The
 approved expansion now includes XP, levels, spendable `yarn`, priced Food/Drink,
-the mood catalog, base/focus-chain rewards, and opt-in keyboard-count yarn. Hold
-Home button 1 for Settings; keyboard and camera default Off, and camera remains
-Unavailable until M29. Level-up/daily-streak bonuses and weekly recap follow.
+the mood catalog, base/focus-chain rewards, and opt-in keyboard-count and
+camera-attention yarn. Press Home button 3 (a gear icon) for Settings; keyboard and camera both
+default Off. Level-up/daily-streak bonuses and weekly recap follow.
 Health/hunger/friendship remain removed. Timer progress art is a separate future
 idea, not the XP bar.
 
@@ -33,15 +33,21 @@ do not preassign people to modules or assume a permanent integration owner.
 
 This repository contains implemented laptop rules, persistence, presentation,
 USB adapters, application coordination/recovery and a development simulator,
-alongside in-progress Pico firmware.
+alongside working TinyScreen+ firmware.
 Use [docs/todo.md](docs/todo.md) for exact verified status; do not describe planned
 modules or checks as working code.
-The user reports some board setup is already done; inspect and record it before
-repeating hardware work. The laptop runtime is CPython 3.14.6. An HP Windows laptop
-has successfully programmed/controlled the Pico over USB; keep application code
-device- and OS-agnostic rather than hardcoding a Windows serial port. Pico
-MicroPython remains independently unpinned until the exact board/installed firmware
-are documented.
+
+The device is a TinyCircuits **TinyScreen+** (ATSAMD21G18A) with a built-in 96x64
+OLED and four corner buttons, programmed in **C++/Arduino** with `arduino-cli`.
+It replaced the earlier Raspberry Pi Pico + external-LCD prototype, whose display
+never worked reliably. Firmware lives in [`tinyscreen/`](tinyscreen/); the
+superseded MicroPython prototype is retained in [`pico/`](pico/) but is not
+flashed or executed. The verified hardware record is in
+[tinyscreen/README.md](tinyscreen/README.md).
+
+The laptop runtime is CPython 3.14.6. An HP Windows laptop builds, flashes and
+talks to the device over USB; keep application code device- and OS-agnostic
+rather than hardcoding a Windows serial port.
 
 The user explicitly asked to improve this file and the previous architecture,
 not preserve their original structure. Their priorities are modularity,
@@ -49,8 +55,10 @@ maintainability, easy updates, and independent hackathon work with minimal merge
 conflicts. See [design_decisions.md](docs/design_decisions.md) for rationale and assumptions.
 
 Preserve portability: never hardcode `COM` names, `/dev` paths, OS checks or a
-specific Pico/display inside core, feature or application modules. Put host serial
-discovery in a laptop adapter and pins/drivers in Pico hardware adapters/config.
+specific board/display inside core, feature or application modules. Put host
+serial discovery in a laptop adapter (its USB identity belongs in configuration)
+and pins/drivers in firmware hardware configuration. The board swap proved this
+rule's worth: it needed no change to game rules or the wire protocol.
 
 ## Documentation map
 
@@ -65,8 +73,8 @@ Supporting documents live in `docs/`; keep this entry point at the repository ro
 | [system_design.md](docs/system_design.md) | Runtime architecture, dependencies, lifecycle, planned folders | Understanding how pieces connect |
 | [class_design.md](docs/class_design.md) | Types, class/function inputs and outputs, error contracts | Implementing or calling an interface |
 | [implementation_guidelines.md](docs/implementation_guidelines.md) | Typing, validation, DRY and project-specific Twelve-Factor choices | Writing or reviewing code |
-| [serial_protocol.md](docs/serial_protocol.md) | Exact laptop ↔ Pico wire format and examples | Firmware, serial adapter, simulator |
-| [development_modes.md](docs/development_modes.md) | Dev/hardware profiles, clickable virtual Pico and wire trace | Building or using the simulator/composition root |
+| [serial_protocol.md](docs/serial_protocol.md) | Exact laptop ↔ device wire format and examples | Firmware, serial adapter, simulator |
+| [development_modes.md](docs/development_modes.md) | Dev/hardware profiles, clickable virtual device and wire trace | Building or using the simulator/composition root |
 | [event_model.md](docs/event_model.md) | Durable events, pause timing, emotion selection, replay and streaks | Game rules, persistence, reports |
 | [hackathon_plan.md](docs/hackathon_plan.md) | Task-based coordination, integration order and verification | Picking up or integrating work |
 | [nice_to_haves.md](docs/nice_to_haves.md) | Ordered future ideas and extension points | Considering future scope |
@@ -84,9 +92,9 @@ User instructions override the plan; document material deviations.
 - Follow [implementation guidelines](docs/implementation_guidelines.md): check
   laptop types, validate external data, and apply Twelve-Factor only where it fits
   this local device. Keep methodology details in that guide.
-- Keep laptop tooling under `laptop/`: run uv, Ruff and Pyright there. Pico firmware
-  has its own pinned MicroPython release and firmware-specific tooling/configuration;
-  neither runtime imports from the other.
+- Keep laptop tooling under `laptop/`: run uv, Ruff and Pyright there. Firmware is
+  a separate C++/Arduino toolchain (`arduino-cli`, pinned board package and
+  libraries) under `tinyscreen/`; neither side imports from the other.
 - Keep business rules on the laptop. Firmware may debounce, validate messages,
   animate, and detect a lost connection, but cannot calculate breaks, advance or
   pause sessions, choose emotions, interpret button actions, or persist game state.
@@ -130,8 +138,10 @@ User instructions override the plan; document material deviations.
 - Keyboard and camera tracking must have independent on/off controls. They add
   completion yarn; disabling them cannot remove base XP/yarn rewards. Never store
   key identities, typed text, camera frames, video, identity or face recognition.
-- Home emphasizes a large pet and top-right clock. Focus/break views emphasize a
-  legible central timer and small face at top right. All three physical buttons have
-  visible labels for their current action; no stat bars or progress art in MVP.
-- MicroPython is the planned firmware runtime. Verify actual hardware before
-  choosing pins, drivers, or connector assumptions.
+- Home emphasizes a large pet and clock. Break emphasizes a legible central
+  timer and small face. Focus emphasizes a legible timer to the right of an
+  animated working-cat sprite on the left. Every bound physical button shows a visible label
+  for its current action, drawn in that button's own screen corner; unbound
+  buttons show a disabled dash. No stat bars or timer progress art in MVP.
+- C++/Arduino is the firmware runtime. Verify actual hardware before choosing
+  pins, drivers, or connector assumptions.

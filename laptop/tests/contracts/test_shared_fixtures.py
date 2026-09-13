@@ -28,7 +28,7 @@ class ProtocolFixtureTests(unittest.TestCase):
         ready = next(message for message in messages if message["type"] == "ready")
         buttons = ready["buttons"]
 
-        self.assertEqual(buttons, [1, 2, 3])
+        self.assertEqual(buttons, [1, 2, 3, 4])
         self.assertTrue(
             any(message.get("button") == 3 for message in messages),
             "an advertised extra button needs a matching input example",
@@ -43,7 +43,7 @@ class ProtocolFixtureTests(unittest.TestCase):
             view = cast(dict[str, JsonValue], render["view"])
             labels = cast(list[JsonValue], view["buttons"])
             ids = [cast(dict[str, JsonValue], label)["button"] for label in labels]
-            self.assertEqual(ids, [1, 2, 3])
+            self.assertEqual(ids, [1, 2, 3, 4])
 
 
 class EventFixtureTests(unittest.TestCase):

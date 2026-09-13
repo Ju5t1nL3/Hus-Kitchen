@@ -10,7 +10,7 @@ code or UI. Health, hunger and friendship remain permanently removed.
 2. Feed opens Jollof Rice (3 yarn), Coffee (2 yarn), and Back. A choice is
    purchased and fed immediately.
 3. Have the user define the complete mood list, triggers, precedence and durations;
-   then implement that catalog consistently across laptop and Pico contracts.
+   then implement that catalog consistently across laptop and firmware contracts.
 4. Decide and implement base XP and yarn for completed focus sessions.
 5. Add optional keystroke-count yarn bonuses, then optional camera-attention yarn
    bonuses.
@@ -35,13 +35,14 @@ recorded values rather than current configuration, and its stable dedupe key mak
 startup/retry idempotent. Existing histories receive it on their next startup; old
 focus sessions receive no retroactive rewards.
 
-Home's Feed action opens a three-button menu:
+Home's Feed action opens a menu binding three of the four corners:
 
 | Button | Action |
 | --- | --- |
-| 1 | Buy and feed Jollof Rice for 3 yarn |
-| 2 | Buy and feed Coffee for 2 yarn |
-| 3 | Back to Home without an event |
+| 1 (top-left) | Buy and feed Jollof Rice for 3 yarn |
+| 2 (top-right) | Buy and feed Coffee for 2 yarn |
+| 3 (bottom-left) | Back to Home without an event |
+| 4 (bottom-right) | Unbound; the level/yarn strip occupies this corner |
 
 The current direction is an immediate purchase-and-feed operation, not a separate
 inventory. One committed event must contain the resolved item, price paid, balance
@@ -122,9 +123,11 @@ Keyboard activity never awards XP. Counts include only active focus segments;
 pause, break and ended sessions are excluded. Persist the enabled/available flags,
 eligible count and resolved yarn in the reward event, never key identities.
 
-Hold Home button 1 to open Settings. Up cycles Keyboard/Camera, Select toggles the
-selected available integration, and Back returns Home. Consent defaults Off and is
-saved locally. A camera that cannot be opened is displayed as Unavailable.
+Press Home button 3 (a gear icon) to open Settings. Up and Down move between
+Keyboard and Camera, Select toggles the selected available integration, and Back
+returns Home. Consent
+defaults Off and is saved locally. A camera that cannot be opened is displayed as
+Unavailable.
 
 M29 samples the camera locally twice per second with OpenCV's bundled frontal-face
 Haar cascade. A centered frontal face is an attentive sample; this is a coarse

@@ -1,6 +1,7 @@
-{"v":2,"type":"ready","connection_id":null,"boot_id":"boot-a1","buttons":[1,2,3],"ui":"emotions_v1"}
-{"v":2,"type":"ready","connection_id":"link-001","boot_id":"boot-a1","buttons":[1,2,3],"ui":"emotions_v1"}
+{"v":2,"type":"ready","connection_id":null,"boot_id":"boot-a1","buttons":[1,2,3,4],"ui":"emotions_v1"}
+{"v":2,"type":"ready","connection_id":"link-001","boot_id":"boot-a1","buttons":[1,2,3,4],"ui":"emotions_v1"}
 {"v":2,"type":"button","connection_id":"link-001","boot_id":"boot-a1","seq":1,"control_epoch":1,"button":1,"action":"press"}
 {"v":2,"type":"button","connection_id":"link-001","boot_id":"boot-a1","seq":2,"control_epoch":1,"button":3,"action":"press"}
 {"v":2,"type":"button","connection_id":"link-001","boot_id":"boot-a1","seq":3,"control_epoch":2,"button":2,"action":"hold"}
+{"v":2,"type":"button","connection_id":"link-001","boot_id":"boot-a1","seq":4,"control_epoch":2,"button":4,"action":"press"}
 {"v":2,"type":"pong","connection_id":"link-001","nonce":7}

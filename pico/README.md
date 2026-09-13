@@ -1,11 +1,29 @@
-# Pico firmware
+# Pico firmware — SUPERSEDED
 
-This folder contains the MicroPython program for the physical device. It reads
-and debounces buttons, validates USB messages, draws laptop-provided views and
-plays requested animations. Timer, emotion and reward decisions stay on the laptop.
+> **This directory is no longer the project's firmware.** The device is now a
+> TinyCircuits TinyScreen+ running C++/Arduino; see
+> [`../tinyscreen/README.md`](../tinyscreen/README.md) for the current hardware
+> record and firmware, and [`../docs/components.md`](../docs/components.md) for
+> the hardware boundary.
+>
+> The board swap happened because this Pico setup's display never reached a
+> reliable state: after ruling out pin mapping, SPI mode, baud rate, driver
+> choice and power, the remaining suspect was an intermittent physical
+> connection that could not be fixed remotely (the full debugging trail is kept
+> below). The TinyScreen+ integrates its display and buttons on one board, which
+> removes that failure mode.
+>
+> This directory and its notes are retained deliberately: the button-scanning,
+> protocol-validation and rendering structure here was ported to C++ rather than
+> rewritten, and the hardware debugging record is still useful evidence. Nothing
+> here is flashed or executed by the current project.
 
-MicroPython is a separate runtime from laptop CPython. Complete M01 in the order
-below before relying on a particular firmware version or language feature.
+This folder contains the MicroPython program that ran on the earlier Raspberry Pi
+Pico prototype. It read and debounced buttons, validated USB messages, drew
+laptop-provided views and played requested animations. Timer, emotion and reward
+decisions stayed on the laptop, exactly as they still do on the TinyScreen+.
+
+Everything below this line describes that superseded Pico setup.
 
 ## 1. Report the existing board and its relevant capabilities
 

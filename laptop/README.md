@@ -10,7 +10,7 @@ Local camera attention uses `opencv-python` only after an independent opt-in. It
 Haar cascade detects a centered frontal face; frames are processed in memory and
 discarded immediately. Camera selection uses OpenCV's portable camera index rather
 than OS names or platform-specific capture APIs.
-It must not be copied to or imported by the Pico firmware.
+It must not be copied to or imported by the device firmware.
 
 The expected deployment host is an HP Windows laptop; initial tooling was also
 verified on macOS. Keep serial discovery and application code OS-agnostic—never
@@ -35,12 +35,12 @@ uv run python -m unittest discover -s tests -v
 ```
 
 Use `uv run ruff format .` to format laptop code. Commit `uv.lock`; do not commit
-`.venv/`. Python 3.14 is independent of the MicroPython release in `../pico/`.
-The Pico reuses this locked Ruff executable with its own provisional
-`../pico/ruff.toml`; follow the [Pico bring-up sequence](../pico/README.md) before
-treating that syntax target as verified.
+`.venv/`. This Python toolchain is independent of the device firmware, which is an
+Arduino/C++ sketch under `../tinyscreen/firmware/` compiled and uploaded with
+arduino-cli; see the [device bring-up notes](../tinyscreen/README.md). Ruff and
+Pyright apply to laptop code only.
 
-Run the hardware application from this folder after connecting the configured Pico:
+Run the hardware application from this folder after connecting the configured device:
 
 ```sh
 uv run python main.py --profile hardware
@@ -50,7 +50,7 @@ Use `--config PATH` or `--data PATH` to override the default `config.yaml` and
 `data/pet.db`. The application reports no matching or ambiguous serial devices
 instead of guessing.
 
-Run the clickable virtual Pico without hardware:
+Run the clickable virtual device without hardware:
 
 ```sh
 uv run python main.py --profile dev
@@ -59,12 +59,12 @@ uv run python main.py --profile dev
 Open the printed loopback URL (normally `http://127.0.0.1:8765`). Development
 storage is temporary unless `--data PATH` is supplied. Use `--simulator-port`
 to choose another local port. The simulator exposes connect/reboot controls,
-three clickable buttons, fake-time advancement, invalid-line injection and a
-bounded copyable JSON trace. Both runtime profiles use the same application,
-rules, presenter, wire codec and event-store contract.
+one clickable button per advertised ID (currently four), fake-time advancement,
+invalid-line injection and a bounded copyable JSON trace. Both runtime profiles
+use the same application, rules, presenter, wire codec and event-store contract.
 
 The [development and hardware profiles](../docs/development_modes.md) use
-one application and wire codec. Development supplies a clickable virtual Pico and
+one application and wire codec. Development supplies a clickable virtual device and
 safe temporary storage; hardware supplies the USB adapter and local SQLite store.
 
 ## Planned layout

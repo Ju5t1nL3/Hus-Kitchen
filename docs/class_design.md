@@ -52,8 +52,9 @@ After history replay, RuntimeState is reconstructed according to recovery policy
   DeviceReady/Pong carry the wire fields; ConnectionChanged carries connection ID
   and connected flag; Tick carries a ClockReading; Shutdown carries no game data.
 - ControlIntent: zero-field variants FeedDefault, OpenSetup, CycleDuration,
-  ConfirmFocus, EndCurrent, PauseCurrent, ResumeCurrent, SkipBreak, StartBreak,
-  BackHome, ShowTime, RestartFocus. controls selects one; application supplies
+  CycleDurationBack, ConfirmFocus, EndCurrent, PauseCurrent, ResumeCurrent,
+  SkipBreak, StartBreak, BackHome, ShowTime, RestartFocus, OpenSettings,
+  CycleSetting, CycleSettingBack, ToggleSetting. controls selects one; app supplies
   IDs and current values. ShowTime is a temporary render toggle (below); RestartFocus
   is a compound navigation intent the application resolves into two domain commands
   (see "Repeating the last focus duration").
@@ -84,7 +85,7 @@ Where a fixed enum is specified, use that type rather than an unrestricted strin
 | API | Inputs → output | Contract |
 | --- | --- | --- |
 | feeding.decide(state, command, food_definitions, now_utc) → Decision | State, FeedPet, immutable ID→definition mapping, explicit time | Current M07 free-feed API; M25 replaces it with balance/price validation and an atomic purchase/feed event |
-| timers.break_minutes(focus_minutes, policy) → int | Selected duration and validated break policy | Pure proportional calculation; no Pico involvement |
+| timers.break_minutes(focus_minutes, policy) → int | Selected duration and validated break policy | Pure proportional calculation; no firmware involvement |
 | timers.decide(state, command, sample, rules, now) → Decision | Immutable state, timer command, TimerSample or None, validated rules and clock reading | Validate transition, pin terms on start, classify early end, build one event |
 | rewards.decide(state, focus_session_id, focus_minutes, chain_number, policy) → Decision | Completed focus/break offer, prior totals, runtime chain position and versioned integer rates | Return one deduplicated, fully resolved reward event; no I/O or current-clock dependency |
 | preferences.decide_toggle(state, selected_row, operation_key, camera_available) → Decision | Current durable consent plus selected settings row | Toggle an available integration or reject when its host permission/device is unavailable |
@@ -118,7 +119,7 @@ model is planned.
 | stop() → None | No input | Neutral end, stop/join workers, close resources; idempotent |
 | controls.resolve(button, runtime, state, bindings, actions) → ControlIntent or None | Valid gesture/context, bindings and action definitions | Look up mapping and check availability; no per-button game rules |
 | controls.labels(runtime, state, device_buttons, bindings, actions) → tuple[ButtonLabel, ...] | Same context/bindings/definitions plus advertised physical order | Derive matching labels/enabled states for the presenter |
-| controls.navigate(runtime, intent, state, config) → RuntimeState | Navigation intent, explicit state/config | Home/setup selection; wrap allowed minutes; no durable mutation |
+| controls.navigate(runtime, intent, state, config) → RuntimeState | Navigation intent, explicit state/config | Home/setup/settings selection; wrap allowed minutes in either direction; no durable mutation |
 | scheduling.sample(session, anchor_mono_ms, now_mono_ms) → TimerSample | Session and live clock anchor | Accumulated active time and ceiling remaining seconds; paused sessions need no anchor |
 | scheduling.advance(state, runtime, now, config) → ScheduleResult | State/runtime/time | Detect interruption before evaluating deadline; next wake includes second tick/reaction expiry |
 | presenter.build(state, runtime, sample, now, config, actions, device_buttons) → RenderSnapshot | Explicit facts, time, configuration and actions | Uses controls.labels, emotion selector and setup break preview |
@@ -150,9 +151,14 @@ bindings under controls in laptop/config.yaml. Contexts are home, feed, setup,
 focus_running, focus_paused, break_offer and break_running; there is no
 break_paused context because break sessions cannot be paused. ActionId is a
 closed literal/enum matching the defined ControlIntents, not an executable
-string. The MVP hardware advertises three physical buttons ([1,2,3]); Home and
-break_running bind only two of them, so the third renders as a disabled dash on
-those two screens. Example binding subset (not a complete configuration):
+string. The hardware advertises four physical buttons ([1,2,3,4]), one per screen
+corner: 1 top-left, 2 top-right, 3 bottom-left, 4 bottom-right. Buttons 1-2 keep
+the meanings designed for the earlier three-button build; buttons 3-4 are the
+addition. Setup and settings bind button 3 as Down and button 4 as Back; home
+binds button 3 to Settings (a gear icon) and button 4 to Pet. Every other
+context leaves both unbound, so they render as a disabled dash. Feed reserves
+the bottom-right corner for the level/yarn strip, and break_running leaves both
+bottom corners unbound. Example binding subset (not a complete configuration):
 
 ```yaml
 controls:
@@ -160,10 +166,17 @@ controls:
     home:
       "1.press": open_feed
       "2.press": open_setup
+      "3.press": open_settings
+      "4.press": pet
     feed:
       "1.press": buy_jollof
       "2.press": buy_coffee
       "3.press": back_home
+    setup:
+      "1.press": cycle_duration
+      "2.press": confirm_focus
+      "3.press": cycle_duration_back
+      "4.press": back_home
     focus_running:
       "1.press": show_time
       "2.press": pause_current
@@ -180,16 +193,17 @@ controls:
   label per screen: break_running's Home button uses ActionId END_BREAK with the
   EndCurrent intent, distinct from focus's END_CURRENT, purely so the label reads
   "Home" instead of "End".
-- Add a physical button: add its ID/GPIO/layout slot to hardware_config.py,
-  advertise it in ready, and bind an action. Scanner and codecs iterate declared
-  IDs; no button-1/button-2/button-3 branches. Extra labels need usable screen space.
+- Add a physical button: add its ID/pin/layout slot to the firmware hardware
+  configuration, advertise it in ready, and bind an action. Scanner and codecs
+  iterate declared IDs; no per-button-number branches. Extra labels need usable
+  screen space.
 
 One handler dictionary maps intents to command construction/navigation; no dynamic
 plugin loader or large nested button switch. Unbound buttons show a disabled dash
 and do nothing. Use the press action for the primary label; if only hold is bound,
-show a short hold hint from its definition. The third button now provides an
-explicit Back action on setup instead of the earlier two-button hold-to-back;
-Setup's press bindings are Up, Set and Back.
+show a short hold hint from its definition. Setup's press bindings are Up, Set,
+Down and Back, and Settings' are Up, Select, Down and Back -- buttons 3-4 are the
+addition to each screen's original three-button layout.
 
 ## The clock reveal (ShowTime)
 
@@ -278,5 +292,5 @@ code; runtime validation still guards every external boundary.
 | DisplayDriver.draw_region(rect, pixels) → None | Bounds and pixel buffer | Hardware-specific drawing; chunk if needed |
 | FirmwareApp.step(now_ms) → None | Loop time | Poll USB/buttons, flush bounded output, update display |
 
-Firmware uses validated dictionaries/small classes suited to MicroPython. It never
+Firmware uses validated structs/small classes suited to its C++ runtime. It never
 imports laptop records, infers a mood, calculates a break, or changes a session.

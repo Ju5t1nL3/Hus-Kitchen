@@ -11,7 +11,9 @@ from deskpet.core.commands import (
     ConfirmFocus,
     ControlIntent,
     CycleDuration,
+    CycleDurationBack,
     CycleSetting,
+    CycleSettingBack,
     EndCurrent,
     OpenFeed,
     OpenSettings,
@@ -42,7 +44,7 @@ from deskpet.core.views import (
     ControlBindings,
     ControlContext,
 )
-from deskpet.features.timers import next_focus_minutes
+from deskpet.features.timers import next_focus_minutes, previous_focus_minutes
 
 _UNBOUND_LABEL = "-"
 
@@ -77,10 +79,6 @@ def _can_restart_focus(state: GameState) -> bool:
     return state.last_focus_minutes is not None
 
 
-def _needs_comfort(state: GameState) -> bool:
-    return _idle(state) and state.needs_comfort
-
-
 ACTIONS: Mapping[ActionId, ActionDefinition] = MappingProxyType(
     {
         ActionId.OPEN_FEED: ActionDefinition(
@@ -89,21 +87,24 @@ ACTIONS: Mapping[ActionId, ActionDefinition] = MappingProxyType(
         ActionId.BUY_JOLLOF: ActionDefinition(
             ActionId.BUY_JOLLOF, "Jollof", BuyItem("jollof_rice"), _idle
         ),
-        ActionId.BUY_COFFEE: ActionDefinition(
-            ActionId.BUY_COFFEE, "Coffee", BuyItem("coffee"), _idle
+        ActionId.BUY_ESPRESSO: ActionDefinition(
+            ActionId.BUY_ESPRESSO, "Espresso", BuyItem("espresso"), _idle
         ),
-        ActionId.PET: ActionDefinition(ActionId.PET, "Pet", PetOnce(), _needs_comfort),
+        ActionId.PET: ActionDefinition(ActionId.PET, "Pet", PetOnce(), _idle),
         ActionId.OPEN_SETUP: ActionDefinition(
             ActionId.OPEN_SETUP, "Focus", OpenSetup(), _idle
         ),
         ActionId.CYCLE_DURATION: ActionDefinition(
             ActionId.CYCLE_DURATION, "Up", CycleDuration(), _idle
         ),
+        ActionId.CYCLE_DURATION_BACK: ActionDefinition(
+            ActionId.CYCLE_DURATION_BACK, "Down", CycleDurationBack(), _idle
+        ),
         ActionId.CONFIRM_FOCUS: ActionDefinition(
             ActionId.CONFIRM_FOCUS, "Set", ConfirmFocus(), _idle
         ),
         ActionId.END_CURRENT: ActionDefinition(
-            ActionId.END_CURRENT, "End", EndCurrent(), _has_session
+            ActionId.END_CURRENT, "End Early", EndCurrent(), _has_session
         ),
         ActionId.PAUSE_CURRENT: ActionDefinition(
             ActionId.PAUSE_CURRENT, "Pause", PauseCurrent(), _running
@@ -124,16 +125,32 @@ ACTIONS: Mapping[ActionId, ActionDefinition] = MappingProxyType(
             ActionId.SHOW_TIME, "Time", ShowTime(), _has_session
         ),
         ActionId.RESTART_FOCUS: ActionDefinition(
-            ActionId.RESTART_FOCUS, "Again", RestartFocus(), _can_restart_focus
+            ActionId.RESTART_FOCUS, "Refocus", RestartFocus(), _can_restart_focus
         ),
         ActionId.END_BREAK: ActionDefinition(
-            ActionId.END_BREAK, "Home", EndCurrent(), _has_session
+            # Always available while bound (break_running only): either ends
+            # the active break, or -- once it has already run out on its own
+            # -- just navigates home. See application._handle_button's
+            # EndCurrent guard for the no-session case.
+            ActionId.END_BREAK,
+            "Home",
+            EndCurrent(),
+            lambda _: True,
+        ),
+        ActionId.RESTART_FOCUS_FROM_BREAK: ActionDefinition(
+            ActionId.RESTART_FOCUS_FROM_BREAK,
+            "Refocus",
+            RestartFocus(),
+            _can_restart_focus,
         ),
         ActionId.OPEN_SETTINGS: ActionDefinition(
             ActionId.OPEN_SETTINGS, "Settings", OpenSettings(), _idle
         ),
         ActionId.CYCLE_SETTING: ActionDefinition(
             ActionId.CYCLE_SETTING, "Up", CycleSetting(), _idle
+        ),
+        ActionId.CYCLE_SETTING_BACK: ActionDefinition(
+            ActionId.CYCLE_SETTING_BACK, "Down", CycleSettingBack(), _idle
         ),
         ActionId.TOGGLE_SETTING: ActionDefinition(
             ActionId.TOGGLE_SETTING, "Select", ToggleSetting(), _idle
@@ -186,10 +203,12 @@ def navigate(
         OpenFeed
         | OpenSetup
         | CycleDuration
+        | CycleDurationBack
         | BackHome
         | ShowTime
         | OpenSettings
         | CycleSetting
+        | CycleSettingBack
     ),
     state: GameState,
     config: FocusConfig,
@@ -220,6 +239,15 @@ def navigate(
                     runtime.selected_focus_minutes, config.allowed_minutes
                 ),
             )
+        case CycleDurationBack():
+            if runtime.screen is not Screen.SETUP:
+                return runtime
+            return replace(
+                runtime,
+                selected_focus_minutes=previous_focus_minutes(
+                    runtime.selected_focus_minutes, config.allowed_minutes
+                ),
+            )
         case BackHome():
             return replace(
                 runtime,
@@ -243,7 +271,11 @@ def navigate(
         case CycleSetting():
             if runtime.screen is not Screen.SETTINGS:
                 return runtime
-            return replace(runtime, settings_row=(runtime.settings_row + 1) % 2)
+            return replace(runtime, settings_row=(runtime.settings_row + 1) % 3)
+        case CycleSettingBack():
+            if runtime.screen is not Screen.SETTINGS:
+                return runtime
+            return replace(runtime, settings_row=(runtime.settings_row - 1) % 3)
 
 
 def context_for(screen: Screen, state: GameState) -> ControlContext:
@@ -297,7 +329,7 @@ def validate_bindings(
         ControlContext.HOME: {ActionId.OPEN_SETUP, ActionId.OPEN_FEED},
         ControlContext.FEED: {
             ActionId.BUY_JOLLOF,
-            ActionId.BUY_COFFEE,
+            ActionId.BUY_ESPRESSO,
             ActionId.BACK_HOME,
         },
         ControlContext.SETUP: {ActionId.CONFIRM_FOCUS, ActionId.BACK_HOME},
@@ -315,7 +347,7 @@ def validate_bindings(
         },
         ControlContext.BREAK_RUNNING: {
             ActionId.END_BREAK,
-            ActionId.RESTART_FOCUS,
+            ActionId.RESTART_FOCUS_FROM_BREAK,
         },
         ControlContext.SETTINGS: {
             ActionId.CYCLE_SETTING,

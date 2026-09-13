@@ -6,7 +6,13 @@ from pathlib import Path
 
 from deskpet.adapters.config_loader import load
 from deskpet.app.controls import ACTIONS, labels, navigate, resolve, validate_bindings
-from deskpet.core.commands import BackHome, CycleDuration, FeedDefault, OpenSetup
+from deskpet.core.commands import (
+    BackHome,
+    CycleDuration,
+    CycleDurationBack,
+    FeedDefault,
+    OpenSetup,
+)
 from deskpet.core.models import (
     ButtonId,
     ClockReading,
@@ -18,7 +24,7 @@ from deskpet.core.models import (
 from deskpet.core.views import ButtonInput, ControlContext
 
 CONFIG_PATH = Path(__file__).parents[2] / "config.yaml"
-BUTTONS = (ButtonId(1), ButtonId(2))
+BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3), ButtonId(4))
 
 
 def runtime(screen: Screen = Screen.HOME, *, epoch: int = 1) -> RuntimeState:
@@ -55,8 +61,8 @@ class ControlResolutionTests(unittest.TestCase):
             ControlContext.HOME, state, BUTTONS, self.config.bindings, ACTIONS
         )
 
-        self.assertIsInstance(intent, FeedDefault)
-        self.assertEqual([item.label for item in rendered], ["Feed", "Focus"])
+        self.assertIsInstance(intent, OpenSetup)
+        self.assertEqual([item.label for item in rendered], ["Focus", "Feed", "Settings", "Pet"])
 
     def test_remapping_changes_behavior_and_label_together(self) -> None:
         state = GameState("user-1", "pet-1")
@@ -68,25 +74,25 @@ class ControlResolutionTests(unittest.TestCase):
         intent = resolve(button(1), runtime(), state, remapped)
         rendered = labels(ControlContext.HOME, state, BUTTONS, remapped, ACTIONS)
 
-        self.assertIsInstance(intent, OpenSetup)
-        self.assertEqual([item.label for item in rendered], ["Focus", "Feed"])
+        self.assertIsInstance(intent, FeedDefault)
+        self.assertEqual([item.label for item in rendered], ["Feed", "Focus", "Settings", "Pet"])
 
-    def test_third_button_uses_the_generic_binding_path(self) -> None:
+    def test_extra_physical_button_uses_the_generic_binding_path(self) -> None:
         state = GameState("user-1", "pet-1")
-        buttons = (*BUTTONS, ButtonId(3))
+        buttons = (*BUTTONS, ButtonId(5))
         bindings = dict(self.config.bindings)
-        bindings[(ControlContext.HOME, ButtonId(3), Gesture.PRESS)] = next(
+        bindings[(ControlContext.HOME, ButtonId(5), Gesture.PRESS)] = next(
             action
             for action, definition in ACTIONS.items()
             if definition.label == "Feed"
         )
 
-        validate_bindings(bindings, buttons, self.config.ui.max_buttons)
-        intent = resolve(button(3), runtime(), state, bindings)
+        validate_bindings(bindings, buttons, len(buttons))
+        intent = resolve(button(5), runtime(), state, bindings)
         rendered = labels(ControlContext.HOME, state, buttons, bindings, ACTIONS)
 
         self.assertIsInstance(intent, FeedDefault)
-        self.assertEqual(rendered[2].label, "Feed")
+        self.assertEqual(rendered[4].label, "Feed")
 
     def test_stale_epoch_and_unavailable_action_do_nothing(self) -> None:
         state = GameState("user-1", "pet-1")
@@ -104,7 +110,7 @@ class ControlResolutionTests(unittest.TestCase):
         self,
     ) -> None:
         with self.assertRaisesRegex(ValueError, "unadvertised"):
-            validate_bindings(self.config.bindings, (ButtonId(1),), 3)
+            validate_bindings(self.config.bindings, (ButtonId(1),), 4)
         with self.assertRaisesRegex(ValueError, "layout"):
             validate_bindings(self.config.bindings, BUTTONS, 1)
 
@@ -141,6 +147,26 @@ class NavigationTests(unittest.TestCase):
 
         self.assertEqual(updated.selected_focus_minutes, 5)
         self.assertEqual(updated.control_epoch, 4)
+
+    def test_down_from_shortest_duration_reaches_debug_sentinel_without_error(
+        self,
+    ) -> None:
+        current = runtime(Screen.SETUP, epoch=1)
+        current = RuntimeState(
+            current.screen,
+            5,
+            current.run_anchor_mono_ms,
+            current.previous_clock,
+            current.control_epoch,
+            current.connection_id,
+            current.boot_id,
+        )
+
+        updated = navigate(
+            current, CycleDurationBack(), GameState("u", "p"), self.config.focus
+        )
+
+        self.assertEqual(updated.selected_focus_minutes, 0)
 
     def test_back_returns_home_and_increments_epoch(self) -> None:
         updated = navigate(

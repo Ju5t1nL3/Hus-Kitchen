@@ -22,9 +22,9 @@ feeding:
       price_yarn: 3
       happy_seconds: 15
       consume_animation: feed
-    coffee:
-      display_name: Coffee
-      sprite_id: coffee
+    espresso:
+      display_name: Espresso
+      sprite_id: espresso
       price_yarn: 2
       happy_seconds: 15
       consume_animation: feed
@@ -46,21 +46,28 @@ activity:
   camera_one_yarn_attention_percent: 70
   camera_two_yarn_attention_percent: 90
 
+# Button IDs map to the device's four screen corners:
+#   1 top-left   2 top-right   3 bottom-left   4 bottom-right
+# Buttons 1-2 keep the meanings designed for the three-button build. On home,
+# Settings (bottom-left, a gear icon replacing the old hold-button-1 gesture)
+# and Pet (bottom-right) fill the two new corners. On setup/settings, Down
+# (bottom-left, a caret) and Back (bottom-right) do the same.
 controls:
   bindings:
     home:
-      1.press: open_feed
-      1.hold: open_settings
-      2.press: open_setup
-      3.press: pet
+      1.press: open_setup
+      2.press: open_feed
+      3.press: open_settings
+      4.press: pet
     feed:
       1.press: buy_jollof
-      2.press: buy_coffee
+      2.press: buy_espresso
       3.press: back_home
     setup:
       1.press: cycle_duration
       2.press: confirm_focus
-      3.press: back_home
+      3.press: cycle_duration_back
+      4.press: back_home
     focus_running:
       1.press: show_time
       2.press: pause_current
@@ -74,19 +81,21 @@ controls:
       2.press: restart_focus
       3.press: skip_break
     break_running:
-      1.press: restart_focus
+      1.press: restart_focus_from_break
       2.press: end_break
     settings:
       1.press: cycle_setting
       2.press: toggle_setting
-      3.press: back_home
+      3.press: cycle_setting_back
+      4.press: back_home
 
 ui:
   clock_timezone: America/Chicago
-  max_buttons: 3
+  max_buttons: 4
 
+# TinyCircuits TinyScreen+ native USB CDC identity (0x03EB / 0x8009).
 device:
   port: null
-  usb_vid: 11914
-  usb_pid: 5
+  usb_vid: 1003
+  usb_pid: 32777
   serial_number: null

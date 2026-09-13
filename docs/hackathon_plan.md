@@ -33,16 +33,17 @@ Shared examples should include:
   break start → end; expected projection, emotions and report.
 - Separate grace/early-end histories and expected effects, including paused time.
 - Fake device, clock and event store with the real ports' signatures.
-- A clickable virtual Pico that sends/receives through the real JSON codec and
+- A clickable virtual device that sends/receives through the real JSON codec and
   displays a bounded bidirectional trace.
 
-Pico and laptop share contracts/examples, not a Python package that imports
-laptop libraries into MicroPython.
+Firmware and laptop share contracts/examples as data files, not a package that
+imports laptop libraries into the C++ firmware.
 
 ## Build order
 
-1. Inspect and document the board setup already done; reuse working wiring,
-   firmware and assets. The laptop uses CPython 3.14.6 with tooling under `laptop/`.
+1. Inspect and document the board setup already done; reuse working firmware and
+   assets. The laptop uses CPython 3.14.6 with tooling under `laptop/`; the
+   TinyScreen+ firmware is an Arduino/C++ sketch built with arduino-cli.
    Bootstrap shared contracts and draw home/setup/timer examples; start USB and
    fake-device paths as their inputs become available. Add the clickable simulator
    after the codec and presenter exist; it must reuse them.
@@ -75,15 +76,15 @@ do not add an undocumented seconds-mode shortcut to production firmware.
 
 | Boundary | Checks |
 | --- | --- |
-| Controls/UI | Every three-button action per screen, setup wrap/default/remembering, paused labels, no automatic break start, Home/break_running's unbound third button shows a disabled dash |
-| Control modularity | Remap an action and simulate an added fourth button through the same path; matching labels; invalid bindings rejected; no timer-rule edits |
+| Controls/UI | Every four-corner action per screen, setup Up/Down wrap/default/remembering, paused labels, no automatic break start, each context's unbound buttons show a disabled dash |
+| Control modularity | Remap an action and simulate an added fifth button through the same path; matching labels; invalid bindings rejected; no timer-rule edits |
 | Timer | Multiple pause/resume segments (focus only), paused End, 59.999s vs 60s grace, deadline wins over End/Pause, break end/skip neutral, break pause/resume rejected, Time reveal reverts after 5s without changing the timer or epoch, Again starts a new focus session at the last confirmed duration |
 | Emotion/feeding/economy | Food/Drink spend the displayed yarn price atomically, insufficient funds do nothing, final user-defined moods expire correctly, no hidden care stats |
 | Replay/storage | Incremental/rebuilt state match; duplicate/conflicting terminal and break-choice keys; pinned terms after config change; commit-before-render crash |
 | History | No pause/break time credited as focus; cumulative samples not double counted; completion dates and today/yesterday streak |
 | Recovery | Running/paused session interrupted neutrally; pending break restored; unsaved elapsed labeled unknown; no replayed animations |
 | Wire/firmware | Fragmented/oversize/invalid JSON, stale seq/connection/epoch/revision, exclusive press/hold, nonblocking drawing and input |
-| App/hardware | Old Pause cannot become Break/Again after navigation; disconnect doesn't stop timer; storage error freezes gameplay; readable screen and measured latency |
+| App/hardware | Old Pause cannot become Break/Again after navigation; disconnect doesn't stop timer; storage error freezes gameplay; readable 96x64 screen and measured latency |
 
 These are planned checks, not executed implementation tests. MVP is done when the
 [product acceptance criteria](features_and_goals.md) pass, setup/run instructions

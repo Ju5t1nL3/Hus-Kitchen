@@ -1,13 +1,13 @@
 # Shared contract fixtures
 
-These runtime-neutral JSON Lines files are the agreed examples for laptop and Pico
+These runtime-neutral JSON Lines files are the agreed examples for laptop and firmware
 tests. Each non-empty line is one complete JSON object. Test code must read the
 files as data; neither runtime may import code from the other.
 
 | File | Direction/purpose |
 | --- | --- |
 | `pico_to_laptop.v2.jsonl` | Valid `ready`, `button` and `pong` messages received by the laptop |
-| `laptop_to_pico.v2.jsonl` | Valid `hello`, `ping`, complete `render` and `animate` messages received by the Pico |
+| `laptop_to_pico.v2.jsonl` | Valid `hello`, `ping`, complete `render` and `animate` messages received by the device |
 | `events.v2.jsonl` | Stored event-schema examples, including the active-time early-end boundary |
 
 Fixtures use protocol version 2, UI vocabulary `emotions_v1`, and event schema 2.
@@ -19,7 +19,11 @@ When a wire or event contract changes, update its owning document and these file
 together. Run the laptop contract tests; the firmware implementation must reuse the
 same files or copies verified byte-for-byte by its test setup.
 
-The `ready` fixture advertises button 3. The three-physical-button MVP binds all
-three IDs on most screens; Home and the break-running screen use only two and
-render the third as a disabled dash, proving that button handling iterates
-advertised IDs instead of assuming a fixed count is bound everywhere.
+The `ready` fixture advertises four buttons. Setup and settings bind all four
+IDs; every other screen leaves button 4 unbound, and break-running leaves both
+bottom corners unbound, so those render as disabled dashes. This proves that
+button handling iterates advertised IDs instead of assuming a fixed count is
+bound everywhere.
+
+The file names retain their original `pico` spelling so existing test paths keep
+working; the device they describe is now a TinyScreen+ running C++ firmware.

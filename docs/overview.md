@@ -6,23 +6,25 @@ the task board. Start here; the other docs are task-specific references.
 ## What does it do?
 
 When you first plug it in, you see a big pet, a clock at the top right, and
-labels above two of the three buttons: **Feed** and **Focus** (the third does
-nothing here and shows a dash).
+labels in two of the four screen corners: **Feed** (top-left) and **Focus**
+(top-right). The bottom-left corner is **Pet**, which comforts a sad pet, and the
+bottom-right corner shows your level and yarn instead of a button label.
 
-Holding the first Home button opens Settings without crowding the normal screen.
-Up selects Keyboard or Camera, Select toggles an available option, and Back returns
-Home. Both begin Off; Camera says Unavailable until its M29 integration exists.
+Holding the top-left Home button opens Settings without crowding the normal
+screen. Up and Down move between Keyboard and Camera, Select toggles an available
+option, and Back returns Home. Both begin Off; Camera says Unavailable when the
+laptop cannot open one.
 
 Feed opens Food/Drink/Back. Food and Drink show a yarn price; choosing one spends
 yarn and feeds the pet immediately if you can afford it. Focus opens a screen
-where the first button cycles through 5, 10, 15 … 60 minutes and back to 5, the
-second (**Set**) confirms, and the third (**Back**) returns home without
-starting anything. The first selection is 25 minutes; later it remembers your
-last confirmed choice.
+where **Up** (top-left) and **Down** (bottom-left) step through 5, 10, 15 … 60
+minutes and wrap around, **Set** (top-right) confirms, and **Back**
+(bottom-right) returns home without starting anything. The first selection is
+25 minutes; later it remembers your last confirmed choice.
 
 The countdown fills most of the screen, with a small pet face at the top right.
-There's now a third button below the screen too, and its job changes with the
-screen. During focus the three buttons are **Time**, **Pause/Resume** and **End**.
+Each button's job changes with the screen. During focus the buttons are **Time**,
+**Pause/Resume** and **End**, and the fourth corner stays empty.
 Pausing freezes the timer; Time swaps the countdown for the real clock for five
 seconds, then switches back on its own.
 
@@ -41,11 +43,11 @@ ending it was always one press away anyway. Neither path is a penalty.
 | Part | Job |
 | --- | --- |
 | Laptop | Timer, pause/resume, break calculation, emotions and saved history |
-| Pico | Read physical buttons and draw the screen the laptop requests |
+| Device | Read physical buttons and draw the screen the laptop requests |
 
-The Pico says “button 1 was pressed.” The laptop knows whether that means Feed,
+The device says “button 1 was pressed.” The laptop knows whether that means Feed,
 Up, End or Home on the current screen. The laptop then sends the updated screen
-description. The Pico never decides that a session is complete or that the pet
+description. The device never decides that a session is complete or that the pet
 should be sad.
 
 ## How does the pet feel?
@@ -66,7 +68,7 @@ and a weekly text summary use the same saved diary and stay on the laptop.
 | --- | --- |
 | Game rules | Timer transitions, feeding and emotion selection |
 | Saving and history | Local database, restart recovery and summaries |
-| Pico and artwork | Buttons, display, pet/face/food sprites and animations |
+| Firmware and artwork | Buttons, display, pet/face/food sprites and animations |
 | App and communication | Screen controls and the USB connection between everything |
 
 There are four people on the team, but possibly only two working on software.

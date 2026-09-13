@@ -16,7 +16,9 @@ from deskpet.core.commands import (
     ConfirmFocus,
     ControlIntent,
     CycleDuration,
+    CycleDurationBack,
     CycleSetting,
+    CycleSettingBack,
     Decision,
     EndCurrent,
     EndSession,
@@ -88,6 +90,7 @@ from deskpet.core.ports import (
 )
 from deskpet.core.views import (
     AnimationCue,
+    AnimationName,
     ButtonInput,
     ConnectionChanged,
     CueRequest,
@@ -333,13 +336,25 @@ class Application:
             case (
                 OpenSetup()
                 | CycleDuration()
+                | CycleDurationBack()
                 | BackHome()
                 | ShowTime()
                 | OpenSettings()
                 | CycleSetting()
+                | CycleSettingBack()
             ):
                 self._runtime = controls.navigate(
                     runtime, intent, self._require_state(), self._config.focus, now
+                )
+                self._render(now)
+            case EndCurrent() if (
+                runtime.screen is Screen.BREAK and self.state.active_session is None
+            ):
+                # The break already ran out on its own (see BreakSessionCompleted
+                # in presenter.on_commit); there's nothing left to end, so Home
+                # just navigates back like BackHome would.
+                self._runtime = controls.navigate(
+                    runtime, BackHome(), self.state, self._config.focus, now
                 )
                 self._render(now)
             case RestartFocus():
@@ -442,12 +457,14 @@ class Application:
                 OpenFeed()
                 | OpenSetup()
                 | CycleDuration()
+                | CycleDurationBack()
                 | BackHome()
                 | ShowTime()
                 | RestartFocus()
                 | PetOnce()
                 | OpenSettings()
                 | CycleSetting()
+                | CycleSettingBack()
                 | ToggleSetting()
             ):
                 raise ValueError("navigation intent cannot become a domain command")
@@ -455,6 +472,17 @@ class Application:
                 assert_never(unreachable)
 
     def _pet_once(self, button: ButtonInput, now: ClockReading) -> None:
+        # Purely cosmetic and not tied to any committed event, unlike other
+        # cues: petting always plays its animation, whether or not the pet
+        # is sad or this tap is the one that clears it.
+        self._device.animate(
+            AnimationCue(
+                animation_id=f"button:{button.connection_id}:{button.seq}:pet",
+                name=AnimationName.PET,
+                after_revision=self._revision,
+                food_sprite=None,
+            )
+        )
         if not self.state.needs_comfort:
             return
         count = self.runtime.sad_pet_count + 1
@@ -480,6 +508,7 @@ class Application:
         minutes = state.last_focus_minutes
         if minutes is None:
             return
+        first: Decision | None = None
         if state.pending_break is not None:
             first = timers.decide(
                 state,
@@ -488,10 +517,9 @@ class Application:
                 self._timer_rules(),
                 now,
             )
-        elif (
-            state.active_session is not None
-            and state.active_session.kind is SessionKind.BREAK
-        ):
+        elif state.active_session is not None:
+            if state.active_session.kind is not SessionKind.BREAK:
+                return
             first = timers.decide(
                 state,
                 EndSession(state.active_session.id, RequestedEndReason.USER),
@@ -499,12 +527,13 @@ class Application:
                 self._timer_rules(),
                 now,
             )
-        else:
-            return
+        # else: the break already completed on its own (break_complete
+        # screen) -- nothing to skip or end first, go straight to starting.
         chain_count = self.runtime.focus_chain_count
-        if not self._commit(first, now, render=False):
-            return
-        self._runtime = replace(self.runtime, focus_chain_count=chain_count)
+        if first is not None:
+            if not self._commit(first, now, render=False):
+                return
+            self._runtime = replace(self.runtime, focus_chain_count=chain_count)
         second = timers.decide(
             self._require_state(),
             StartFocus(str(self._uuid_factory()), minutes),

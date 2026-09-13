@@ -11,10 +11,11 @@ class ActionId(StrEnum):
     OPEN_FEED = "open_feed"
     FEED_DEFAULT = "open_feed"  # compatibility alias for pre-M25 callers
     BUY_JOLLOF = "buy_jollof"
-    BUY_COFFEE = "buy_coffee"
+    BUY_ESPRESSO = "buy_espresso"
     PET = "pet"
     OPEN_SETUP = "open_setup"
     CYCLE_DURATION = "cycle_duration"
+    CYCLE_DURATION_BACK = "cycle_duration_back"
     CONFIRM_FOCUS = "confirm_focus"
     END_CURRENT = "end_current"
     END_BREAK = "end_break"
@@ -25,8 +26,10 @@ class ActionId(StrEnum):
     BACK_HOME = "back_home"
     SHOW_TIME = "show_time"
     RESTART_FOCUS = "restart_focus"
+    RESTART_FOCUS_FROM_BREAK = "restart_focus_from_break"
     OPEN_SETTINGS = "open_settings"
     CYCLE_SETTING = "cycle_setting"
+    CYCLE_SETTING_BACK = "cycle_setting_back"
     TOGGLE_SETTING = "toggle_setting"
 
 
@@ -52,6 +55,10 @@ class OpenSetup: ...
 
 @dataclass(frozen=True, slots=True)
 class CycleDuration: ...
+
+
+@dataclass(frozen=True, slots=True)
+class CycleDurationBack: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +106,10 @@ class CycleSetting: ...
 
 
 @dataclass(frozen=True, slots=True)
+class CycleSettingBack: ...
+
+
+@dataclass(frozen=True, slots=True)
 class ToggleSetting: ...
 
 
@@ -106,9 +117,9 @@ type ControlIntent = (
     OpenFeed
     | BuyItem
     | PetOnce
-    | PetOnce
     | OpenSetup
     | CycleDuration
+    | CycleDurationBack
     | ConfirmFocus
     | EndCurrent
     | PauseCurrent
@@ -120,6 +131,7 @@ type ControlIntent = (
     | RestartFocus
     | OpenSettings
     | CycleSetting
+    | CycleSettingBack
     | ToggleSetting
 )
 

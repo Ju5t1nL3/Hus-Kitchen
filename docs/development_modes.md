@@ -11,8 +11,8 @@ attention, or samples.
 
 | Profile | Device | Storage | Clock | Diagnostics |
 | --- | --- | --- | --- | --- |
-| `dev` | Clickable virtual Pico | Temporary/in-memory by default; explicit path allowed | Real by default; controllable fake clock available | Visible bidirectional wire trace and validation errors |
-| `hardware` | USB-connected Pico | User's local SQLite database | System UTC + monotonic clock | Normal structured logs; no development UI |
+| `dev` | Clickable virtual device | Temporary/in-memory by default; explicit path allowed | Real by default; controllable fake clock available | Visible bidirectional wire trace and validation errors |
+| `hardware` | USB-connected TinyScreen+ | User's local SQLite database | System UTC + monotonic clock | Normal structured logs; no development UI |
 
 Use `hardware` as this local product's production profile. The expected demo host
 is Windows, while profile selection and application logic remain OS-agnostic.
@@ -20,16 +20,16 @@ Choose the profile explicitly through the eventual CLI/configuration. Do not inf
 it from the operating system, silently fall back to the simulator when USB fails,
 or let development mode write the normal user database by default.
 
-## Clickable virtual Pico
+## Clickable virtual device
 
 Development mode opens a small local UI representing the physical setup:
 
-- Pico/USB connection indicator and connect, disconnect and reboot controls.
-- LCD-sized screen preview using the current render snapshot.
+- Device/USB connection indicator and connect, disconnect and reboot controls.
+- Screen preview at the panel's real size using the current render snapshot.
 - Natural long-press simulation: hold a virtual button for 600 ms; Home button 1
   opens the same Settings route as physical firmware.
 - One clickable control for every button ID advertised by the simulated device;
-  the MVP defaults to IDs 1, 2 and 3.
+  the current build defaults to IDs 1, 2, 3 and 4.
 - One normal clickable press per button, with its current label and enabled state.
 - Optional fake-clock controls to advance a long focus or break quickly.
 - A chronological trace with direction, timestamp, raw JSON line, decoded message
@@ -37,16 +37,16 @@ Development mode opens a small local UI representing the physical setup:
 - Clear, pause, copy/export and invalid-message injection controls for debugging.
 
 The drawing is a functional virtual breadboard, not an electrical authority. GPIO
-wiring and voltage facts remain in the Pico hardware documentation. Once the real
-layout is known, the UI may arrange the Pico, display and buttons similarly, but it
+wiring and voltage facts remain in the device hardware documentation. Once the real
+layout is known, the UI may arrange the board, display and buttons similarly, but it
 must label the view as simulated.
 
 ## Exercise the real boundary
 
 A click must not call a feeding or timer function directly. It creates the same
-Pico-to-laptop JSON button message as firmware, passes through the production wire
+device-to-laptop JSON button message as firmware, passes through the production wire
 decoder and enters the normal application input queue. Laptop renders and animation
-cues pass through the production encoder before the virtual Pico validates and
+cues pass through the production encoder before the virtual device validates and
 displays them.
 
 The simulator uses an in-memory byte transport so it does not need a serial port.
@@ -64,7 +64,7 @@ sensitive sensor data before display/export.
 | --- | --- | --- |
 | `build_application(profile, config_path, data_path)` | Explicit profile, validated config path and optional storage path | One application composed with matching adapters |
 | `SimulatorPort.push_from_device(data)` | One bounded JSON byte line | Bytes delivered to the production laptop decoder |
-| `SimulatorPort.write(data)` | Bytes from the real laptop serial link | Bytes validated and applied by the virtual Pico |
+| `SimulatorPort.write(data)` | Bytes from the real laptop serial link | Bytes validated and applied by the virtual device |
 | `VirtualPico.press(button, gesture)` | Advertised button ID and normal press | Versioned button JSON with connection, boot, sequence and control epoch |
 | `VirtualPico.accept_host_bytes(data)` | Laptop hello/ping/render/animate bytes | Updated connection/screen/animation state or traced rejection |
 | `TraceSink.record(...)` | Direction, raw line, message type and result | Bounded ordered diagnostic entry |

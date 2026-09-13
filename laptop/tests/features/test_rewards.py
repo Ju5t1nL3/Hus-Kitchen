@@ -65,6 +65,17 @@ class RewardDecisionTests(unittest.TestCase):
                 self.assertEqual(event.base_yarn + event.chain_yarn, expected_yarn)
                 self.assertEqual(event.dedupe_key, "focus-reward:focus-1")
 
+    def test_debug_zero_minute_completion_grants_no_base_reward(self) -> None:
+        result = decide(state(), "focus-1", 0, 1, POLICY)
+
+        self.assertIsInstance(result, Accepted)
+        assert isinstance(result, Accepted)
+        event = result.event
+        self.assertIsInstance(event, FocusRewardGranted)
+        assert isinstance(event, FocusRewardGranted)
+        self.assertEqual(event.base_xp, 0)
+        self.assertEqual(event.base_yarn, 0)
+
     def test_wrong_or_missing_completion_is_unavailable(self) -> None:
         missing = GameState(
             user_id="user-1",

@@ -112,10 +112,11 @@ class SettingsView:
     keyboard_available: bool
     camera_enabled: bool
     camera_available: bool
+    sound_enabled: bool
 
     def __post_init__(self) -> None:
-        if self.selected_row not in (0, 1):
-            raise ValueError("selected_row must select keyboard or camera")
+        if self.selected_row not in (0, 1, 2):
+            raise ValueError("selected_row must select keyboard, camera or sound")
 
 
 type AvailabilityPredicate = Callable[[GameState], bool]
@@ -153,6 +154,7 @@ class RenderSnapshot:
 class AnimationName(StrEnum):
     FEED = "feed"
     CELEBRATE = "celebrate"
+    PET = "pet"
 
 
 @dataclass(frozen=True, slots=True)

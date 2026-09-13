@@ -15,6 +15,7 @@ from deskpet.adapters.fakes import (
 )
 from deskpet.app.application import Application
 from deskpet.core.events import (
+    BreakSessionCompleted,
     BreakSkipped,
     EndReason,
     FocusRewardGranted,
@@ -46,7 +47,7 @@ from deskpet.core.views import (
 )
 
 CONFIG_PATH = Path(__file__).parents[2] / "config.yaml"
-BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3))
+BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3), ButtonId(4))
 NOW = ClockReading(datetime(2026, 9, 13, 14, 0, tzinfo=UTC), 1_000, False)
 
 
@@ -152,16 +153,16 @@ class ApplicationTests(unittest.TestCase):
         )
 
     def start_focus(self) -> None:
-        self.press(2, 1)
+        self.press(1, 1)
         self.press(2, 2)
 
     def test_feed_menu_buys_both_items_and_spends_yarn(self) -> None:
         self.clock.advance(300_000)
-        self.press(1, 1)
+        self.press(2, 1)
         self.assertIs(self.app.runtime.screen, Screen.FEED)
         self.assertEqual(
             [label.label for label in self.device.published[-1].view.buttons],
-            ["Jollof 3Y", "Coffee 2Y", "Back"],
+            ["Jollof 3Y", "Espresso 2Y", "Back", "-"],
         )
         self.press(2, 2)
         self.assertIs(self.app.runtime.screen, Screen.HOME)
@@ -169,7 +170,7 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(self.app.state.progression.yarn_balance, 8)
 
         self.clock.advance(300_000)
-        self.press(1, 3)
+        self.press(2, 3)
         self.press(1, 4)
 
         assert self.app.state.progression is not None
@@ -177,7 +178,7 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(self.device.published[-1].view.mood.value, "happy")
 
     def test_settings_opt_in_and_keyboard_bonus_exclude_paused_presses(self) -> None:
-        self.hold(1, 1)
+        self.press(3, 1)
         self.assertIs(self.app.runtime.screen, Screen.SETTINGS)
         settings = self.device.published[-1].view.settings
         assert settings is not None
@@ -189,9 +190,9 @@ class ApplicationTests(unittest.TestCase):
         self.press(1, 3)
         self.press(2, 4)
         self.assertTrue(self.app.state.camera_tracking_enabled)
-        self.press(3, 5)
+        self.press(4, 5)
 
-        self.press(2, 6)
+        self.press(1, 6)
         self.press(2, 7)
         self.assertTrue(self.keyboard.capturing)
         self.keyboard.add_presses(499)
@@ -214,10 +215,29 @@ class ApplicationTests(unittest.TestCase):
         assert earned is not None
         self.assertEqual(earned.yarn, 6)
 
+    def test_sound_setting_toggles_off_and_back_on(self) -> None:
+        self.press(3, 1)
+        self.assertIs(self.app.runtime.screen, Screen.SETTINGS)
+        self.press(1, 2)
+        self.press(1, 3)
+        settings = self.device.published[-1].view.settings
+        assert settings is not None
+        self.assertEqual(self.app.runtime.settings_row, 2)
+        self.assertTrue(settings.sound_enabled)
+
+        self.press(2, 4)
+        self.assertFalse(self.app.state.sound_enabled)
+        settings = self.device.published[-1].view.settings
+        assert settings is not None
+        self.assertFalse(settings.sound_enabled)
+
+        self.press(2, 5)
+        self.assertTrue(self.app.state.sound_enabled)
+
     def test_insufficient_yarn_does_not_append_or_animate(self) -> None:
         for index in range(5):
             self.clock.advance(300_000)
-            self.press(1, index * 2 + 1)
+            self.press(2, index * 2 + 1)
             self.press(2, index * 2 + 2)
         assert self.app.state.progression is not None
         self.assertEqual(self.app.state.progression.yarn_balance, 0)
@@ -225,7 +245,7 @@ class ApplicationTests(unittest.TestCase):
         cue_count = len(self.device.animations)
 
         self.clock.advance(300_000)
-        self.press(1, 11)
+        self.press(2, 11)
         self.assertFalse(self.device.published[-1].view.buttons[1].enabled)
         self.press(2, 12)
 
@@ -233,17 +253,17 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(len(self.device.animations), cue_count)
         self.assertIs(self.app.runtime.screen, Screen.FEED)
 
-    def test_home_setup_focus_vertical_slice_uses_three_button_labels(self) -> None:
+    def test_home_setup_focus_vertical_slice_uses_four_corner_labels(self) -> None:
         self.assertEqual(
             [label.label for label in self.device.published[-1].view.buttons],
-            ["Feed", "Focus", "-"],
+            ["Focus", "Feed", "Settings", "Pet"],
         )
 
-        self.press(2, 1)
+        self.press(1, 1)
         self.assertIs(self.app.runtime.screen, Screen.SETUP)
         self.assertEqual(
             [label.label for label in self.device.published[-1].view.buttons],
-            ["Up", "Set", "Back"],
+            ["Up", "Set", "Down", "Back"],
         )
         self.press(2, 2)
 
@@ -251,8 +271,41 @@ class ApplicationTests(unittest.TestCase):
         self.assertIsInstance(self.store.events[-1].event.draft, FocusSessionStarted)
         self.assertEqual(
             [label.label for label in self.device.published[-1].view.buttons],
-            ["Time", "Pause", "End"],
+            ["Time", "Pause", "End Early", "-"],
         )
+
+    def test_debug_duration_session_completes_and_grants_zero_reward(self) -> None:
+        self.press(1, 1)
+        self.assertIs(self.app.runtime.screen, Screen.SETUP)
+        for seq in range(2, 7):
+            self.press(3, seq)
+        self.assertEqual(
+            self.device.published[-1].view.focus_minutes,
+            0,
+            "Down five times from the default 25m should reach the debug entry",
+        )
+        self.press(2, 7)
+        self.assertIs(self.app.runtime.screen, Screen.FOCUS)
+
+        self.clock.advance(10_000)
+        self.app.handle(Tick(self.clock.read()), self.clock.read())
+
+        self.assertIs(self.app.runtime.screen, Screen.BREAK_OFFER)
+        reward = self.store.events[-1].event.draft
+        self.assertIsInstance(reward, FocusRewardGranted)
+        assert isinstance(reward, FocusRewardGranted)
+        self.assertEqual(reward.base_xp, 0)
+        self.assertEqual(reward.base_yarn, 0)
+
+    def test_pet_always_plays_its_animation_even_when_not_sad(self) -> None:
+        self.assertFalse(self.app.state.needs_comfort)
+        animation_count = len(self.device.animations)
+
+        self.press(4, 1)
+
+        self.assertFalse(self.app.state.needs_comfort)
+        self.assertEqual(len(self.device.animations), animation_count + 1)
+        self.assertEqual(self.device.animations[-1].name.value, "pet")
 
     def test_five_pets_clear_sad_then_reveal_hunger_before_feeding(self) -> None:
         self.start_focus()
@@ -262,20 +315,21 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(self.device.published[-1].view.mood.value, "sad")
         self.assertEqual(
             [label.label for label in self.device.published[-1].view.buttons],
-            ["Feed", "Focus", "Pet"],
+            ["Focus", "Feed", "Settings", "Pet"],
         )
 
         self.clock.advance(240_000)
         for sequence in range(4, 8):
-            self.press(3, sequence)
+            self.press(4, sequence)
             self.assertTrue(self.app.state.needs_comfort)
         self.assertEqual(self.app.runtime.sad_pet_count, 4)
-        self.press(3, 8)
+        self.press(4, 8)
 
         self.assertFalse(self.app.state.needs_comfort)
         self.assertEqual(self.app.runtime.sad_pet_count, 0)
+        self.assertEqual(self.device.animations[-1].name.value, "pet")
         self.assertEqual(self.device.published[-1].view.mood.value, "hungry")
-        self.press(1, 9)
+        self.press(2, 9)
         self.press(2, 10)
         self.assertEqual(self.device.published[-1].view.mood.value, "happy")
 
@@ -366,6 +420,77 @@ class ApplicationTests(unittest.TestCase):
         self.assertIs(self.app.runtime.screen, Screen.HOME)
         self.assertEqual(self.app.runtime.focus_chain_count, 0)
 
+    def test_break_running_shows_refocus_and_home_then_refocus_starts_a_session(
+        self,
+    ) -> None:
+        self.start_focus()
+        self.clock.advance(1_500_000)
+        self.app.handle(Tick(self.clock.read()), self.clock.read())
+        self.assertIs(self.app.runtime.screen, Screen.BREAK_OFFER)
+
+        self.press(1, 3)
+        self.assertIs(self.app.runtime.screen, Screen.BREAK)
+        self.assertEqual(
+            [label.label for label in self.device.published[-1].view.buttons],
+            ["Refocus", "Home", "-", "-"],
+        )
+
+        self.press(1, 4)
+        self.assertIs(self.app.runtime.screen, Screen.FOCUS)
+        started = self.store.events[-1].event.draft
+        self.assertIsInstance(started, FocusSessionStarted)
+        assert isinstance(started, FocusSessionStarted)
+        self.assertEqual(
+            started.terms.duration_seconds,
+            25 * 60,
+            "Refocus must reuse the originally selected duration",
+        )
+
+    def test_refocus_reuses_a_non_default_selected_duration(self) -> None:
+        self.press(1, 1)
+        self.assertIs(self.app.runtime.screen, Screen.SETUP)
+        self.press(1, 2)
+        self.press(1, 3)
+        self.assertEqual(self.device.published[-1].view.focus_minutes, 35)
+        self.press(2, 4)
+        self.assertIs(self.app.runtime.screen, Screen.FOCUS)
+
+        self.clock.advance(35 * 60 * 1_000)
+        self.app.handle(Tick(self.clock.read()), self.clock.read())
+        self.assertIs(self.app.runtime.screen, Screen.BREAK_OFFER)
+        self.press(1, 5)
+        self.assertIs(self.app.runtime.screen, Screen.BREAK)
+
+        self.press(1, 6)
+        self.assertIs(self.app.runtime.screen, Screen.FOCUS)
+        started = self.store.events[-1].event.draft
+        self.assertIsInstance(started, FocusSessionStarted)
+        assert isinstance(started, FocusSessionStarted)
+        self.assertEqual(started.terms.duration_seconds, 35 * 60)
+
+    def test_break_running_out_on_its_own_shows_zero_and_home_still_works(
+        self,
+    ) -> None:
+        self.start_focus()
+        self.clock.advance(1_500_000)
+        self.app.handle(Tick(self.clock.read()), self.clock.read())
+        self.press(1, 3)
+        self.assertIs(self.app.runtime.screen, Screen.BREAK)
+
+        self.clock.advance(5 * 60 * 1_000)
+        self.app.handle(Tick(self.clock.read()), self.clock.read())
+
+        self.assertIs(self.app.runtime.screen, Screen.BREAK)
+        self.assertIsInstance(self.store.events[-1].event.draft, BreakSessionCompleted)
+        self.assertEqual(self.device.published[-1].view.timer_seconds, 0)
+        self.assertEqual(
+            [label.label for label in self.device.published[-1].view.buttons],
+            ["Refocus", "Home", "-", "-"],
+        )
+
+        self.press(2, 4)
+        self.assertIs(self.app.runtime.screen, Screen.HOME)
+
     def test_reconnect_keeps_render_revisions_increasing(self) -> None:
         previous_revision = self.device.published[-1].revision
         self.app.handle(ConnectionChanged("connection-1", False), self.clock.read())
@@ -429,14 +554,14 @@ class RecoveryTests(unittest.TestCase):
             DeviceReady("connection-1", "boot-1", BUTTONS, "emotions_v1"),
             self.clock.read(),
         )
-        for seq in (1, 2):
+        for seq, button_id in ((1, 1), (2, 2)):
             app.handle(
                 ButtonInput(
                     "connection-1",
                     "boot-1",
                     seq,
                     app.runtime.control_epoch,
-                    ButtonId(2),
+                    ButtonId(button_id),
                     Gesture.PRESS,
                     self.clock.read(),
                 ),
@@ -507,14 +632,14 @@ class RecoveryTests(unittest.TestCase):
             DeviceReady("connection-1", "boot-1", BUTTONS, "emotions_v1"),
             self.clock.read(),
         )
-        for seq in (1, 2):
+        for seq, button_id in ((1, 1), (2, 2)):
             app.handle(
                 ButtonInput(
                     "connection-1",
                     "boot-1",
                     seq,
                     app.runtime.control_epoch,
-                    ButtonId(2),
+                    ButtonId(button_id),
                     Gesture.PRESS,
                     self.clock.read(),
                 ),
@@ -580,7 +705,7 @@ class CommitOrderingTests(unittest.TestCase):
                 "boot-1",
                 1,
                 app.runtime.control_epoch,
-                ButtonId(1),
+                ButtonId(2),
                 Gesture.PRESS,
                 clock.read(),
             ),

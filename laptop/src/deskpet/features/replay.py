@@ -23,6 +23,7 @@ from deskpet.core.events import (
     PetCreated,
     PetFed,
     ProgressionInitialized,
+    SoundPreferenceChanged,
     TrackingPreferencesChanged,
 )
 from deskpet.core.models import (
@@ -133,6 +134,8 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 keyboard_tracking_enabled=draft.keyboard_enabled,
                 camera_tracking_enabled=draft.camera_enabled,
             )
+        case SoundPreferenceChanged():
+            return _advance(state, event, sound_enabled=draft.sound_enabled)
         case FocusRewardGranted():
             progression = state.progression
             offer = state.pending_break
@@ -140,15 +143,12 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 raise ReplayError("focus reward requires progression and break offer")
             if offer.parent_focus_id != draft.focus_session_id:
                 raise ReplayError("focus reward does not match latest completion")
-            values = (
-                draft.policy_version,
-                draft.chain_number,
-                draft.focus_minutes,
-                draft.base_xp,
-                draft.base_yarn,
-            )
-            if any(value <= 0 for value in values):
+            if draft.policy_version <= 0 or draft.chain_number <= 0:
                 raise ReplayError("focus reward positive fields are invalid")
+            # focus_minutes/base_xp/base_yarn may be exactly 0 for a completed
+            # debug session (features.timers's DEBUG_FOCUS_MINUTES).
+            if draft.focus_minutes < 0 or draft.base_xp < 0 or draft.base_yarn < 0:
+                raise ReplayError("focus reward nonnegative fields are invalid")
             if draft.chain_xp < 0 or draft.chain_yarn < 0:
                 raise ReplayError("focus reward chain fields are invalid")
             if draft.keyboard_keypresses < 0 or draft.keyboard_yarn not in (0, 1, 2):
@@ -227,7 +227,7 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
             )
         case FocusSessionStarted():
             _require_available(state, "focus session start")
-            if draft.terms.duration_seconds % 60 != 0:
+            if not draft.terms.is_debug and draft.terms.duration_seconds % 60 != 0:
                 raise ReplayError("focus duration must be a whole number of minutes")
             session = Session(
                 id=draft.session_id,
@@ -236,12 +236,12 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 status=SessionStatus.RUNNING,
                 committed_active_ms=0,
             )
-            return _advance(
-                state,
-                event,
-                active_session=session,
-                last_focus_minutes=draft.terms.duration_seconds // 60,
-            )
+            changes: dict[str, object] = {"active_session": session}
+            # A debug session's duration isn't a whole number of minutes and
+            # shouldn't become the new Again/Setup default.
+            if not draft.terms.is_debug:
+                changes["last_focus_minutes"] = draft.terms.duration_seconds // 60
+            return _advance(state, event, **changes)
         case BreakSessionStarted():
             if state.active_session is not None:
                 raise ReplayError("break cannot start while a session is active")

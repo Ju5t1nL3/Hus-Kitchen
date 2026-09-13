@@ -31,6 +31,7 @@ from deskpet.core.events import (
     PetCreated,
     PetFed,
     ProgressionInitialized,
+    SoundPreferenceChanged,
     TrackingPreferencesChanged,
 )
 from deskpet.core.models import (
@@ -60,7 +61,7 @@ from deskpet.core.views import (
     SettingsView,
 )
 from deskpet.features import emotions
-from deskpet.features.timers import BreakPolicy
+from deskpet.features.timers import DEBUG_FOCUS_MINUTES, BreakPolicy
 from deskpet.features.timers import break_minutes as compute_break_minutes
 
 
@@ -155,22 +156,27 @@ def on_commit(
         case FocusSessionCompleted():
             cue = CueRequest(name=AnimationName.CELEBRATE, food_sprite=None)
             return PresentationResult(screen=Screen.BREAK_OFFER, cues=(cue,))
-        case (
-            FocusSessionEnded()
-            | BreakSessionEnded()
-            | BreakSessionCompleted()
-            | BreakSkipped()
-        ):
+        case FocusSessionEnded() | BreakSessionEnded() | BreakSkipped():
             return PresentationResult(screen=Screen.HOME, cues=())
+        case BreakSessionCompleted():
+            # The break's timer ran out on its own (not a manual Home/Refocus
+            # press) -- stay on the break screen; _timer_seconds() below
+            # renders 0 once there's no active session, and the firmware
+            # shows "Break's up" instead of a countdown for that value.
+            return PresentationResult(screen=runtime.screen, cues=())
         case PetCreated():
             return PresentationResult(screen=Screen.HOME, cues=())
         case PetComforted():
+            # The pet cue itself is sent unconditionally on every Pet press
+            # (see application._pet_once), not tied to this specific event.
             return PresentationResult(screen=Screen.HOME, cues=())
         case ProgressionInitialized():
             return PresentationResult(screen=runtime.screen, cues=())
         case FocusRewardGranted():
             return PresentationResult(screen=runtime.screen, cues=())
         case TrackingPreferencesChanged():
+            return PresentationResult(screen=runtime.screen, cues=())
+        case SoundPreferenceChanged():
             return PresentationResult(screen=runtime.screen, cues=())
         case PetFed():
             definition = food_definitions.get(draft.food_id)
@@ -218,8 +224,13 @@ def _clock_text(now: ClockReading, timezone: str) -> str:
 
 
 def _timer_seconds(screen: Screen, sample: TimerSample | None) -> int | None:
-    if screen not in (Screen.FOCUS, Screen.BREAK) or sample is None:
+    if screen not in (Screen.FOCUS, Screen.BREAK):
         return None
+    if sample is None:
+        # On break, no sample means its timer already ran out on its own
+        # (BreakSessionCompleted clears active_session but keeps the screen);
+        # 0 is what tells the firmware to show "Break's up" over a countdown.
+        return 0 if screen is Screen.BREAK else None
     return sample.remaining_seconds
 
 
@@ -227,11 +238,16 @@ def _break_minutes(
     runtime: RuntimeState, state: GameState, config: PresenterConfig
 ) -> int | None:
     if runtime.screen is Screen.SETUP:
+        if runtime.selected_focus_minutes == DEBUG_FOCUS_MINUTES:
+            return 1
         return compute_break_minutes(
             runtime.selected_focus_minutes, config.break_policy
         )
     if runtime.screen is Screen.BREAK_OFFER and state.pending_break is not None:
-        return state.pending_break.duration_seconds // 60
+        # A debug session's break is only a few seconds (features.timers's
+        # DEBUG_FOCUS_SECONDS); the wire protocol requires break_minutes >= 1,
+        # so round up rather than send an invalid 0.
+        return max(1, state.pending_break.duration_seconds // 60)
     return None
 
 
@@ -264,6 +280,7 @@ def _settings(state: GameState, runtime: RuntimeState) -> SettingsView:
         keyboard_available=runtime.keyboard_available,
         camera_enabled=state.camera_tracking_enabled,
         camera_available=runtime.camera_available,
+        sound_enabled=state.sound_enabled,
     )
 
 
@@ -288,14 +305,6 @@ def _buttons(
                         label.button,
                         label.label,
                         not state.needs_comfort,
-                    )
-                )
-            elif action_id is ActionId.PET:
-                updated_home.append(
-                    ButtonLabel(
-                        label.button,
-                        label.label if state.needs_comfort else "-",
-                        state.needs_comfort,
                     )
                 )
             else:

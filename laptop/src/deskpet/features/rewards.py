@@ -66,8 +66,11 @@ def decide(
         return Rejected(RejectionCode.UNAVAILABLE)
     if state.pending_break.parent_focus_id != focus_session_id:
         return Rejected(RejectionCode.UNAVAILABLE)
-    if focus_minutes <= 0 or chain_number <= 0:
-        raise ValueError("focus_minutes and chain_number must be positive")
+    # 0 is the reserved debug-duration sentinel (a completed debug session is
+    # not a whole number of minutes); every real session's minutes are
+    # positive, and the math below already yields a zero base reward for it.
+    if focus_minutes < 0 or chain_number <= 0:
+        raise ValueError("focus_minutes must be nonnegative and chain_number positive")
 
     base_xp = focus_minutes * policy.xp_per_focus_minute
     chain_xp = base_xp * policy.chain_xp_percent * (chain_number - 1) // 100

@@ -200,6 +200,29 @@ class SqliteEventStoreTests(unittest.TestCase):
         self.assertEqual(restored, committed)
         self.assertEqual([event.seq for event in restored], list(range(1, 17)))
 
+    def test_debug_focus_terms_round_trip_and_legacy_rows_default_to_false(self) -> None:
+        debug_terms = FocusTerms(10, 10, 60_000, 30, 30, "America/Chicago", is_debug=True)
+        debug_event = uncommitted(
+            1,
+            FocusSessionStarted(
+                **metadata("session-start:focus-debug"),
+                session_id="focus-debug",
+                terms=debug_terms,
+            ),
+        )
+        with SqliteEventStore(self.path) as store:
+            committed_event = store.append(debug_event).event
+
+        draft = committed_event.event.draft
+        assert isinstance(draft, FocusSessionStarted)
+        self.assertTrue(draft.terms.is_debug)
+
+        with SqliteEventStore(self.path) as reopened:
+            restored = reopened.read_after()
+        restored_draft = restored[0].event.draft
+        assert isinstance(restored_draft, FocusSessionStarted)
+        self.assertTrue(restored_draft.terms.is_debug)
+
     def test_semantic_retry_ignores_new_id_and_timestamp(self) -> None:
         draft = every_draft()[0]
         first = uncommitted(1, draft)

@@ -105,15 +105,46 @@ class TimerRules:
             raise ValueError("report_timezone must be a known IANA timezone") from error
 
 
+# A dev-only debug duration reachable by cycling Down past the shortest
+# configured focus length. `0` is not itself a real minute count (allowed
+# durations are always 5-60); it is the sentinel Setup/StartFocus use for a
+# fixed DEBUG_FOCUS_SECONDS-long session, so it does not need a config entry
+# of its own and never appears in `allowed_focus_minutes`.
+DEBUG_FOCUS_MINUTES = 0
+DEBUG_FOCUS_SECONDS = 10
+
+
 def next_focus_minutes(current: int, allowed: tuple[int, ...]) -> int:
     """Return the next configured duration, wrapping after the final value."""
     if not allowed:
         raise ValueError("allowed durations must not be empty")
+    if current == DEBUG_FOCUS_MINUTES:
+        return allowed[0]
     try:
         index = allowed.index(current)
     except ValueError as error:
         raise ValueError("current duration is not allowed") from error
     return allowed[(index + 1) % len(allowed)]
+
+
+def previous_focus_minutes(current: int, allowed: tuple[int, ...]) -> int:
+    """Return the preceding configured duration, wrapping before the first value.
+
+    Stepping down from the shortest configured duration lands on
+    `DEBUG_FOCUS_MINUTES` (a fixed-length debug session) before continuing to
+    wrap to the longest duration on the next press.
+    """
+    if not allowed:
+        raise ValueError("allowed durations must not be empty")
+    if current == DEBUG_FOCUS_MINUTES:
+        return allowed[-1]
+    try:
+        index = allowed.index(current)
+    except ValueError as error:
+        raise ValueError("current duration is not allowed") from error
+    if index == 0:
+        return DEBUG_FOCUS_MINUTES
+    return allowed[index - 1]
 
 
 def break_minutes(focus_minutes: int, policy: BreakPolicy) -> int:
@@ -161,6 +192,23 @@ def _start_focus(
     _require_no_sample(sample)
     if state.active_session is not None or state.pending_break is not None:
         return Rejected(RejectionCode.UNAVAILABLE)
+    if command.minutes == DEBUG_FOCUS_MINUTES:
+        return Accepted(
+            FocusSessionStarted(
+                source=EventSource.SYSTEM,
+                dedupe_key=f"session-start:{command.session_id}",
+                session_id=command.session_id,
+                terms=FocusTerms(
+                    duration_seconds=DEBUG_FOCUS_SECONDS,
+                    break_seconds=DEBUG_FOCUS_SECONDS,
+                    grace_active_ms=rules.grace_active_ms,
+                    sad_seconds=rules.sad_seconds,
+                    happy_seconds=rules.happy_seconds,
+                    report_timezone=rules.report_timezone,
+                    is_debug=True,
+                ),
+            )
+        )
     if command.minutes not in rules.allowed_focus_minutes:
         return Rejected(RejectionCode.INVALID_DURATION)
     proposed_break = break_minutes(command.minutes, rules.break_policy)

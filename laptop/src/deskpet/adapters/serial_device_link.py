@@ -69,6 +69,14 @@ class SerialDeviceLink:
         self._write_lock = threading.Lock()
         self._port: SerialPort | None = None
         self._session: _Session | None = None
+        # A connection_id we proactively picked and said hello with right after
+        # opening the port, awaiting the device's first matching reply -- see
+        # _current_or_open_port(). Covers a real device that already sent its
+        # one-shot boot-time `ready(connection_id=null)` announce before this
+        # process's port was even open to receive it, which would otherwise
+        # deadlock: the device only re-announces in reply to a hello, and this
+        # process would only send one in reply to that announce.
+        self._pending_connection_id: str | None = None
         self._latest_view: tuple[RenderSnapshot, int] | None = None
         self._pending_render: RenderMessage | None = None
         self._animation_queue: deque[AnimateMessage] = deque()
@@ -85,6 +93,7 @@ class SerialDeviceLink:
             self._on_input = on_input
             self._stop.clear()
             self._line_decoder.reset()
+            self._pending_connection_id = None
             self._recent_animation_ids.clear()
             self._reader_thread = threading.Thread(
                 target=self._read_loop, name="deskpet-serial-reader", daemon=True
@@ -164,16 +173,23 @@ class SerialDeviceLink:
             opened = self._backend.open()
         except OSError:
             return None
+        connection_id = self._connection_id_factory()
         with self._lock:
             if self._stop.is_set() or self._port is not None:
                 keep = False
             else:
                 self._port = opened
                 self._line_decoder.reset()
+                self._pending_connection_id = connection_id
                 keep = True
         if not keep:
             opened.close()
             return None
+        # Say hello immediately rather than only in reply to the device's
+        # boot-time announce -- that announce is sent once and may already be
+        # gone by the time this port is open to receive it. A real device
+        # replies to any hello the same way regardless of what prompted it.
+        self._write(wire_codec.encode(HelloMessage(connection_id)))
         return opened
 
     def _handle_message(self, message: DeviceMessage) -> None:
@@ -186,9 +202,13 @@ class SerialDeviceLink:
 
     def _handle_ready(self, message: DeviceReady) -> None:
         if message.connection_id is None:
-            connection_id = self._connection_id_factory()
             disconnected_id: str | None = None
             with self._lock:
+                # Reuse a hello already sent proactively on port-open rather
+                # than picking a second id and sending a redundant one -- this
+                # announce may just be the boot-time original arriving after
+                # (rather than instead of) that proactive hello.
+                connection_id = self._pending_connection_id or self._connection_id_factory()
                 old = self._session
                 if old is not None and old.connected:
                     disconnected_id = old.connection_id
@@ -197,6 +217,7 @@ class SerialDeviceLink:
                     boot_id=message.boot_id,
                     buttons=message.buttons,
                 )
+                self._pending_connection_id = None
                 self._pending_render = None
                 self._animation_queue.clear()
             if disconnected_id is not None:
@@ -206,12 +227,21 @@ class SerialDeviceLink:
 
         with self._lock:
             session = self._session
-            if (
-                session is None
-                or message.connection_id != session.connection_id
-                or message.boot_id != session.boot_id
-                or message.buttons != session.buttons
-            ):
+            if session is None or message.connection_id != session.connection_id:
+                if message.connection_id != self._pending_connection_id:
+                    return
+                # First reply to a hello this process sent proactively right
+                # after opening the port, without ever seeing the device's
+                # boot-time announce -- this reply is the first place we learn
+                # its boot_id and advertised buttons.
+                self._pending_connection_id = None
+                session = _Session(
+                    connection_id=message.connection_id,
+                    boot_id=message.boot_id,
+                    buttons=message.buttons,
+                )
+                self._session = session
+            elif message.boot_id != session.boot_id or message.buttons != session.buttons:
                 return
             first_ack = not session.connected
             session.connected = True
@@ -331,6 +361,7 @@ class SerialDeviceLink:
             self._port = None
             session = self._session
             self._session = None
+            self._pending_connection_id = None
             self._pending_render = None
             self._animation_queue.clear()
         if port is not None:

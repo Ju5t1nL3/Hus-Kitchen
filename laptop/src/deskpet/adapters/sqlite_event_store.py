@@ -30,6 +30,7 @@ from deskpet.core.events import (
     PetCreated,
     PetFed,
     ProgressionInitialized,
+    SoundPreferenceChanged,
     TrackingPreferencesChanged,
     UncommittedEvent,
 )
@@ -358,6 +359,8 @@ def _encode_draft(draft: EventDraft) -> JsonObject:
                 "keyboard_enabled": draft.keyboard_enabled,
                 "camera_enabled": draft.camera_enabled,
             }
+        case SoundPreferenceChanged():
+            return {"sound_enabled": draft.sound_enabled}
         case FocusRewardGranted():
             return {
                 "focus_session_id": draft.focus_session_id,
@@ -453,6 +456,7 @@ def _encode_focus_terms(value: FocusTerms) -> JsonObject:
         "sad_seconds": value.sad_seconds,
         "happy_seconds": value.happy_seconds,
         "report_timezone": value.report_timezone,
+        "is_debug": value.is_debug,
     }
 
 
@@ -643,6 +647,12 @@ def _decode_draft(
             keyboard_enabled=_bool_field(payload, "keyboard_enabled"),
             camera_enabled=_bool_field(payload, "camera_enabled"),
         )
+    if event_type == "sound_preference_changed":
+        _keys(payload, {"sound_enabled"})
+        return SoundPreferenceChanged(
+            **metadata,
+            sound_enabled=_bool_field(payload, "sound_enabled"),
+        )
     if event_type == "break_skipped":
         _keys(payload, {"parent_focus_id"})
         return BreakSkipped(
@@ -741,7 +751,12 @@ def _focus_terms(raw: Mapping[str, JsonValue]) -> FocusTerms:
         "happy_seconds",
         "report_timezone",
     }
-    _keys(raw, fields)
+    # "is_debug" was added after this event type shipped; accept rows from
+    # before that addition (it defaults to False) alongside rows that carry it.
+    if set(raw) != fields and set(raw) != fields | {"is_debug"}:
+        raise CorruptEventStoreError(
+            "stored event payload fields do not match its type"
+        )
     return FocusTerms(
         *(
             _int_field(raw, key)
@@ -754,6 +769,7 @@ def _focus_terms(raw: Mapping[str, JsonValue]) -> FocusTerms:
             )
         ),
         report_timezone=_text_field(raw, "report_timezone"),
+        is_debug=_bool_field(raw, "is_debug") if "is_debug" in raw else False,
     )
 
 

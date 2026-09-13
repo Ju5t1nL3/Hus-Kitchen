@@ -6,8 +6,10 @@ be implemented.
 For the plain-language project explanation, read [the overview](overview.md).
 
 Laptop tooling is initialized under `laptop/`: CPython 3.14.6, uv, Ruff and Pyright.
-Run its commands from that directory. Firmware records its independent MicroPython
-release in `pico/MICROPYTHON_VERSION` after the existing board setup is identified.
+Run its commands from that directory. Firmware is an Arduino/C++ sketch under
+`tinyscreen/firmware/`, compiled and uploaded with arduino-cli against the
+TinyCircuits SAMD board package; it records its own toolchain in
+`tinyscreen/README.md`.
 
 ## Keep each rule in one place
 
@@ -65,7 +67,7 @@ Type annotations do not validate incoming data. Validate YAML configuration, sto
 events, and USB messages when reading them, then pass validated records inward.
 Feature functions still enforce business rules, such as resuming only a paused
 session and excluding paused time from the early-end grace calculation.
-MicroPython may use validated dictionaries and small classes; it does not need
+Firmware may use validated structs and small classes; it does not need
 laptop dataclasses or the laptop's type-checker configuration.
 
 ## Keep host and hardware details at the edges
@@ -76,10 +78,11 @@ laptop dataclasses or the laptop's type-checker configuration.
   select the first device based on enumeration order.
 - Keep OS-specific serial behavior inside the serial adapter. Core, features and
   app orchestration must behave identically on Windows, macOS and Linux.
-- Keep GPIO numbers and display-controller calls inside Pico configuration/drivers.
-  Laptop behavior depends only on protocol capabilities, not board identity.
+- Keep pin numbers and display-controller calls inside firmware configuration and
+  its display wrapper. Laptop behavior depends only on protocol capabilities, not
+  board identity.
 - Test discovery with fake Windows and POSIX port names. Hardware smoke tests remain
-  necessary because mocks cannot prove USB driver or MicroPython behavior.
+  necessary because mocks cannot prove USB driver or on-device firmware behavior.
 
 ## Use Twelve-Factor selectively
 

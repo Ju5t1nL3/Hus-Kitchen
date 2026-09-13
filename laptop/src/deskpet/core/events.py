@@ -89,6 +89,18 @@ class TrackingPreferencesChanged(DraftMetadata):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class SoundPreferenceChanged(DraftMetadata):
+    """Kept separate from TrackingPreferencesChanged: audio feedback is not a
+    privacy-sensitive tracking consent, has no "available" status, and is on
+    by default rather than opt-in."""
+
+    event_type: ClassVar[Literal["sound_preference_changed"]] = (
+        "sound_preference_changed"
+    )
+    sound_enabled: bool
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class FocusRewardGranted(DraftMetadata):
     event_type: ClassVar[Literal["focus_reward_granted"]] = "focus_reward_granted"
     focus_session_id: str
@@ -200,6 +212,7 @@ type EventDraft = (
     | ItemPurchasedAndFed
     | PetComforted
     | TrackingPreferencesChanged
+    | SoundPreferenceChanged
     | FocusRewardGranted
     | FocusSessionStarted
     | BreakSessionStarted

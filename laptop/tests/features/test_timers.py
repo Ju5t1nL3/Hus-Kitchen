@@ -41,11 +41,14 @@ from deskpet.core.models import (
     TimerSample,
 )
 from deskpet.features.timers import (
+    DEBUG_FOCUS_MINUTES,
+    DEBUG_FOCUS_SECONDS,
     BreakPolicy,
     TimerRules,
     break_minutes,
     decide,
     next_focus_minutes,
+    previous_focus_minutes,
 )
 
 NOW = ClockReading(datetime(2026, 9, 13, 4, 30, tzinfo=UTC), 100_000, False)
@@ -123,6 +126,13 @@ class DurationRuleTests(unittest.TestCase):
         self.assertEqual(break_minutes(25, policy), 5)
         self.assertEqual(break_minutes(60, policy), 12)
 
+    def test_down_from_shortest_duration_reaches_debug_then_wraps_to_longest(self) -> None:
+        self.assertEqual(previous_focus_minutes(5, ALLOWED_MINUTES), DEBUG_FOCUS_MINUTES)
+        self.assertEqual(previous_focus_minutes(DEBUG_FOCUS_MINUTES, ALLOWED_MINUTES), 60)
+
+    def test_up_from_debug_duration_returns_to_shortest(self) -> None:
+        self.assertEqual(next_focus_minutes(DEBUG_FOCUS_MINUTES, ALLOWED_MINUTES), 5)
+
     def test_rules_reject_duration_the_display_protocol_cannot_represent(self) -> None:
         with self.assertRaisesRegex(ValueError, "multiples of 5"):
             TimerRules(
@@ -153,6 +163,19 @@ class StartRuleTests(unittest.TestCase):
         result = decide(empty_state(), StartFocus("focus-1", 7), None, RULES, NOW)
 
         self.assertEqual(result, Rejected(RejectionCode.INVALID_DURATION))
+
+    def test_start_focus_with_debug_duration_is_a_fixed_short_session(self) -> None:
+        result = decide(
+            empty_state(), StartFocus("focus-1", DEBUG_FOCUS_MINUTES), None, RULES, NOW
+        )
+
+        self.assertIsInstance(result, Accepted)
+        assert isinstance(result, Accepted)
+        self.assertIsInstance(result.event, FocusSessionStarted)
+        assert isinstance(result.event, FocusSessionStarted)
+        self.assertEqual(result.event.terms.duration_seconds, DEBUG_FOCUS_SECONDS)
+        self.assertEqual(result.event.terms.break_seconds, DEBUG_FOCUS_SECONDS)
+        self.assertTrue(result.event.terms.is_debug)
 
     def test_start_and_skip_break_require_matching_offer(self) -> None:
         offer = BreakOffer("focus-1", 300, "America/Chicago")

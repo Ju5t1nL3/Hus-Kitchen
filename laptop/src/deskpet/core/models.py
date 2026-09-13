@@ -115,6 +115,11 @@ class FocusTerms:
     sad_seconds: int
     happy_seconds: int
     report_timezone: str
+    # A dev-only 10-second focus session (see Setup's debug duration below
+    # allowed_minutes[0]); exempts this session from the whole-minute
+    # invariant that ordinary durations must satisfy and from updating
+    # last_focus_minutes/Again on replay.
+    is_debug: bool = False
 
     def __post_init__(self) -> None:
         _require_positive(self.duration_seconds, "duration_seconds")
@@ -208,6 +213,7 @@ class GameState:
     needs_comfort: bool = False
     keyboard_tracking_enabled: bool = False
     camera_tracking_enabled: bool = False
+    sound_enabled: bool = True
     focus_dates: frozenset[date] = field(default_factory=lambda: frozenset[date]())
     last_seq: int = 0
 
@@ -255,7 +261,9 @@ class RuntimeState:
     camera_available: bool = True
 
     def __post_init__(self) -> None:
-        _require_positive(self.selected_focus_minutes, "selected_focus_minutes")
+        # 0 is the reserved debug-duration sentinel (features.timers's
+        # DEBUG_FOCUS_MINUTES), not a real focus length.
+        _require_nonnegative(self.selected_focus_minutes, "selected_focus_minutes")
         _require_positive(self.control_epoch, "control_epoch")
         if self.run_anchor_mono_ms is not None:
             _require_nonnegative(self.run_anchor_mono_ms, "run_anchor_mono_ms")
@@ -270,8 +278,8 @@ class RuntimeState:
         if self.last_earned_xp is not None:
             _require_nonnegative(self.last_earned_xp, "last_earned_xp")
             _require_nonnegative(self.last_earned_yarn or 0, "last_earned_yarn")
-        if self.settings_row not in (0, 1):
-            raise ValueError("settings_row must select keyboard or camera")
+        if self.settings_row not in (0, 1, 2):
+            raise ValueError("settings_row must select keyboard, camera or sound")
 
 
 @dataclass(frozen=True, slots=True)

@@ -44,7 +44,9 @@ from deskpet.core.views import (
 )
 
 TRACE_LIMIT = 250
-DEFAULT_BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3))
+# Mirrors the physical device's four corner buttons: 1 top-left, 2 top-right,
+# 3 bottom-left, 4 bottom-right.
+DEFAULT_BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3), ButtonId(4))
 
 
 class TraceDirection(StrEnum):
@@ -662,6 +664,7 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
         keyboard_available = raw_settings.get("keyboard_available")
         camera_enabled = raw_settings.get("camera_enabled")
         camera_available = raw_settings.get("camera_available")
+        sound_enabled = raw_settings.get("sound_enabled")
         if not all(
             isinstance(item, bool)
             for item in (
@@ -669,6 +672,7 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
                 keyboard_available,
                 camera_enabled,
                 camera_available,
+                sound_enabled,
             )
         ):
             raise ValueError("bad_settings_flags")
@@ -678,6 +682,7 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
             keyboard_available=bool(keyboard_available),
             camera_enabled=bool(camera_enabled),
             camera_available=bool(camera_available),
+            sound_enabled=bool(sound_enabled),
         )
     return RenderSnapshot(
         screen=Screen(_required_str(value, "screen")),

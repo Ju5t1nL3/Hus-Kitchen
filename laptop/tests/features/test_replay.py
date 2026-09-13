@@ -77,6 +77,25 @@ def started(seq: int = 2, session_id: str = "focus-1") -> DomainEvent:
 
 
 class ReplayHappyPathTests(unittest.TestCase):
+    def test_debug_session_starts_without_updating_last_focus_minutes(self) -> None:
+        debug_terms = FocusTerms(10, 10, 60_000, 30, 30, "America/Chicago", is_debug=True)
+        debug_started = committed(
+            2,
+            FocusSessionStarted(
+                source=EventSource.SYSTEM,
+                dedupe_key="session-start:focus-1",
+                session_id="focus-1",
+                terms=debug_terms,
+            ),
+        )
+
+        rebuilt = rebuild((created(), debug_started))
+
+        assert rebuilt is not None
+        assert rebuilt.active_session is not None
+        self.assertTrue(rebuilt.active_session.terms.is_debug)
+        self.assertIsNone(rebuilt.last_focus_minutes)
+
     def test_tracking_preferences_survive_replay(self) -> None:
         preference = committed(
             2,
@@ -151,6 +170,71 @@ class ReplayHappyPathTests(unittest.TestCase):
         forged = replace(reward, total_xp_after=16)
         with self.assertRaisesRegex(ReplayError, "before totals|does not add up"):
             apply_event(updated, committed(6, forged))
+
+    def test_debug_session_reward_of_zero_replays_without_error(self) -> None:
+        initialized = committed(
+            2,
+            ProgressionInitialized(
+                source=EventSource.SYSTEM,
+                dedupe_key="progression-initialized",
+                policy_version=2,
+                starting_yarn=10,
+                xp_per_level=75,
+                xp_level_increment=25,
+            ),
+        )
+        debug_terms = FocusTerms(10, 10, 60_000, 30, 30, "America/Chicago", is_debug=True)
+        debug_started = committed(
+            3,
+            FocusSessionStarted(
+                source=EventSource.SYSTEM,
+                dedupe_key="session-start:focus-1",
+                session_id="focus-1",
+                terms=debug_terms,
+            ),
+        )
+        completion = committed(
+            4,
+            FocusSessionCompleted(
+                source=EventSource.SYSTEM,
+                dedupe_key="session-terminal:focus-1",
+                session_id="focus-1",
+                active_ms=10_000,
+                credit_date=date(2026, 9, 12),
+                break_offer=BreakOffer("focus-1", 10, "America/Chicago"),
+                reaction=Reaction(ReactionMood.HAPPY, NOW + timedelta(seconds=30)),
+            ),
+        )
+        before_reward = rebuild((created(), initialized, debug_started, completion))
+        assert before_reward is not None
+        reward = FocusRewardGranted(
+            source=EventSource.SYSTEM,
+            dedupe_key="focus-reward:focus-1",
+            focus_session_id="focus-1",
+            policy_version=2,
+            chain_number=1,
+            focus_minutes=0,
+            base_xp=0,
+            chain_xp=0,
+            base_yarn=0,
+            chain_yarn=0,
+            keyboard_enabled=False,
+            keyboard_available=False,
+            keyboard_keypresses=0,
+            keyboard_yarn=0,
+            total_xp_before=0,
+            total_xp_after=0,
+            level_before=1,
+            level_after=1,
+            yarn_before=10,
+            yarn_after=10,
+        )
+
+        updated = apply_event(before_reward, committed(5, reward))
+
+        assert updated.progression is not None
+        self.assertEqual(updated.progression.total_xp, 0)
+        self.assertEqual(updated.progression.yarn_balance, 10)
 
     def test_purchase_spends_recorded_yarn_and_replays_identically(self) -> None:
         initialized = ProgressionInitialized(
@@ -357,6 +441,21 @@ class ReplayHappyPathTests(unittest.TestCase):
 
 
 class ReplayValidationTests(unittest.TestCase):
+    def test_non_debug_focus_duration_must_be_whole_minutes(self) -> None:
+        bad_terms = FocusTerms(10, 10, 60_000, 30, 30, "America/Chicago")
+        bad_started = committed(
+            2,
+            FocusSessionStarted(
+                source=EventSource.SYSTEM,
+                dedupe_key="session-start:focus-1",
+                session_id="focus-1",
+                terms=bad_terms,
+            ),
+        )
+
+        with self.assertRaisesRegex(ReplayError, "whole number of minutes"):
+            rebuild((created(), bad_started))
+
     def test_history_must_start_once_with_pet_created(self) -> None:
         with self.assertRaisesRegex(ReplayError, "begin with pet_created"):
             rebuild((started(1),))

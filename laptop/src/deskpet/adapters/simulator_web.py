@@ -212,7 +212,9 @@ _html = _replace_once(
     "(settings.selected_row===0?'> ':'  ')+'Keyboard: '+"
     "(settings.keyboard_available?(settings.keyboard_enabled?'ON':'OFF'):'Unavailable')+'\\n'+"
     "(settings.selected_row===1?'> ':'  ')+'Camera: '+"
-    "(settings.camera_available?(settings.camera_enabled?'ON':'OFF'):'Unavailable'):'';",
+    "(settings.camera_available?(settings.camera_enabled?'ON':'OFF'):'Unavailable')+'\\n'+"
+    "(settings.selected_row===2?'> ':'  ')+'Sound: '+"
+    "(settings.sound_enabled?'ON':'OFF'):'';",
 )
 _html = _replace_once(
     _html,

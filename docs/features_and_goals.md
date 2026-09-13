@@ -5,36 +5,41 @@ phone. Keep the code modular, maintainable and easy to divide among teammates.
 This is the current small-screen design; it replaces the earlier stats/shop MVP.
 Use [todo.md](todo.md) for implementation and hardware-verification status.
 
-## Screens and three-button controls
+## Screens and four-button controls
 
-Three physical buttons sit below the screen, left to right as button 1/2/3. Draw
-their current labels above them. They are not touchscreen buttons. The third
-button acts as a back/cancel button on most screens, but not on every screen: on
-Home and the running/paused break screen it has no back destination and takes on
-a different role instead (unbound on Home and break-running; "Time" during
-focus). Unbound buttons show a disabled dash, per the button-labeling rule in
-[class design](class_design.md).
+Four physical buttons sit at the four corners of the screen: button 1 top-left,
+button 2 top-right, button 3 bottom-left and button 4 bottom-right. Draw each
+current label in its own corner. They are not touchscreen buttons. Buttons 1-2
+keep the meanings designed for the earlier three-button build. On Home,
+buttons 3-4 are Settings (bottom-left, a gear icon replacing an earlier
+hold-button-1 gesture) and Pet (bottom-right, comfort a sad pet). On Setup and
+Settings, buttons 3-4 are Down (bottom-left, a caret counterpart to the
+top-left Up) and Back (bottom-right). On Feed, both stay unbound because the
+level/yarn strip occupies the bottom-right corner. Unbound buttons show a
+disabled dash, per the button-labeling rule in [class design](class_design.md).
 
-| Screen | What is visible | Button 1 | Button 2 | Button 3 |
-| --- | --- | --- | --- | --- |
-| Home | Large central pet; clock plus compact level/yarn strip (exact XP is dev-only) | Feed: open menu | Focus: open setup | *(unbound)* |
-| Settings | Keyboard and Camera rows with selected marker and On/Off/Unavailable status | Up: select next row | Select: toggle available row | Back: Home |
-| Feed menu | Current yarn balance; Food and Drink with their configured yarn prices | Buy/feed Food | Buy/feed Drink | Back: cancel to Home |
-| Setup | Selected focus minutes; smaller calculated break duration | Up: next duration | Set: start focus | Back: cancel to Home |
-| Focus, running | Large central countdown; small expressive face at top right | Time: show the real clock | Pause | End |
-| Focus, paused | Frozen countdown; “Paused”; small face at top right | Time: show the real clock | Resume | End |
-| Focus complete (break offer) | Happy pet; “Focus complete”; proposed break minutes | Break: start the break | Again: skip the break and start a new focus session immediately, using the previous duration | Home: skip the break and return to Home |
-| Break, running | Large countdown; “Break”; small face at top right | Again: end the break and start a new focus session immediately, using the previous duration | Home: end the break and return to Home | *(unbound)* |
+| Screen | What is visible | Button 1 (top-left) | Button 2 (top-right) | Button 3 (bottom-left) | Button 4 (bottom-right) |
+| --- | --- | --- | --- | --- | --- |
+| Home | Large central pet; clock plus compact level/yarn strip (exact XP is dev-only) | Feed: open menu | Focus: open setup | Settings: open Settings (gear icon) | Pet: comfort a sad pet |
+| Settings | Keyboard and Camera rows with selected marker and On/Off/Unavailable status | Up: previous row | Select: toggle available row | Down: next row | Back: Home |
+| Feed menu | Current yarn balance; Food and Drink with their configured yarn prices | Buy/feed Food | Buy/feed Drink | Back: cancel to Home | *(unbound; level/yarn strip)* |
+| Setup | Selected focus minutes; smaller calculated break duration | Up: next duration | Set: start focus | Down: previous duration | Back: cancel to Home |
+| Focus, running | Countdown on the right; animated mood sprite (working cat) on the left | Time: show the real clock | Pause | End | *(unbound)* |
+| Focus, paused | Frozen countdown on the right; “Paused”; idle sprite on the left | Time: show the real clock | Resume | End | *(unbound)* |
+| Focus complete (break offer) | Party pose; earned XP/yarn shown immediately, button labels held back a few seconds | Break: start the break | Refocus: skip the break and start a new focus session immediately, using the previous duration | Home: skip the break and return to Home | *(unbound)* |
+| Break, running | Full pet pose on the left, countdown on the right. Once the timer runs out on its own (not a manual Refocus/Home press), the pose is replaced by “Break's Up” on the left and the countdown disappears; the buttons are unchanged | Refocus: start a new focus session immediately, using the previous duration (works whether the break is still running or has already run out) | Home: end the break, or -- once it has already run out -- just return to Home | *(unbound)* | *(unbound)* |
 
 Breaks can no longer be paused; ending one always goes either straight into
-another focus session (Again) or back to Home. Holds do nothing in MVP; firmware
-emits one press OR one hold per gesture, never both. Labels should fit the actual
-screen; the state machine and actions stay on the laptop.
+another focus session (Again) or back to Home. Holds do nothing in MVP;
+firmware emits one press OR one hold per gesture, never both. Labels should
+fit the actual screen; the state machine and actions stay on the laptop.
 
-Holding button 1 on Home opens Settings; an ordinary press still opens Feed. Both
-tracking choices default Off and persist locally once changed. Keyboard is
-available in M28. Camera remains visibly Unavailable until M29 supplies its adapter,
-so selecting it cannot imply tracking occurred.
+Pressing button 3 on Home opens Settings (an ordinary press on button 1 still
+opens Feed; this replaced an earlier hold-button-1 gesture once a fourth
+corner became available for the layout). Both tracking choices default Off
+and persist locally once changed. Keyboard is available in M28. Camera
+remains visibly Unavailable
+until M29 supplies its adapter, so selecting it cannot imply tracking occurred.
 
 **Time reveal.** Pressing Time on a running or paused focus screen swaps the
 countdown for the actual wall-clock time (e.g. "4:00", the same HH:MM format used
@@ -54,8 +59,19 @@ explains how to add a physical button or new behavior.
 
 ## Duration and break rules
 
-- The selector is in **minutes**: 5 → 10 → … → 60 → 5. First use starts at 25;
-  later uses start at the last confirmed duration. Just cycling does not save it.
+- The selector is in **minutes**: 5 → 10 → … → 60 → 5. Up advances and Down
+  steps back through the same wrapped list. First use starts at 25; later uses
+  start at the last confirmed duration. Just cycling does not save it.
+- **Debug duration.** Pressing Down once more from 5 reaches a reserved,
+  dev-only entry displayed as "Debug 10s": a fixed 10-second focus session
+  (and 10-second break) for quickly exercising the full focus/break flow
+  without waiting on real minutes. Pressing Down again from there wraps to 60,
+  same as the normal list; Up from it returns to 5. Confirming it starts a
+  session whose duration is not a whole number of minutes, so it is exempt
+  from the whole-minute invariant and never becomes the remembered duration
+  for Again or Setup's next default. See
+  [`features/timers.py`](../laptop/src/deskpet/features/timers.py)'s
+  `DEBUG_FOCUS_MINUTES`/`DEBUG_FOCUS_SECONDS`.
 - The laptop computes the break before confirmation. Proposed product rule:
   `break_minutes = max(1, floor(focus_minutes / 5 + 0.5))`. Every allowed MVP
   duration divides exactly by five: 5→1, 25→5, 60→12.
@@ -138,13 +154,13 @@ Prices, reaction duration and manifest IDs are configuration rather than rule co
 Define consumable data separately from feeding logic. Required assets now include
 Food and Drink sprites/feeding frames plus the mood and celebration art. Artwork
 production remains coordinated with M16. Source frames are individual PNGs grouped
-by an ordered manifest and converted to Pico bitmap data before deployment.
+by an ordered manifest and converted to firmware bitmap data before deployment.
 
 ## History and recovery
 
 Keep a local event time series for feeding and session start/pause/resume/end/
 completion. Daily streaks and a weekly text recap remain laptop-only; no report
-menu or stat bars on the Pico. Completed focus earns a streak day; an early-ended
+menu or stat bars on the device. Completed focus earns a streak day; an early-ended
 session is logged separately and never counts as completed.
 
 USB reconnect restores the current screen while the laptop keeps running. App
@@ -167,11 +183,12 @@ later idea separate from the XP bar.
 ## Acceptance checks
 
 1. Home shows a large pet, clock, readable XP/level/yarn information and Feed/Focus
-   labels on the real LCD, with a disabled dash on the unbound third button.
+   labels on the real OLED, with a disabled dash on the unbound fourth button.
 2. Feed opens Food/Drink/Back; an affordable choice spends its displayed yarn cost
    and feeds once, while Back and insufficient funds make no durable change.
-3. Setup cycles 5–60 minutes, wraps, shows the derived break and confirms
-   correctly; Back returns to Home without starting a session or an event.
+3. Setup cycles 5–60 minutes in both directions, wraps, shows the derived break
+   and confirms correctly; Back returns to Home without starting a session or an
+   event.
 4. Pause/resume preserves remaining time for focus; paused time cannot consume
    the grace period. Break has no Pause/Resume buttons at all.
 5. End at 59.999 focused seconds is neutral; End at 60 seconds is briefly sad.
@@ -190,7 +207,7 @@ later idea separate from the XP bar.
     animations. Pending breaks and interrupted sessions follow the policy above.
 11. Completed focus grants one deduplicated XP/yarn breakdown; optional sensor and
     streak/level bonuses remain explainable, additive and independently testable.
-12. Test rules using a fake device/clock, then measure actual LCD/button behavior.
+12. Test rules using a fake device/clock, then measure actual OLED/button behavior.
 
 Target under 50 ms from a recognized debounced gesture to the start of its screen
 update. Measure gesture recognition and full redraw separately; hardware performance

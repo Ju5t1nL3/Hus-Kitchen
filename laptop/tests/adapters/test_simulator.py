@@ -86,7 +86,7 @@ class SimulatorTests(unittest.TestCase):
         wait_for(lambda: self._screen() is expected, f"did not reach {expected.value}")
 
     def test_full_focus_pause_resume_and_break_flow_uses_json_both_ways(self) -> None:
-        self._press(2, Screen.SETUP)
+        self._press(1, Screen.SETUP)
         self.assertTrue(self.device.press(1, "press"))
         wait_for(
             lambda: cast_view(self._state()).get("focus_minutes") == 30,
@@ -130,7 +130,13 @@ class SimulatorTests(unittest.TestCase):
         )
         self._press(1, Screen.BREAK)
         self.device.advance(6 * 60)
-        wait_for(lambda: self._screen() is Screen.HOME, "break did not complete")
+        wait_for(
+            lambda: self._screen() is Screen.BREAK
+            and cast_view(self._state()).get("timer_seconds") == 0,
+            "break did not run out on its own",
+        )
+        self.assertTrue(self.device.press(2, "press"))
+        wait_for(lambda: self._screen() is Screen.HOME, "break did not return home")
 
         entries = self.trace.snapshot()
         directions = {entry.direction for entry in entries}
@@ -142,8 +148,8 @@ class SimulatorTests(unittest.TestCase):
         self.assertTrue(any(entry.message_type == "render" for entry in entries))
         self.assertTrue(all('": ' not in entry.raw for entry in entries))
 
-    def test_settings_hold_and_toggle_traverse_production_codec(self) -> None:
-        self.assertTrue(self.device.press(1, "hold"))
+    def test_settings_open_and_toggle_traverse_production_codec(self) -> None:
+        self.assertTrue(self.device.press(3, "press"))
         wait_for(lambda: self._screen() is Screen.SETTINGS, "settings did not open")
         settings = cast_view(self._state()).get("settings")
         self.assertIsInstance(settings, dict)
@@ -166,12 +172,12 @@ class SimulatorTests(unittest.TestCase):
 
     def test_feed_menu_purchase_traverses_production_json_codec(self) -> None:
         self.device.advance(300)
-        self._press(1, Screen.FEED)
+        self._press(2, Screen.FEED)
         view = cast_view(self._state())
         buttons = cast(list[dict[str, object]], view["buttons"])
         self.assertEqual(
             [button["label"] for button in buttons],
-            ["Jollof 3Y", "Coffee 2Y", "Back"],
+            ["Jollof 3Y", "Espresso 2Y", "Back", "-"],
         )
 
         self._press(2, Screen.HOME)

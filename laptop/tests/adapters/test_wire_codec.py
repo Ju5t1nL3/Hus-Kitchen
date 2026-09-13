@@ -40,7 +40,7 @@ from deskpet.core.views import (
 
 CONTRACTS = Path(__file__).parents[3] / "contracts"
 NOW = ClockReading(datetime(2026, 9, 13, 4, 30, tzinfo=UTC), 10_000, False)
-BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3))
+BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3), ButtonId(4))
 
 
 def home() -> RenderSnapshot:
@@ -56,7 +56,8 @@ def home() -> RenderSnapshot:
         buttons=(
             ButtonLabel(ButtonId(1), "Feed", True),
             ButtonLabel(ButtonId(2), "Focus", True),
-            ButtonLabel(ButtonId(3), "-", False),
+            ButtonLabel(ButtonId(3), "Settings", True),
+            ButtonLabel(ButtonId(4), "Pet", False),
         ),
         feedback=None,
         progression=ProgressionView(1, 0, 100, 10),
@@ -179,6 +180,18 @@ class EncodeTests(unittest.TestCase):
             with self.subTest(view=view), self.assertRaises(EncodeError):
                 encode(RenderMessage("c", 1, view), BUTTONS)
 
+    def test_setup_accepts_the_reserved_debug_duration(self) -> None:
+        debug_setup = replace(
+            home(),
+            screen=Screen.SETUP,
+            clock_text=None,
+            focus_minutes=0,
+            break_minutes=1,
+            progression=None,
+        )
+
+        encode(RenderMessage("c", 1, debug_setup), BUTTONS)
+
     def test_setup_and_timer_ranges_are_validated(self) -> None:
         feed = replace(home(), screen=Screen.FEED, clock_text=None)
         setup = replace(
@@ -247,6 +260,22 @@ class EncodeTests(unittest.TestCase):
                     AnimationCue("id", AnimationName.CELEBRATE, 1, "food_basic"),
                 )
             )
+        with self.assertRaises(EncodeError):
+            encode(
+                AnimateMessage(
+                    "c",
+                    AnimationCue("id", AnimationName.PET, 1, "food_basic"),
+                )
+            )
+
+    def test_pet_animation_encodes_without_a_food_sprite(self) -> None:
+        encoded = encode(
+            AnimateMessage("c", AnimationCue("id", AnimationName.PET, 1, None))
+        )
+
+        parsed = cast(dict[str, object], json.loads(encoded))
+        self.assertEqual(parsed["name"], "pet")
+        self.assertIsNone(parsed["food_sprite"])
 
     def test_overlong_field_is_rejected_before_encoding(self) -> None:
         huge = "x" * 2_000
@@ -257,6 +286,7 @@ class EncodeTests(unittest.TestCase):
                 ButtonLabel(ButtonId(1), "Feed", True),
                 ButtonLabel(ButtonId(2), "Focus", True),
                 ButtonLabel(ButtonId(3), huge, False),
+                ButtonLabel(ButtonId(4), "-", False),
             ),
         )
 

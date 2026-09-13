@@ -1,7 +1,8 @@
 # MVP system design
 
-One laptop Python application owns game decisions and history. A separate Pico
-MicroPython program reports buttons and renders complete screen descriptions.
+One laptop Python application owns game decisions and history. A separate C++
+firmware program on the device reports buttons and renders complete screen
+descriptions.
 This is a proposed implementation; see [class_design.md](class_design.md) for APIs.
 
 ## Product flow
@@ -11,13 +12,13 @@ feedback, while the laptop decides what happens and saves the history locally.
 
 ```mermaid
 flowchart LR
-    User[User presses a button] --> Pico[Pico desk pet]
-    Pico -->|button event over USB| Laptop[Laptop application]
+    User[User presses a button] --> Device[Desk pet device]
+    Device -->|button event over USB| Laptop[Laptop application]
     Laptop --> Rules[Focus and pet rules]
     Rules -->|result| Laptop
     Laptop -->|save accepted events| History[(Local history)]
     Laptop --> Screen[Screen and emotion]
-    Screen -->|display update over USB| Pico
+    Screen -->|display update over USB| Device
 ```
 
 ## Engineering data flow
@@ -29,7 +30,7 @@ Ordinary events update the current state incrementally through `apply_event`;
 ```mermaid
 flowchart LR
     %% Inputs
-    Pico[Pico buttons and display] -->|physical gestures| USB[USB adapter]
+    Device[Device buttons and display] -->|physical gestures| USB[USB adapter]
     USB --> App[Application coordinator]
     Clock[System Clock / Ticks] --> App
     Config[config.yaml] --> Rules
@@ -56,7 +57,7 @@ flowchart LR
     View -.->|AnimationCue| USB
 
     %% Output
-    USB -->|render and animate| Pico
+    USB -->|render and animate| Device
 ```
 
 The application receives a button, resolves its meaning on the current screen,
@@ -72,8 +73,8 @@ same commit-before-presentation path when a focus or break timer finishes.
 | features | Timer transitions, food validation, emotion selection, replay/history | Core; no USB/SQL/GPIO imports |
 | app | Screen controls, scheduling, state ownership and presentation | Core and feature APIs |
 | adapters | SQLite, USB, system clock, YAML and text output | Core contracts |
-| devtools | Virtual Pico UI, in-memory byte transport and bounded wire trace | Core contracts and production wire codec |
-| pico | Hardware input, protocol validation, drawing and sprites | MicroPython and local firmware modules |
+| devtools | Virtual device UI, in-memory byte transport and bounded wire trace | Core contracts and production wire codec |
+| firmware | Hardware input, protocol validation, drawing and sprites | Arduino/TinyScreen libraries and local firmware modules |
 | laptop/main.py | Construct dependencies and start/stop the laptop app | Laptop modules |
 
 Keep feature functions pure and resource classes small. Features do not import
@@ -95,9 +96,9 @@ pick the first port. Store port names in configuration or runtime state, never i
 gameplay events. Tests use a fake enumerator/backend and cover Windows-style and
 POSIX-style names without requiring either OS.
 
-Hardware variation is isolated on the other side of the wire: Pico pins live in
-hardware configuration and display/controller operations live behind
-`DisplayDriver`. A new compatible board or display may require a firmware adapter
+Hardware variation is isolated on the other side of the wire: device pins live in
+firmware hardware configuration and display/controller operations live behind the
+firmware's display wrapper. A new compatible board or display may require an adapter
 and configuration change, but must not require edits to laptop game rules or the
 versioned protocol.
 
@@ -105,13 +106,13 @@ versioned protocol.
 
 The composition root accepts an explicit `dev` or `hardware` profile. Both build
 the same application, features, reducer, presenter and wire codec. `dev` supplies
-the virtual Pico, safe temporary storage and optional fake clock; `hardware`
+the virtual device, safe temporary storage and optional fake clock; `hardware`
 supplies serial USB, the user's SQLite database and system clock. Profile checks
 stay at composition/adapter boundaries and never appear in feature rules.
 
 The [development modes design](development_modes.md) defines the clickable device,
 wire trace and safety boundaries. Its clicks and renders cross the real JSON codec
-through an in-memory byte transport, allowing laptop/Pico integration debugging
+through an in-memory byte transport, allowing laptop/firmware integration debugging
 without a physical board.
 
 ## Planned folders
@@ -157,23 +158,24 @@ laptop/                           # CPython 3.14.6 uv project
       sqlite_event_store.py       # durable append/read and single-writer lock
       system_clock.py             # UTC and monotonic time, resume detection
       config_loader.py            # YAML -> typed configuration
-      simulator.py                # virtual Pico, in-memory serial, clock and trace
+      simulator.py                # virtual device, in-memory serial, clock and trace
       simulator_web.py            # loopback-only clickable development UI
       temporary_event_store.py    # disposable SQLite storage for development
       text_report.py              # read-only report formatting
       fakes.py                    # fake store/device/clock
   tests/                          # laptop unit/integration tests
-pico/
-  README.md                       # firmware/hardware setup and flashing notes
-  MICROPYTHON_VERSION             # exact tested firmware; currently UNPINNED
-  main.py                         # cooperative loop
-  protocol.py                     # firmware JSON/session validation
-  buttons.py                      # debounce and press/hold detection
-  display.py                      # layouts and nonblocking animations
-  lcd_driver.py                   # hardware-specific drawing
-  sprites.py                      # full pet, small faces, food and animations
-  hardware_config.py              # pins, orientation and debounce
-  tests/                          # firmware parser/gesture/render checks
+tinyscreen/
+  README.md                       # board inventory, flashing and bring-up notes
+  firmware/                       # Arduino/C++ sketch built with arduino-cli
+    firmware.ino                  # cooperative loop
+    protocol.h/.cpp               # firmware JSON/session validation
+    buttons.h/.cpp                # debounce and press/hold detection
+    display.h/.cpp                # layouts and nonblocking animations
+    sound.h/.cpp                  # DAC tone cues
+    hardware_config.h             # button IDs, timing and screen size
+    sprites.h, icons.h, colors.h  # generated bitmap data and palette
+  sprites/                        # PNG sources converted into the headers above
+pico/                             # superseded MicroPython firmware, retained only
 ```
 
 ## Reducer-style state updates
@@ -214,8 +216,8 @@ mood are projections of state and explicit time, not per-second saved events.
   and qualifying focus dates. No wallet, inventory or numeric pet stats.
 - RuntimeState: live monotonic anchor, selected setup duration, current screen and
   control epoch, connection state and animation bookkeeping. Not replayed.
-- RenderSnapshot: exactly what the Pico should draw: screen, mood, time values,
-  paused flag and an ID-tagged list of button labels (three in the default build).
+- RenderSnapshot: exactly what the device should draw: screen, mood, time values,
+  paused flag and an ID-tagged list of button labels (four in the default build).
   No business-rule parameters.
 
 Reactions expire through an explicit clock query; focus duration changes only
@@ -279,14 +281,14 @@ durations are positive, and referenced food/assets exist. Store resolved focus/
 break/reaction terms in events. Configuration loads at startup; hot reload is
 deferred. The controls section maps screen context/button/gesture to action IDs.
 Action definitions supply labels and availability to input handling and presentation;
-layout stays in rendering. Hardware ID/pin/layout entries stay on Pico.
+layout stays in rendering. Hardware ID/pin/layout entries stay in firmware.
 See the [button extension recipe](class_design.md). Protocol constants are versioned contracts.
 
 ## Approved expansion before final verification
 
 Add progression, priced feeding and optional keyboard/camera adapters through the
 existing decide/save/apply/present path. XP, levels, yarn and all reward calculations
-belong on the laptop; Pico receives only display facts and animation IDs. Keyboard
+belong on the laptop; firmware receives only display facts and animation IDs. Keyboard
 and camera inputs have independent on/off settings. [Progression design](progression_design.md)
 owns task order, persisted policies/summaries and retry behavior. Implement only the
 claimed stage so unresolved later values are not guessed. There is no future

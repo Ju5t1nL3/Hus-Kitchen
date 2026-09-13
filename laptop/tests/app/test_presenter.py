@@ -19,10 +19,12 @@ from deskpet.core.commands import (
     BackHome,
     ConfirmFocus,
     CycleDuration,
+    CycleDurationBack,
     EndCurrent,
     FeedDefault,
     OpenSetup,
     PauseCurrent,
+    PetOnce,
     RestartFocus,
     ResumeCurrent,
     ShowTime,
@@ -36,7 +38,9 @@ from deskpet.core.events import (
     EventSource,
     FocusSessionCompleted,
     FocusSessionStarted,
+    PetComforted,
     PetFed,
+    SoundPreferenceChanged,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -61,7 +65,7 @@ from deskpet.core.views import ActionDefinition, ButtonLabel, ControlContext
 from deskpet.features.timers import BreakPolicy
 
 CONFIG = PresenterConfig(clock_timezone="UTC", break_policy=BreakPolicy())
-DEVICE_BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3))
+DEVICE_BUTTONS = (ButtonId(1), ButtonId(2), ButtonId(3), ButtonId(4))
 
 ACTIONS = {
     ActionId.FEED_DEFAULT: ActionDefinition(
@@ -80,6 +84,18 @@ ACTIONS = {
         id=ActionId.CYCLE_DURATION,
         label="Up",
         intent=CycleDuration(),
+        available=lambda _: True,
+    ),
+    ActionId.CYCLE_DURATION_BACK: ActionDefinition(
+        id=ActionId.CYCLE_DURATION_BACK,
+        label="Down",
+        intent=CycleDurationBack(),
+        available=lambda _: True,
+    ),
+    ActionId.PET: ActionDefinition(
+        id=ActionId.PET,
+        label="Pet",
+        intent=PetOnce(),
         available=lambda _: True,
     ),
     ActionId.CONFIRM_FOCUS: ActionDefinition(
@@ -147,9 +163,11 @@ ACTIONS = {
 BINDINGS = {
     (ControlContext.HOME, ButtonId(1), Gesture.PRESS): ActionId.FEED_DEFAULT,
     (ControlContext.HOME, ButtonId(2), Gesture.PRESS): ActionId.OPEN_SETUP,
+    (ControlContext.HOME, ButtonId(3), Gesture.PRESS): ActionId.PET,
     (ControlContext.SETUP, ButtonId(1), Gesture.PRESS): ActionId.CYCLE_DURATION,
     (ControlContext.SETUP, ButtonId(2), Gesture.PRESS): ActionId.CONFIRM_FOCUS,
-    (ControlContext.SETUP, ButtonId(3), Gesture.PRESS): ActionId.BACK_HOME,
+    (ControlContext.SETUP, ButtonId(3), Gesture.PRESS): ActionId.CYCLE_DURATION_BACK,
+    (ControlContext.SETUP, ButtonId(4), Gesture.PRESS): ActionId.BACK_HOME,
     (ControlContext.FOCUS_RUNNING, ButtonId(1), Gesture.PRESS): ActionId.SHOW_TIME,
     (ControlContext.FOCUS_RUNNING, ButtonId(2), Gesture.PRESS): ActionId.PAUSE_CURRENT,
     (ControlContext.FOCUS_RUNNING, ButtonId(3), Gesture.PRESS): ActionId.END_CURRENT,
@@ -214,7 +232,8 @@ class PresenterFixtureTests(unittest.TestCase):
             (
                 ButtonLabel(button=ButtonId(1), label="Feed", enabled=True),
                 ButtonLabel(button=ButtonId(2), label="Focus", enabled=True),
-                ButtonLabel(button=ButtonId(3), label="-", enabled=False),
+                ButtonLabel(button=ButtonId(3), label="Pet", enabled=True),
+                ButtonLabel(button=ButtonId(4), label="-", enabled=False),
             ),
         )
         self.assertIsNone(snapshot.feedback)
@@ -236,7 +255,7 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertEqual(snapshot.focus_minutes, 25)
         self.assertEqual(snapshot.break_minutes, 5)
         self.assertEqual(
-            [label.label for label in snapshot.buttons], ["Up", "Set", "Back"]
+            [label.label for label in snapshot.buttons], ["Up", "Set", "Down", "Back"]
         )
 
     def test_focus_running_matches_fixture(self) -> None:
@@ -265,7 +284,7 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertEqual(snapshot.timer_seconds, 1499)
         self.assertFalse(snapshot.paused)
         self.assertEqual(
-            [label.label for label in snapshot.buttons], ["Time", "Pause", "End"]
+            [label.label for label in snapshot.buttons], ["Time", "Pause", "End", "-"]
         )
 
     def test_focus_running_reveals_clock_for_five_seconds(self) -> None:
@@ -334,7 +353,7 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertEqual(snapshot.timer_seconds, 1470)
         self.assertTrue(snapshot.paused)
         self.assertEqual(
-            [label.label for label in snapshot.buttons], ["Time", "Resume", "End"]
+            [label.label for label in snapshot.buttons], ["Time", "Resume", "End", "-"]
         )
 
     def test_break_offer_matches_fixture(self) -> None:
@@ -364,8 +383,28 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertIsNone(snapshot.timer_seconds)
         self.assertEqual(snapshot.break_minutes, 5)
         self.assertEqual(
-            [label.label for label in snapshot.buttons], ["Break", "Again", "Home"]
+            [label.label for label in snapshot.buttons], ["Break", "Again", "Home", "-"]
         )
+
+    def test_break_offer_rounds_up_a_debug_sessions_short_break(self) -> None:
+        state = GameState(
+            user_id="u1",
+            pet_id="p1",
+            pending_break=BreakOffer(
+                parent_focus_id="s1", duration_seconds=10, report_timezone="UTC"
+            ),
+        )
+        snapshot = build(
+            state,
+            _runtime(Screen.BREAK_OFFER, 5),
+            None,
+            _clock(14, 32),
+            CONFIG,
+            BINDINGS,
+            ACTIONS,
+            DEVICE_BUTTONS,
+        )
+        self.assertEqual(snapshot.break_minutes, 1)
 
     def test_break_running_matches_fixture(self) -> None:
         session = Session(
@@ -397,7 +436,7 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertIsNone(snapshot.break_minutes)
         self.assertEqual(
             [label.label for label in snapshot.buttons],
-            ["Again", "Home", "-"],
+            ["Again", "Home", "-", "-"],
         )
 
     def test_home_with_sad_reaction_matches_fixture(self) -> None:
@@ -423,7 +462,7 @@ class PresenterFixtureTests(unittest.TestCase):
         self.assertEqual(snapshot.mood, "sad")
         self.assertEqual(snapshot.clock_text, "14:35")
         self.assertEqual(
-            [label.label for label in snapshot.buttons], ["Feed", "Focus", "-"]
+            [label.label for label in snapshot.buttons], ["Feed", "Focus", "Pet", "-"]
         )
 
 
@@ -501,6 +540,32 @@ class PresenterNavigationTests(unittest.TestCase):
         self.assertEqual(len(result.cues), 1)
         self.assertEqual(result.cues[0].name, "feed")
         self.assertEqual(result.cues[0].food_sprite, "sandwich")
+
+    def test_pet_comforted_stays_home_without_its_own_cue(self) -> None:
+        # The pet cue is sent unconditionally on every Pet press by
+        # application._pet_once, not tied to this specific event.
+        draft = PetComforted(
+            source=EventSource.LOCAL_CONTROLS,
+            dedupe_key="k5",
+            reaction=Reaction(
+                ReactionMood.HAPPY, datetime(2026, 9, 13, 14, 33, tzinfo=UTC)
+            ),
+        )
+        result = on_commit(_committed(draft), _runtime(Screen.HOME, 1), {})
+        self.assertEqual(result.screen, Screen.HOME)
+        self.assertEqual(result.cues, ())
+
+    def test_sound_preference_changed_stays_on_current_screen_without_a_cue(
+        self,
+    ) -> None:
+        draft = SoundPreferenceChanged(
+            source=EventSource.LOCAL_CONTROLS,
+            dedupe_key="k6",
+            sound_enabled=False,
+        )
+        result = on_commit(_committed(draft), _runtime(Screen.SETTINGS, 1), {})
+        self.assertEqual(result.screen, Screen.SETTINGS)
+        self.assertEqual(result.cues, ())
 
 
 if __name__ == "__main__":

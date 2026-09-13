@@ -186,6 +186,37 @@ class SerialDeviceLinkTests(unittest.TestCase):
         self.assertEqual(writes[0]["type"], "hello")
         self.assertTrue(any(isinstance(item, DeviceReady) for item in received))
 
+    def test_hello_is_sent_proactively_and_a_direct_reply_completes_the_handshake(
+        self,
+    ) -> None:
+        """A missed boot-time `ready(null)` must not deadlock the handshake.
+
+        The device only re-announces in reply to a hello, and this link only
+        used to send one in reply to that announce -- so if the announce
+        arrived before this port was open to receive it, neither side would
+        ever speak first. The link must say hello as soon as it opens the
+        port, without waiting to see the announce at all.
+        """
+        port = FakeSerialPort()
+        _link, received = self.make_link(FakeSerialBackend(port))
+
+        wait_for(
+            lambda: any(item.get("type") == "hello" for item in decoded_writes(port)),
+            "hello was not sent proactively on port open",
+        )
+        # The device never sends its null-connection announce here -- only a
+        # direct reply to the hello this link already sent.
+        port.push(ready("link-1"))
+
+        wait_for(
+            lambda: any(
+                isinstance(item, ConnectionChanged) and item.connected
+                for item in received
+            ),
+            "connection was not established from a direct reply alone",
+        )
+        self.assertTrue(any(isinstance(item, DeviceReady) for item in received))
+
     def test_latest_view_is_restored_after_handshake_and_updates_coalesce(self) -> None:
         port = FakeSerialPort()
         link, received = self.make_link(FakeSerialBackend(port))

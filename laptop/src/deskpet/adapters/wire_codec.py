@@ -31,7 +31,7 @@ UI_VOCABULARY = "emotions_v1"
 MAX_LINE_BYTES = 2048
 
 _GESTURES = {g.value: g for g in Gesture}
-_ANIMATION_NAMES = {"feed", "celebrate"}
+_ANIMATION_NAMES = {"feed", "celebrate", "pet"}
 _CLOCK_PATTERN = re.compile(r"(?:[01]\d|2[0-3]):[0-5]\d")
 
 
@@ -342,6 +342,7 @@ def _encode_settings(value: SettingsView | None) -> JsonObject | None:
         "keyboard_available": value.keyboard_available,
         "camera_enabled": value.camera_enabled,
         "camera_available": value.camera_available,
+        "sound_enabled": value.sound_enabled,
     }
 
 
@@ -361,8 +362,8 @@ def _encode_animate(message: AnimateMessage) -> JsonObject:
         cue.food_sprite is None or not _printable_ascii(cue.food_sprite, 64)
     ):
         raise EncodeError("feed animation requires a valid item sprite")
-    if name == "celebrate" and cue.food_sprite is not None:
-        raise EncodeError("celebrate animation cannot include food_sprite")
+    if name in ("celebrate", "pet") and cue.food_sprite is not None:
+        raise EncodeError(f"{name} animation cannot include food_sprite")
 
     return {
         "v": PROTOCOL_VERSION,
@@ -420,10 +421,11 @@ def _validate_view(
     elif view.timer_seconds is not None or view.paused:
         raise EncodeError("non-timer screen cannot have timer state")
     if view.screen is Screen.SETUP:
-        if (
-            not _is_int(view.focus_minutes)
-            or not 5 <= view.focus_minutes <= 60
-            or view.focus_minutes % 5 != 0
+        # 0 is reserved for the fixed-length debug session below the shortest
+        # configured duration (see features.timers.DEBUG_FOCUS_MINUTES).
+        if not _is_int(view.focus_minutes) or (
+            view.focus_minutes != 0
+            and (not 5 <= view.focus_minutes <= 60 or view.focus_minutes % 5 != 0)
         ):
             raise EncodeError("setup requires valid focus_minutes")
     elif view.focus_minutes is not None:
