@@ -33,11 +33,12 @@ earlier stats/shop proposal. No implementation or hardware verification is claim
 | Break sessions cannot be paused | Break offers only two actions (Again, Home), both of which end the break; keeping a third pause/resume pair added no value once ending was always one press away. |
 | Again: skip/end a break and immediately start a new focus session at the last confirmed duration | Lets a user keep working without revisiting Setup, while remaining an explicit press rather than an automatic continuation. |
 | One free food with a separate definition and sprite | Small MVP with room for more foods later. |
+| Individual PNG source frames plus a small ordered animation manifest | Two-frame animations do not justify sprite-sheet slicing; separate files are easier to replace and reduce artwork merge conflicts, while the manifest makes grouping, order and timing explicit. PNGs are converted to firmware bitmap data before deployment. |
 | 5–60-minute focus in five-minute steps; default 25, remember last confirmation | Simple adjustable duration. “5s” is interpreted as five-minute increments, as discussed with the user. |
 | Break = one-fifth of focus, rounded to whole minutes, minimum one | Transparent proposed product rule; not a universal Pomodoro requirement. |
 | Offer a break after completion; do not auto-start | User controls when rest starts; no unattended countdown. |
 | Large countdown, small expressive face at top right | Prioritizes readability; removes progress art from MVP. |
-| End and Pause/Resume during focus and break | Supports accidental starts and interruptions. |
+| End and Pause/Resume during focus | Supports accidental starts and interruptions; breaks deliberately cannot pause. |
 | Grace below 60 seconds of actual focus; brief sadness after that | Pauses do not consume grace; no lasting punishment. |
 | Emotions from saved events and explicit time | Predictable content/happy/sad reactions without hidden numerical stats. |
 | Laptop-only streak/weekly text report | Keeps useful history without cluttering the Pico. |

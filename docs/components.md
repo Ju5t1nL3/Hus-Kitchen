@@ -24,14 +24,16 @@ OS-agnostic: discover/configure the serial port rather than hardcoding a Windows
 
 ## Display and assets
 
-Home: large central pet, clock at top right, labels above two bottom buttons.
-Timer: large central countdown, small face at top right, bottom End/Pause labels.
-Setup and break offer must fit their duration and both button labels without bars.
+Home: large central pet, clock at top right, and three bottom button slots (the
+unbound third slot is disabled). Timer: large central countdown, small face at top
+right, and three action labels. Setup and break offer must fit all three labels
+without bars.
 
-Two buttons are the baseline, not a hardcoded scanner limit. Define ID, GPIO and
-label-layout slot per button in hardware_config.py. Iterate that table for scanning,
-advertising capabilities and drawing label positions. Adding a third button needs
-a real pin/placement check and a laptop binding, not new feeding/timer logic.
+Three buttons are the MVP baseline, not a hardcoded scanner limit. Define ID, GPIO
+and label-layout slot per button in hardware_config.py. Iterate that table for
+scanning, advertising capabilities and drawing label positions. Adding or removing
+a button needs a real pin/placement check and a laptop binding, not new feeding or
+timer logic.
 The post-MVP top XP/coin strip needs a layout pass alongside the clock/face;
 it does not introduce numerical care stats or timer-progress artwork.
 
@@ -39,6 +41,12 @@ Provide full-body and small-face sprites for `calm`, `content`, `happy`, `sad`,
 `focused` and `resting`; one `food_basic` sprite; and feeding/celebration frames.
 Share animation frames where practical. A face must remain recognizable at its
 small size. Exact pixel dimensions, fonts and palette depend on the confirmed LCD.
+
+Keep source frames as individual PNG files, including two-frame animations. A
+small asset manifest groups each animation ID with its ordered filenames and frame
+timing so ordering does not depend on directory listings or filename guessing.
+Convert those PNG sources into Pico-friendly bitmap data before deployment; the
+firmware does not decode PNG files or receive frames over USB at runtime.
 
 Firmware draws the laptop-selected mood, text, food and button labels. It may
 debounce, animate and format seconds, but cannot calculate breaks, pause the game,
