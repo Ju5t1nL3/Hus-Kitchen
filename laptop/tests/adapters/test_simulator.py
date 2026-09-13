@@ -99,6 +99,7 @@ class SimulatorTests(unittest.TestCase):
             lambda: cast_view(self._state()).get("clock_text") is not None,
             "real-time reveal was not encoded",
         )
+
         self.device.advance(5)
         wait_for(
             lambda: cast_view(self._state()).get("timer_seconds") is not None,
@@ -140,6 +141,28 @@ class SimulatorTests(unittest.TestCase):
         self.assertTrue(any(entry.message_type == "button" for entry in entries))
         self.assertTrue(any(entry.message_type == "render" for entry in entries))
         self.assertTrue(all('": ' not in entry.raw for entry in entries))
+
+    def test_settings_hold_and_toggle_traverse_production_codec(self) -> None:
+        self.assertTrue(self.device.press(1, "hold"))
+        wait_for(lambda: self._screen() is Screen.SETTINGS, "settings did not open")
+        settings = cast_view(self._state()).get("settings")
+        self.assertIsInstance(settings, dict)
+        assert isinstance(settings, dict)
+        self.assertFalse(settings["keyboard_enabled"])
+        self.assertFalse(settings["camera_available"])
+
+        self.assertTrue(self.device.press(2, "press"))
+        wait_for(
+            lambda: bool(
+                cast(dict[str, object], cast_view(self._state()).get("settings"))[
+                    "keyboard_enabled"
+                ]
+            ),
+            "keyboard setting did not toggle",
+        )
+        settings = cast_view(self._state()).get("settings")
+        assert isinstance(settings, dict)
+        self.assertTrue(settings["keyboard_enabled"])
 
     def test_feed_menu_purchase_traverses_production_json_codec(self) -> None:
         self.device.advance(300)
@@ -237,6 +260,8 @@ class SimulatorTests(unittest.TestCase):
         self.assertIn("view.focus_minutes+' min'", SIMULATOR_HTML)
         self.assertIn("'break: '+view.break_minutes+' min'", SIMULATOR_HTML)
         self.assertIn("const stickToBottom=!current.trace_paused", SIMULATOR_HTML)
+        self.assertIn("gesture:'hold'", SIMULATOR_HTML)
+        self.assertIn("Camera: ", SIMULATOR_HTML)
 
 
 def cast_view(state: dict[str, object]) -> dict[str, object]:

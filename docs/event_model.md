@@ -51,7 +51,8 @@ startup with an actionable error, not a silently reset database.
 | `pet_fed` | `food_id`, `reaction` (content) | Current M07 event; M25 versions/replaces it with resolved yarn price/balance facts for purchase-and-feed |
 | `item_purchased_and_fed` | `item_id`, `price_paid`, `yarn_balance_after`, `reaction` (happy) | Atomically spend the configured price and feed; retained facts make replay independent of later price edits |
 | `pet_comforted` | `reaction` (happy for 15 seconds) | The fifth Pet tap clears durable sadness; the preceding four-tap count is intentionally runtime-only |
-| `focus_reward_granted` | focus session/policy/chain/minutes; base+chain XP/yarn; before/after XP, level and yarn | Apply one fully resolved completion reward without consulting newer configuration during replay |
+| `tracking_preferences_changed` | `keyboard_enabled`, `camera_enabled` | Persist explicit independent local consent; both default false |
+| `focus_reward_granted` | focus session/policy/chain/minutes; base+chain XP/yarn; keyboard enabled/available/count/yarn; before/after XP, level and yarn | Apply one fully resolved completion reward without consulting newer configuration during replay; never store keys/text |
 | `session_started` | `session_id`, `kind: focus\|break`, kind-specific `terms` | Start running at zero active time; focus updates last confirmed duration; break consumes matching offer |
 | `session_paused` | `session_id`, `kind: focus`, `active_ms` | Save cumulative progress and mark paused; focus only, break sessions cannot pause |
 | `session_resumed` | `session_id`, `kind: focus`, `active_ms` | Mark running; active_ms must equal preceding pause; focus only |
@@ -69,6 +70,7 @@ Semantic keys:
 - Progression initialization: `progression-initialized`.
 - Focus reward: source system, `focus-reward:<focus_session_id>`.
 - Feeding: source local_controls, `button:<connection_id>:<button_seq>`.
+- Tracking preference: source local_controls, `button:<connection_id>:<button_seq>`.
 - Session start: source system, `session-start:<session_id>`.
 - Pause/resume: source system, `button:<connection_id>:<button_seq>`.
 - End OR completion: source system, `session-terminal:<session_id>`.

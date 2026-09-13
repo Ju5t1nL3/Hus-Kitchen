@@ -183,7 +183,8 @@ def _replace_once(source: str, old: str, new: str) -> str:
 _html = _replace_once(
     _HTML_TEMPLATE,
     '<div class="lcd"><div id="clock"></div>',
-    '<div class="lcd"><div id="clock"></div><div id="progression"></div>',
+    '<div class="lcd"><div id="clock"></div><div id="progression"></div>'
+    '<div id="settings"></div>',
 )
 _html = _replace_once(
     _html,
@@ -201,6 +202,27 @@ _html = _replace_once(
     "document.getElementById('progression').textContent=progression?"
     "'Lv '+progression.level+' · XP '+progression.xp_into_level+'/' +"
     "progression.xp_for_next_level+' · '+progression.yarn_balance+' yarn':'';",
+)
+_html = _replace_once(
+    _html,
+    "document.getElementById('mood').textContent=view?'mood: '+view.mood:'';",
+    "document.getElementById('mood').textContent=view?'mood: '+view.mood:'';"
+    "const settings=view?.settings;"
+    "document.getElementById('settings').innerText=settings?"
+    "(settings.selected_row===0?'> ':'  ')+'Keyboard: '+"
+    "(settings.keyboard_available?(settings.keyboard_enabled?'ON':'OFF'):'Unavailable')+'\\n'+"
+    "(settings.selected_row===1?'> ':'  ')+'Camera: '+"
+    "(settings.camera_available?(settings.camera_enabled?'ON':'OFF'):'Unavailable'):'';",
+)
+_html = _replace_once(
+    _html,
+    "press.onclick=()=>post('/api/press',{button:id,gesture:'press'});",
+    "let holdTimer=null;let held=false;"
+    "press.onpointerdown=()=>{held=false;holdTimer=setTimeout(()=>{held=true;"
+    "post('/api/press',{button:id,gesture:'hold'})},600)};"
+    "press.onpointerup=()=>{clearTimeout(holdTimer);if(!held)"
+    "post('/api/press',{button:id,gesture:'press'})};"
+    "press.onpointerleave=()=>clearTimeout(holdTimer);",
 )
 _html = _replace_once(
     _html,

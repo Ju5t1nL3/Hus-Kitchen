@@ -6,7 +6,12 @@ from pathlib import Path
 from uuid import UUID
 
 from deskpet.adapters.config_loader import load
-from deskpet.adapters.fakes import FakeClock, FakeDeviceLink, FakeEventStore
+from deskpet.adapters.fakes import (
+    FakeClock,
+    FakeDeviceLink,
+    FakeEventStore,
+    FakeKeyboardTracker,
+)
 from deskpet.app.application import Application
 from deskpet.core.events import (
     BreakSkipped,
@@ -95,12 +100,14 @@ class ApplicationTests(unittest.TestCase):
         self.clock = FakeClock(NOW)
         self.store = FakeEventStore()
         self.device = FakeDeviceLink()
+        self.keyboard = FakeKeyboardTracker()
         self.app = Application(
             self.store,
             self.device,
             self.clock,
             load(CONFIG_PATH),
             uuid_factory=SequentialUuids(),
+            keyboard_tracker=self.keyboard,
         )
         self.app.start()
         self.addCleanup(self.app.stop)
@@ -122,6 +129,20 @@ class ApplicationTests(unittest.TestCase):
                 self.app.runtime.control_epoch,
                 ButtonId(button),
                 Gesture.PRESS,
+                self.clock.read(),
+            ),
+            self.clock.read(),
+        )
+
+    def hold(self, button: int, seq: int) -> None:
+        self.app.handle(
+            ButtonInput(
+                "connection-1",
+                "boot-1",
+                seq,
+                self.app.runtime.control_epoch,
+                ButtonId(button),
+                Gesture.HOLD,
                 self.clock.read(),
             ),
             self.clock.read(),
@@ -151,6 +172,41 @@ class ApplicationTests(unittest.TestCase):
         assert self.app.state.progression is not None
         self.assertEqual(self.app.state.progression.yarn_balance, 5)
         self.assertEqual(self.device.published[-1].view.mood.value, "happy")
+
+    def test_settings_opt_in_and_keyboard_bonus_exclude_paused_presses(self) -> None:
+        self.hold(1, 1)
+        self.assertIs(self.app.runtime.screen, Screen.SETTINGS)
+        settings = self.device.published[-1].view.settings
+        assert settings is not None
+        self.assertFalse(settings.keyboard_enabled)
+        self.assertFalse(settings.camera_available)
+
+        self.press(2, 2)
+        self.assertTrue(self.app.state.keyboard_tracking_enabled)
+        self.press(1, 3)
+        self.press(2, 4)
+        self.assertFalse(self.app.state.camera_tracking_enabled)
+        self.press(3, 5)
+
+        self.press(2, 6)
+        self.press(2, 7)
+        self.assertTrue(self.keyboard.capturing)
+        self.keyboard.add_presses(499)
+        self.press(2, 8)
+        self.assertFalse(self.keyboard.capturing)
+        self.keyboard.add_presses(1_000)
+        self.press(2, 9)
+        self.keyboard.add_presses(1)
+        self.clock.advance(1_500_000)
+        self.app.handle(Tick(self.clock.read()), self.clock.read())
+
+        reward = self.store.events[-1].event.draft
+        assert isinstance(reward, FocusRewardGranted)
+        self.assertEqual(reward.keyboard_keypresses, 500)
+        self.assertEqual(reward.keyboard_yarn, 1)
+        earned = self.device.published[-1].view.earned_rewards
+        assert earned is not None
+        self.assertEqual(earned.yarn, 4)
 
     def test_insufficient_yarn_does_not_append_or_animate(self) -> None:
         for index in range(5):

@@ -30,6 +30,7 @@ from deskpet.core.events import (
     PetCreated,
     PetFed,
     ProgressionInitialized,
+    TrackingPreferencesChanged,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -352,6 +353,11 @@ def _encode_draft(draft: EventDraft) -> JsonObject:
             }
         case PetComforted():
             return {"reaction": _encode_reaction(draft.reaction)}
+        case TrackingPreferencesChanged():
+            return {
+                "keyboard_enabled": draft.keyboard_enabled,
+                "camera_enabled": draft.camera_enabled,
+            }
         case FocusRewardGranted():
             return {
                 "focus_session_id": draft.focus_session_id,
@@ -362,6 +368,10 @@ def _encode_draft(draft: EventDraft) -> JsonObject:
                 "chain_xp": draft.chain_xp,
                 "base_yarn": draft.base_yarn,
                 "chain_yarn": draft.chain_yarn,
+                "keyboard_enabled": draft.keyboard_enabled,
+                "keyboard_available": draft.keyboard_available,
+                "keyboard_keypresses": draft.keyboard_keypresses,
+                "keyboard_yarn": draft.keyboard_yarn,
                 "total_xp_before": draft.total_xp_before,
                 "total_xp_after": draft.total_xp_after,
                 "level_before": draft.level_before,
@@ -540,6 +550,10 @@ def _decode_draft(
             "chain_xp",
             "base_yarn",
             "chain_yarn",
+            "keyboard_enabled",
+            "keyboard_available",
+            "keyboard_keypresses",
+            "keyboard_yarn",
             "total_xp_before",
             "total_xp_after",
             "level_before",
@@ -547,7 +561,17 @@ def _decode_draft(
             "yarn_before",
             "yarn_after",
         }
-        _keys(payload, fields)
+        legacy_fields = fields - {
+            "keyboard_enabled",
+            "keyboard_available",
+            "keyboard_keypresses",
+            "keyboard_yarn",
+        }
+        if set(payload) not in (fields, legacy_fields):
+            raise CorruptEventStoreError(
+                "stored event payload fields do not match its type"
+            )
+        has_keyboard = set(payload) == fields
         return FocusRewardGranted(
             **metadata,
             focus_session_id=_text_field(payload, "focus_session_id"),
@@ -558,12 +582,29 @@ def _decode_draft(
             chain_xp=_int_field(payload, "chain_xp"),
             base_yarn=_int_field(payload, "base_yarn"),
             chain_yarn=_int_field(payload, "chain_yarn"),
+            keyboard_enabled=(
+                _bool_field(payload, "keyboard_enabled") if has_keyboard else False
+            ),
+            keyboard_available=(
+                _bool_field(payload, "keyboard_available") if has_keyboard else False
+            ),
+            keyboard_keypresses=(
+                _int_field(payload, "keyboard_keypresses") if has_keyboard else 0
+            ),
+            keyboard_yarn=(_int_field(payload, "keyboard_yarn") if has_keyboard else 0),
             total_xp_before=_int_field(payload, "total_xp_before"),
             total_xp_after=_int_field(payload, "total_xp_after"),
             level_before=_int_field(payload, "level_before"),
             level_after=_int_field(payload, "level_after"),
             yarn_before=_int_field(payload, "yarn_before"),
             yarn_after=_int_field(payload, "yarn_after"),
+        )
+    if event_type == "tracking_preferences_changed":
+        _keys(payload, {"keyboard_enabled", "camera_enabled"})
+        return TrackingPreferencesChanged(
+            **metadata,
+            keyboard_enabled=_bool_field(payload, "keyboard_enabled"),
+            camera_enabled=_bool_field(payload, "camera_enabled"),
         )
     if event_type == "break_skipped":
         _keys(payload, {"parent_focus_id"})
@@ -729,6 +770,13 @@ def _text_field(value: Mapping[str, JsonValue], key: str) -> str:
 
 def _int_field(value: Mapping[str, JsonValue], key: str) -> int:
     return _integer(value.get(key), key)
+
+
+def _bool_field(value: Mapping[str, JsonValue], key: str) -> bool:
+    field = value.get(key)
+    if not isinstance(field, bool):
+        raise CorruptEventStoreError(f"{key} must be a boolean")
+    return field
 
 
 def _string(value: object, name: str) -> str:

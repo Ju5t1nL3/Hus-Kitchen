@@ -10,7 +10,7 @@ injected. The [event model](event_model.md) owns saved payload semantics; the
 Define these in core rather than passing raw dictionaries through laptop modules:
 
 ```python
-Screen = Literal["home", "setup", "focus", "break_offer", "break"]
+Screen = Literal["home", "feed", "setup", "focus", "break_offer", "break", "settings"]
 Mood = Literal["idle", "happy", "sad", "hungry", "working_neutral", "working_sad", "sleeping", "party"]
 SessionKind = Literal["focus", "break"]
 SessionStatus = Literal["running", "paused"]
@@ -28,12 +28,13 @@ Feedback = Literal["unavailable", "storage_error"]
 | FocusTerms / BreakTerms / BreakOffer | Exact fields from the event model; durations in seconds |
 | Session | id: str, kind: SessionKind, matching typed terms, status: SessionStatus, committed_active_ms: int |
 | ProgressionState | total_xp/yarn_balance: nonnegative ints, derived positive level, positive policy_version/xp_per_level, nonnegative xp_level_increment |
-| GameState | user_id: str, pet_id: str, active_session: Session or None, pending_break: BreakOffer or None, last_focus_minutes: int or None, latest_reaction: Reaction or None, progression: ProgressionState or None for pre-M24 history, focus_dates: frozenset[date], last_seq: int |
+| GameState | Identity/session/reaction/progression/history fields plus durable independent keyboard_tracking_enabled and camera_tracking_enabled preferences (default false) |
 | ClockReading | utc: aware datetime, monotonic_ms: int, resumed: bool |
 | RuntimeState | screen/timer/connection fields plus runtime-only sad_pet_count, attention_lost, focus_chain_count and last-earned XP/yarn for the Party view |
 | TimerSample | session_id: str, active_ms: int, remaining_seconds: int, due: bool; explicit trusted laptop sample |
+| KeyboardSummary | keypress_count: nonnegative int, available: bool; unavailable implies zero, and no key identity can enter this contract |
 | ButtonInput | connection_id, boot_id, seq, control_epoch, button: ButtonId (positive int advertised by device), action: Gesture; internal received clock sample |
-| RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration/progression fields, paused, tuple of ButtonLabels, feedback |
+| RenderSnapshot | Complete typed view from wire spec: screen/epoch/mood, optional clock/timer/duration/progression/settings fields, paused, tuple of ButtonLabels, feedback |
 | ButtonLabel | button: ButtonId, label: str, enabled: bool |
 | ActionDefinition | id: typed ActionId, label: str, intent: ControlIntent, available: pure predicate on GameState |
 | ControlBindings | Mapping from (context, ButtonId, Gesture) to ActionId; context distinguishes running/paused screens |
@@ -86,6 +87,7 @@ Where a fixed enum is specified, use that type rather than an unrestricted strin
 | timers.break_minutes(focus_minutes, policy) → int | Selected duration and validated break policy | Pure proportional calculation; no Pico involvement |
 | timers.decide(state, command, sample, rules, now) → Decision | Immutable state, timer command, TimerSample or None, validated rules and clock reading | Validate transition, pin terms on start, classify early end, build one event |
 | rewards.decide(state, focus_session_id, focus_minutes, chain_number, policy) → Decision | Completed focus/break offer, prior totals, runtime chain position and versioned integer rates | Return one deduplicated, fully resolved reward event; no I/O or current-clock dependency |
+| preferences.decide_toggle(state, selected_row, operation_key, camera_available) → Decision | Current durable consent plus selected settings row | Toggle an available integration or reject; camera remains unavailable through M28 |
 | emotions.select(state, now_utc) → Mood | Event-derived state and explicit UTC | Latest unexpired reaction, then activity default; no I/O or event append |
 | replay.apply_event(state, event) → GameState | GameState or None, committed event | Pure reducer: return new state, validate transition and advance last_seq; do not mutate input |
 | replay.rebuild(events) → GameState or None | Ordered committed history | Repeatedly call apply_event; empty log returns None, invalid/unsupported history raises ReplayError |

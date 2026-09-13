@@ -22,6 +22,8 @@ Development mode opens a small local UI representing the physical setup:
 
 - Pico/USB connection indicator and connect, disconnect and reboot controls.
 - LCD-sized screen preview using the current render snapshot.
+- Natural long-press simulation: hold a virtual button for 600 ms; Home button 1
+  opens the same Settings route as physical firmware.
 - One clickable control for every button ID advertised by the simulated device;
   the MVP defaults to IDs 1, 2 and 3.
 - One normal clickable press per button, with its current label and enabled state.

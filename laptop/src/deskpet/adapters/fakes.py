@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from deskpet.core.events import DomainEvent, UncommittedEvent
-from deskpet.core.models import ClockReading, PublishStatus
+from deskpet.core.models import ClockReading, KeyboardSummary, PublishStatus
 from deskpet.core.ports import AppendResult, InputCallback
 from deskpet.core.views import AnimationCue, InputMessage, RenderSnapshot
 
@@ -43,6 +43,43 @@ class FakeClock:
             monotonic_ms=monotonic_ms,
             resumed=resumed,
         )
+
+
+class FakeKeyboardTracker:
+    """Controllable counter with the same active-segment contract as production."""
+
+    def __init__(self, *, available: bool = True) -> None:
+        self.available = available
+        self.capturing = False
+        self.count = 0
+        self.stopped = False
+
+    def begin(self, enabled: bool) -> bool:
+        self.stopped = False
+        self.count = 0
+        self.capturing = enabled and self.available
+        return not enabled or self.available
+
+    def pause(self) -> None:
+        self.capturing = False
+
+    def resume(self) -> None:
+        if self.available:
+            self.capturing = True
+
+    def add_presses(self, count: int) -> None:
+        if count < 0:
+            raise ValueError("count must be nonnegative")
+        if self.capturing:
+            self.count += count
+
+    def finish(self) -> KeyboardSummary:
+        self.capturing = False
+        return KeyboardSummary(self.count if self.available else 0, self.available)
+
+    def stop(self) -> None:
+        self.capturing = False
+        self.stopped = True
 
 
 class FakeEventStore:

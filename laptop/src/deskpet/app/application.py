@@ -16,12 +16,14 @@ from deskpet.core.commands import (
     ConfirmFocus,
     ControlIntent,
     CycleDuration,
+    CycleSetting,
     Decision,
     EndCurrent,
     EndSession,
     FeedPet,
     NoOp,
     OpenFeed,
+    OpenSettings,
     OpenSetup,
     PauseCurrent,
     PauseSession,
@@ -37,6 +39,7 @@ from deskpet.core.commands import (
     StartBreak,
     StartBreakIntent,
     StartFocus,
+    ToggleSetting,
 )
 from deskpet.core.config import AppConfig
 from deskpet.core.events import (
@@ -55,6 +58,7 @@ from deskpet.core.events import (
     PetComforted,
     PetCreated,
     ProgressionInitialized,
+    TrackingPreferencesChanged,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -62,6 +66,7 @@ from deskpet.core.models import (
     ClockReading,
     Feedback,
     GameState,
+    KeyboardSummary,
     Reaction,
     ReactionMood,
     RejectionCode,
@@ -76,6 +81,7 @@ from deskpet.core.ports import (
     DeviceLink,
     EventStore,
     EventStoreError,
+    KeyboardTracker,
 )
 from deskpet.core.views import (
     AnimationCue,
@@ -90,7 +96,7 @@ from deskpet.core.views import (
     Shutdown,
     Tick,
 )
-from deskpet.features import feeding, replay, rewards, timers
+from deskpet.features import feeding, preferences, replay, rewards, timers
 
 UuidFactory = Callable[[], UUID]
 
@@ -106,12 +112,14 @@ class Application:
         config: AppConfig,
         *,
         uuid_factory: UuidFactory = uuid4,
+        keyboard_tracker: KeyboardTracker | None = None,
     ) -> None:
         self._store = store
         self._device = device
         self._clock = clock
         self._config = config
         self._uuid_factory = uuid_factory
+        self._keyboard = keyboard_tracker or _InactiveKeyboardTracker()
         self._inputs: queue.Queue[InputMessage] = queue.Queue()
         self._state: GameState | None = None
         self._runtime: RuntimeState | None = None
@@ -255,7 +263,10 @@ class Application:
             try:
                 self._device.stop()
             finally:
-                self._store.close()
+                try:
+                    self._keyboard.stop()
+                finally:
+                    self._store.close()
 
     def _enqueue(self, incoming: InputMessage) -> None:
         self._inputs.put_nowait(incoming)
@@ -309,7 +320,14 @@ class Application:
                     runtime, intent, self.state, self._config.focus, now
                 )
                 self._render(now)
-            case OpenSetup() | CycleDuration() | BackHome() | ShowTime():
+            case (
+                OpenSetup()
+                | CycleDuration()
+                | BackHome()
+                | ShowTime()
+                | OpenSettings()
+                | CycleSetting()
+            ):
                 self._runtime = controls.navigate(
                     runtime, intent, self._require_state(), self._config.focus, now
                 )
@@ -318,6 +336,14 @@ class Application:
                 self._restart_focus(incoming, now)
             case PetOnce():
                 self._pet_once(incoming, now)
+            case ToggleSetting():
+                decision = preferences.decide_toggle(
+                    self.state,
+                    self.runtime.settings_row,
+                    f"button:{incoming.connection_id}:{incoming.seq}",
+                    camera_available=False,
+                )
+                self._commit(decision, now)
             case _:
                 decision = self._decide(intent, incoming, now)
                 self._commit(decision, now)
@@ -410,6 +436,9 @@ class Application:
                 | ShowTime()
                 | RestartFocus()
                 | PetOnce()
+                | OpenSettings()
+                | CycleSetting()
+                | ToggleSetting()
             ):
                 raise ValueError("navigation intent cannot become a domain command")
             case _ as unreachable:
@@ -509,6 +538,12 @@ class Application:
     ) -> bool:
         if isinstance(decision, Rejected | NoOp):
             return False
+        keyboard_summary = (
+            self._keyboard.finish()
+            if isinstance(decision.event, FocusSessionCompleted)
+            and self.state.keyboard_tracking_enabled
+            else None
+        )
         try:
             result = self._append(decision.event, now)
         except EventStoreError:
@@ -534,7 +569,10 @@ class Application:
         if isinstance(result.event.event.draft, FocusSessionCompleted) and (
             completed_minutes is None
             or not self._grant_focus_reward(
-                result.event.event.draft.session_id, completed_minutes, now
+                result.event.event.draft.session_id,
+                completed_minutes,
+                now,
+                keyboard_summary,
             )
         ):
             return False
@@ -547,7 +585,11 @@ class Application:
         return True
 
     def _grant_focus_reward(
-        self, focus_session_id: str, focus_minutes: int, now: ClockReading
+        self,
+        focus_session_id: str,
+        focus_minutes: int,
+        now: ClockReading,
+        keyboard_summary: KeyboardSummary | None,
     ) -> bool:
         """Persist and apply a completion reward before exposing the party screen."""
         chain_number = self.runtime.focus_chain_count + 1
@@ -557,6 +599,7 @@ class Application:
             focus_minutes,
             chain_number,
             self._reward_policy(),
+            keyboard_summary,
         )
         if not isinstance(decision, Accepted):
             return False
@@ -575,7 +618,7 @@ class Application:
             self.runtime,
             focus_chain_count=chain_number,
             last_earned_xp=draft.base_xp + draft.chain_xp,
-            last_earned_yarn=draft.base_yarn + draft.chain_yarn,
+            last_earned_yarn=(draft.base_yarn + draft.chain_yarn + draft.keyboard_yarn),
         )
         return True
 
@@ -661,6 +704,19 @@ class Application:
             anchor = None
         if isinstance(draft, FocusSessionPaused | FocusSessionResumed):
             meaning_changed = True
+        if isinstance(draft, FocusSessionStarted):
+            available = self._keyboard.begin(self.state.keyboard_tracking_enabled)
+            runtime = replace(runtime, keyboard_available=available)
+        elif isinstance(draft, FocusSessionPaused):
+            self._keyboard.pause()
+        elif isinstance(draft, FocusSessionResumed):
+            self._keyboard.resume()
+        elif isinstance(draft, FocusSessionEnded):
+            self._keyboard.finish()
+        elif (
+            isinstance(draft, TrackingPreferencesChanged) and not draft.keyboard_enabled
+        ):
+            self._keyboard.stop()
         chain_count = runtime.focus_chain_count
         last_xp = runtime.last_earned_xp
         last_yarn = runtime.last_earned_yarn
@@ -759,6 +815,12 @@ class Application:
             yarn_minutes_per_unit=progression.yarn_minutes_per_unit,
             chain_xp_percent=progression.chain_xp_percent,
             chain_yarn_per_step=progression.chain_yarn_per_step,
+            keyboard_one_yarn_keypresses=(
+                self._config.activity.keyboard_one_yarn_keypresses
+            ),
+            keyboard_two_yarn_keypresses=(
+                self._config.activity.keyboard_two_yarn_keypresses
+            ),
         )
 
     def _wait_seconds(self, now: ClockReading) -> float:
@@ -791,3 +853,19 @@ def _startup_screen(state: GameState) -> Screen:
             else Screen.BREAK
         )
     return Screen.HOME
+
+
+class _InactiveKeyboardTracker:
+    """Default dependency for tests/callers that do not compose host tracking."""
+
+    def begin(self, enabled: bool) -> bool:
+        return not enabled
+
+    def pause(self) -> None: ...
+
+    def resume(self) -> None: ...
+
+    def finish(self) -> KeyboardSummary:
+        return KeyboardSummary(0, False)
+
+    def stop(self) -> None: ...

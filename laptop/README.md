@@ -2,6 +2,10 @@
 
 This folder contains the CPython application: timer and emotion rules, SQLite
 history, screen presentation, USB communication and future laptop integrations.
+Global keyboard counting uses `pynput`; it starts only after the user opts in and
+a focus session begins, and it never stores key identities or text. The OS may
+request Accessibility/input-monitoring permission. A denial simply disables the
+bonus without affecting focus rewards.
 It must not be copied to or imported by the Pico firmware.
 
 The expected deployment host is an HP Windows laptop; initial tooling was also

@@ -80,6 +80,15 @@ class PetComforted(DraftMetadata):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class TrackingPreferencesChanged(DraftMetadata):
+    event_type: ClassVar[Literal["tracking_preferences_changed"]] = (
+        "tracking_preferences_changed"
+    )
+    keyboard_enabled: bool
+    camera_enabled: bool
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class FocusRewardGranted(DraftMetadata):
     event_type: ClassVar[Literal["focus_reward_granted"]] = "focus_reward_granted"
     focus_session_id: str
@@ -96,6 +105,10 @@ class FocusRewardGranted(DraftMetadata):
     level_after: int
     yarn_before: int
     yarn_after: int
+    keyboard_enabled: bool = False
+    keyboard_available: bool = False
+    keyboard_keypresses: int = 0
+    keyboard_yarn: int = 0
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -180,6 +193,7 @@ type EventDraft = (
     | PetFed
     | ItemPurchasedAndFed
     | PetComforted
+    | TrackingPreferencesChanged
     | FocusRewardGranted
     | FocusSessionStarted
     | BreakSessionStarted

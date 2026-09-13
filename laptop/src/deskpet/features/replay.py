@@ -23,6 +23,7 @@ from deskpet.core.events import (
     PetCreated,
     PetFed,
     ProgressionInitialized,
+    TrackingPreferencesChanged,
 )
 from deskpet.core.models import (
     FocusTerms,
@@ -125,6 +126,13 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 needs_comfort=False,
                 latest_reaction=draft.reaction,
             )
+        case TrackingPreferencesChanged():
+            return _advance(
+                state,
+                event,
+                keyboard_tracking_enabled=draft.keyboard_enabled,
+                camera_tracking_enabled=draft.camera_enabled,
+            )
         case FocusRewardGranted():
             progression = state.progression
             offer = state.pending_break
@@ -143,6 +151,20 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 raise ReplayError("focus reward positive fields are invalid")
             if draft.chain_xp < 0 or draft.chain_yarn < 0:
                 raise ReplayError("focus reward chain fields are invalid")
+            if draft.keyboard_keypresses < 0 or draft.keyboard_yarn not in (0, 1, 2):
+                raise ReplayError("focus reward keyboard fields are invalid")
+            if (
+                not draft.keyboard_enabled
+                and (
+                    draft.keyboard_available
+                    or draft.keyboard_keypresses
+                    or draft.keyboard_yarn
+                )
+            ) or (
+                not draft.keyboard_available
+                and (draft.keyboard_keypresses or draft.keyboard_yarn)
+            ):
+                raise ReplayError("focus reward keyboard eligibility is inconsistent")
             if (
                 draft.total_xp_before != progression.total_xp
                 or draft.level_before != progression.level
@@ -156,7 +178,10 @@ def apply_event(state: GameState | None, event: DomainEvent) -> GameState:
                 raise ReplayError("focus reward XP breakdown does not add up")
             if (
                 draft.yarn_after
-                != draft.yarn_before + draft.base_yarn + draft.chain_yarn
+                != draft.yarn_before
+                + draft.base_yarn
+                + draft.chain_yarn
+                + draft.keyboard_yarn
             ):
                 raise ReplayError("focus reward yarn breakdown does not add up")
             expected_level = level_for_xp(

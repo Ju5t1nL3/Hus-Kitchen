@@ -31,6 +31,7 @@ from deskpet.core.events import (
     PetCreated,
     PetFed,
     ProgressionInitialized,
+    TrackingPreferencesChanged,
 )
 from deskpet.core.models import (
     ButtonId,
@@ -56,6 +57,7 @@ from deskpet.core.views import (
     PresentationResult,
     ProgressionView,
     RenderSnapshot,
+    SettingsView,
 )
 from deskpet.features import emotions
 from deskpet.features.timers import BreakPolicy
@@ -130,6 +132,9 @@ def build(
         earned_rewards=_earned_rewards(runtime)
         if runtime.screen is Screen.BREAK_OFFER
         else None,
+        settings=_settings(state, runtime)
+        if runtime.screen is Screen.SETTINGS
+        else None,
     )
 
 
@@ -164,6 +169,8 @@ def on_commit(
         case ProgressionInitialized():
             return PresentationResult(screen=runtime.screen, cues=())
         case FocusRewardGranted():
+            return PresentationResult(screen=runtime.screen, cues=())
+        case TrackingPreferencesChanged():
             return PresentationResult(screen=runtime.screen, cues=())
         case PetFed():
             definition = food_definitions.get(draft.food_id)
@@ -200,6 +207,8 @@ def _context(screen: Screen, paused: bool) -> ControlContext:
             return ControlContext.BREAK_OFFER
         case Screen.BREAK:
             return ControlContext.BREAK_RUNNING
+        case Screen.SETTINGS:
+            return ControlContext.SETTINGS
         case _ as unreachable:
             assert_never(unreachable)
 
@@ -246,6 +255,16 @@ def _earned_rewards(runtime: RuntimeState) -> EarnedRewardsView | None:
     if runtime.last_earned_xp is None or runtime.last_earned_yarn is None:
         return None
     return EarnedRewardsView(runtime.last_earned_xp, runtime.last_earned_yarn)
+
+
+def _settings(state: GameState, runtime: RuntimeState) -> SettingsView:
+    return SettingsView(
+        selected_row=runtime.settings_row,
+        keyboard_enabled=state.keyboard_tracking_enabled,
+        keyboard_available=runtime.keyboard_available,
+        camera_enabled=state.camera_tracking_enabled,
+        camera_available=False,
+    )
 
 
 def _buttons(

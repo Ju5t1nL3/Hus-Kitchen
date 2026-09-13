@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from deskpet.core.commands import Accepted, Decision, Rejected
 from deskpet.core.events import EventSource, FocusRewardGranted
-from deskpet.core.models import GameState, RejectionCode, level_for_xp
+from deskpet.core.models import GameState, KeyboardSummary, RejectionCode, level_for_xp
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +14,8 @@ class RewardPolicy:
     yarn_minutes_per_unit: int
     chain_xp_percent: int
     chain_yarn_per_step: int
+    keyboard_one_yarn_keypresses: int
+    keyboard_two_yarn_keypresses: int
 
     def __post_init__(self) -> None:
         if self.version <= 0 or self.xp_per_focus_minute <= 0:
@@ -22,6 +24,10 @@ class RewardPolicy:
             raise ValueError("yarn_minutes_per_unit must be positive")
         if self.chain_xp_percent < 0 or self.chain_yarn_per_step < 0:
             raise ValueError("chain bonuses must be nonnegative")
+        if self.keyboard_one_yarn_keypresses <= 0 or (
+            self.keyboard_two_yarn_keypresses <= self.keyboard_one_yarn_keypresses
+        ):
+            raise ValueError("keyboard reward thresholds must be positive and increase")
 
 
 def decide(
@@ -30,6 +36,7 @@ def decide(
     focus_minutes: int,
     chain_number: int,
     policy: RewardPolicy,
+    keyboard: KeyboardSummary | None = None,
 ) -> Decision:
     """Return one fully resolved, deduplicated completion reward."""
     progression = state.progression
@@ -46,8 +53,16 @@ def decide(
         policy.yarn_minutes_per_unit
     )
     chain_yarn = (chain_number - 1) * policy.chain_yarn_per_step
+    keyboard_enabled = keyboard is not None
+    keyboard_available = keyboard.available if keyboard is not None else False
+    keypresses = keyboard.keypress_count if keyboard_available and keyboard else 0
+    keyboard_yarn = (
+        2
+        if keypresses >= policy.keyboard_two_yarn_keypresses
+        else int(keypresses >= policy.keyboard_one_yarn_keypresses)
+    )
     total_xp_after = progression.total_xp + base_xp + chain_xp
-    yarn_after = progression.yarn_balance + base_yarn + chain_yarn
+    yarn_after = progression.yarn_balance + base_yarn + chain_yarn + keyboard_yarn
     level_after = level_for_xp(
         total_xp_after, progression.xp_per_level, progression.xp_level_increment
     )
@@ -63,6 +78,10 @@ def decide(
             chain_xp=chain_xp,
             base_yarn=base_yarn,
             chain_yarn=chain_yarn,
+            keyboard_enabled=keyboard_enabled,
+            keyboard_available=keyboard_available,
+            keyboard_keypresses=keypresses,
+            keyboard_yarn=keyboard_yarn,
             total_xp_before=progression.total_xp,
             total_xp_after=total_xp_after,
             level_before=progression.level,

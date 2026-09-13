@@ -25,6 +25,7 @@ class ControlContext(StrEnum):
     FOCUS_PAUSED = "focus_paused"
     BREAK_OFFER = "break_offer"
     BREAK_RUNNING = "break_running"
+    SETTINGS = "settings"
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +105,19 @@ class EarnedRewardsView:
             raise ValueError("earned rewards must be nonnegative")
 
 
+@dataclass(frozen=True, slots=True)
+class SettingsView:
+    selected_row: int
+    keyboard_enabled: bool
+    keyboard_available: bool
+    camera_enabled: bool
+    camera_available: bool
+
+    def __post_init__(self) -> None:
+        if self.selected_row not in (0, 1):
+            raise ValueError("selected_row must select keyboard or camera")
+
+
 type AvailabilityPredicate = Callable[[GameState], bool]
 
 
@@ -133,6 +147,7 @@ class RenderSnapshot:
     feedback: Feedback | None
     progression: ProgressionView | None = None
     earned_rewards: EarnedRewardsView | None = None
+    settings: SettingsView | None = None
 
 
 class AnimationName(StrEnum):

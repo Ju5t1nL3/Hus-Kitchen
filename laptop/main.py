@@ -5,6 +5,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from deskpet.adapters.config_loader import load
+from deskpet.adapters.keyboard_tracker import PynputKeyboardTracker
 from deskpet.adapters.serial_device_link import SerialDeviceLink
 from deskpet.adapters.serial_discovery import (
     PortableDeviceResolver,
@@ -58,7 +59,13 @@ def build_application(
         store = (
             TemporaryEventStore() if data_path is None else SqliteEventStore(data_path)
         )
-        return Application(store, device, clock, config)
+        return Application(
+            store,
+            device,
+            clock,
+            config,
+            keyboard_tracker=PynputKeyboardTracker(),
+        )
 
     selector = DeviceSelector(
         port=config.device.port,
@@ -75,7 +82,13 @@ def build_application(
     clock = SystemClock()
     device = SerialDeviceLink(PySerialBackend(result.candidate.port), SystemClock())
     store = SqliteEventStore(data_path or ROOT / "data" / "pet.db")
-    return Application(store, device, clock, config)
+    return Application(
+        store,
+        device,
+        clock,
+        config,
+        keyboard_tracker=PynputKeyboardTracker(),
+    )
 
 
 def main() -> None:

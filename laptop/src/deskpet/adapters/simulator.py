@@ -38,6 +38,7 @@ from deskpet.core.views import (
     Pong,
     ProgressionView,
     RenderSnapshot,
+    SettingsView,
     Shutdown,
     Tick,
 )
@@ -651,6 +652,33 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
             xp=_required_int(raw_rewards, "xp"),
             yarn=_required_int(raw_rewards, "yarn"),
         )
+    settings_value = value.get("settings")
+    settings = None
+    if settings_value is not None:
+        if not isinstance(settings_value, dict):
+            raise ValueError("bad_settings")
+        raw_settings = cast(dict[str, object], settings_value)
+        keyboard_enabled = raw_settings.get("keyboard_enabled")
+        keyboard_available = raw_settings.get("keyboard_available")
+        camera_enabled = raw_settings.get("camera_enabled")
+        camera_available = raw_settings.get("camera_available")
+        if not all(
+            isinstance(item, bool)
+            for item in (
+                keyboard_enabled,
+                keyboard_available,
+                camera_enabled,
+                camera_available,
+            )
+        ):
+            raise ValueError("bad_settings_flags")
+        settings = SettingsView(
+            selected_row=_required_int(raw_settings, "selected_row"),
+            keyboard_enabled=bool(keyboard_enabled),
+            keyboard_available=bool(keyboard_available),
+            camera_enabled=bool(camera_enabled),
+            camera_available=bool(camera_available),
+        )
     return RenderSnapshot(
         screen=Screen(_required_str(value, "screen")),
         control_epoch=_required_int(value, "control_epoch"),
@@ -664,6 +692,7 @@ def _decode_view(value: dict[str, object]) -> RenderSnapshot:
         feedback=feedback,
         progression=progression,
         earned_rewards=rewards,
+        settings=settings,
     )
 
 
@@ -701,6 +730,15 @@ def _view_json(view: RenderSnapshot) -> dict[str, object]:
         "earned_rewards": None
         if view.earned_rewards is None
         else {"xp": view.earned_rewards.xp, "yarn": view.earned_rewards.yarn},
+        "settings": None
+        if view.settings is None
+        else {
+            "selected_row": view.settings.selected_row,
+            "keyboard_enabled": view.settings.keyboard_enabled,
+            "keyboard_available": view.settings.keyboard_available,
+            "camera_enabled": view.settings.camera_enabled,
+            "camera_available": view.settings.camera_available,
+        },
     }
 
 

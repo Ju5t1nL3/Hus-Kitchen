@@ -129,6 +129,20 @@ class ProgressionConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ActivityConfig:
+    keyboard_one_yarn_keypresses: int
+    keyboard_two_yarn_keypresses: int
+
+    def __post_init__(self) -> None:
+        _positive(
+            self.keyboard_one_yarn_keypresses,
+            "activity.keyboard_one_yarn_keypresses",
+        )
+        if self.keyboard_two_yarn_keypresses <= self.keyboard_one_yarn_keypresses:
+            raise ValueError("activity keyboard thresholds must increase")
+
+
+@dataclass(frozen=True, slots=True)
 class AppConfig:
     identity: IdentityConfig
     focus: FocusConfig
@@ -137,6 +151,7 @@ class AppConfig:
     ui: UiConfig
     device: DeviceConfig
     progression: ProgressionConfig
+    activity: ActivityConfig
 
 
 def _text(value: str, path: str) -> None:

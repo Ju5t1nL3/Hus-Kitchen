@@ -11,8 +11,10 @@ from deskpet.core.commands import (
     ConfirmFocus,
     ControlIntent,
     CycleDuration,
+    CycleSetting,
     EndCurrent,
     OpenFeed,
+    OpenSettings,
     OpenSetup,
     PauseCurrent,
     PetOnce,
@@ -21,6 +23,7 @@ from deskpet.core.commands import (
     ShowTime,
     SkipBreakIntent,
     StartBreakIntent,
+    ToggleSetting,
 )
 from deskpet.core.config import FocusConfig
 from deskpet.core.models import (
@@ -126,6 +129,15 @@ ACTIONS: Mapping[ActionId, ActionDefinition] = MappingProxyType(
         ActionId.END_BREAK: ActionDefinition(
             ActionId.END_BREAK, "Home", EndCurrent(), _has_session
         ),
+        ActionId.OPEN_SETTINGS: ActionDefinition(
+            ActionId.OPEN_SETTINGS, "Settings", OpenSettings(), _idle
+        ),
+        ActionId.CYCLE_SETTING: ActionDefinition(
+            ActionId.CYCLE_SETTING, "Up", CycleSetting(), _idle
+        ),
+        ActionId.TOGGLE_SETTING: ActionDefinition(
+            ActionId.TOGGLE_SETTING, "Select", ToggleSetting(), _idle
+        ),
     }
 )
 
@@ -170,7 +182,15 @@ _CLOCK_REVEAL_MS = 5_000
 
 def navigate(
     runtime: RuntimeState,
-    intent: OpenFeed | OpenSetup | CycleDuration | BackHome | ShowTime,
+    intent: (
+        OpenFeed
+        | OpenSetup
+        | CycleDuration
+        | BackHome
+        | ShowTime
+        | OpenSettings
+        | CycleSetting
+    ),
     state: GameState,
     config: FocusConfig,
     now: ClockReading | None = None,
@@ -213,6 +233,17 @@ def navigate(
                 runtime,
                 clock_reveal_until_mono_ms=now.monotonic_ms + _CLOCK_REVEAL_MS,
             )
+        case OpenSettings():
+            return replace(
+                runtime,
+                screen=Screen.SETTINGS,
+                settings_row=0,
+                control_epoch=runtime.control_epoch + 1,
+            )
+        case CycleSetting():
+            if runtime.screen is not Screen.SETTINGS:
+                return runtime
+            return replace(runtime, settings_row=(runtime.settings_row + 1) % 2)
 
 
 def context_for(screen: Screen, state: GameState) -> ControlContext:
@@ -236,6 +267,8 @@ def context_for(screen: Screen, state: GameState) -> ControlContext:
             return ControlContext.BREAK_OFFER
         case Screen.BREAK:
             return ControlContext.BREAK_RUNNING
+        case Screen.SETTINGS:
+            return ControlContext.SETTINGS
 
 
 def validate_bindings(
@@ -283,6 +316,11 @@ def validate_bindings(
         ControlContext.BREAK_RUNNING: {
             ActionId.END_BREAK,
             ActionId.RESTART_FOCUS,
+        },
+        ControlContext.SETTINGS: {
+            ActionId.CYCLE_SETTING,
+            ActionId.TOGGLE_SETTING,
+            ActionId.BACK_HOME,
         },
     }
     for context, required in required_routes.items():

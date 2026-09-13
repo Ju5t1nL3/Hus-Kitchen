@@ -6,7 +6,12 @@ from pathlib import Path
 from typing import Protocol
 
 from deskpet.core.events import DomainEvent, UncommittedEvent
-from deskpet.core.models import ClockReading, PublishStatus, WeeklyReport
+from deskpet.core.models import (
+    ClockReading,
+    KeyboardSummary,
+    PublishStatus,
+    WeeklyReport,
+)
 from deskpet.core.views import AnimationCue, InputMessage, RenderSnapshot
 
 
@@ -22,6 +27,20 @@ class AppendResult:
 
 class Clock(Protocol):
     def read(self) -> ClockReading: ...
+
+
+class KeyboardTracker(Protocol):
+    """Count presses without receiving or exposing key identities."""
+
+    def begin(self, enabled: bool) -> bool: ...
+
+    def pause(self) -> None: ...
+
+    def resume(self) -> None: ...
+
+    def finish(self) -> KeyboardSummary: ...
+
+    def stop(self) -> None: ...
 
 
 class EventStore(Protocol):

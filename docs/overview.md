@@ -9,6 +9,10 @@ When you first plug it in, you see a big pet, a clock at the top right, and
 labels above two of the three buttons: **Feed** and **Focus** (the third does
 nothing here and shows a dash).
 
+Holding the first Home button opens Settings without crowding the normal screen.
+Up selects Keyboard or Camera, Select toggles an available option, and Back returns
+Home. Both begin Off; Camera says Unavailable until its M29 integration exists.
+
 Feed opens Food/Drink/Back. Food and Drink show a yarn price; choosing one spends
 yarn and feeds the pet immediately if you can afford it. Focus opens a screen
 where the first button cycles through 5, 10, 15 … 60 minutes and back to 5, the
@@ -86,10 +90,10 @@ reuse the scanner and USB messages rather than needing new game logic.
 
 ## What comes next?
 
-First add XP, levels and yarn plus purchasable Food/Drink. After the user defines
-the mood catalog, finishing focus earns base XP/yarn. Optional keyboard counts and
-local camera attention add yarn; level gains, uninterrupted focus chains and daily
-streaks can add more. Reward amounts and exact streak rules still need choices.
+XP, yarn, priced feeding, moods and base/focus-chain rewards are implemented.
+Optional keyboard counting now adds at most two yarn to a completed focus and
+never XP; it stores counts rather than keys or text. Local camera attention is
+next, followed by level-up/daily-streak yarn and weekly recap work.
 
 Keyboard and camera bonuses are now active tasks. The remaining future-feature
 order continues with sound and then a weekly dashboard. Pixel-art timer progress

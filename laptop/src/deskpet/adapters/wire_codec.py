@@ -23,6 +23,7 @@ from deskpet.core.views import (
     Pong,
     ProgressionView,
     RenderSnapshot,
+    SettingsView,
 )
 
 PROTOCOL_VERSION = 2
@@ -296,6 +297,8 @@ def _encode_render(
         "progression": _encode_progression(view.progression),
         "earned_rewards": _encode_rewards(view.earned_rewards),
     }
+    if view.settings is not None:
+        encoded_view["settings"] = _encode_settings(view.settings)
     return {
         "v": PROTOCOL_VERSION,
         "type": "render",
@@ -328,6 +331,18 @@ def _encode_rewards(value: EarnedRewardsView | None) -> JsonObject | None:
     if value is None:
         return None
     return {"xp": value.xp, "yarn": value.yarn}
+
+
+def _encode_settings(value: SettingsView | None) -> JsonObject | None:
+    if value is None:
+        return None
+    return {
+        "selected_row": value.selected_row,
+        "keyboard_enabled": value.keyboard_enabled,
+        "keyboard_available": value.keyboard_available,
+        "camera_enabled": value.camera_enabled,
+        "camera_available": value.camera_available,
+    }
 
 
 def _encode_animate(message: AnimateMessage) -> JsonObject:
@@ -393,6 +408,8 @@ def _validate_view(
         raise EncodeError("progression is only valid on home or feed")
     if view.screen is not Screen.BREAK_OFFER and view.earned_rewards is not None:
         raise EncodeError("earned_rewards is only valid on break_offer")
+    if (view.screen is Screen.SETTINGS) != (view.settings is not None):
+        raise EncodeError("settings data is required only on settings")
     if is_timer:
         if revealing_clock and view.timer_seconds is not None:
             raise EncodeError("focus clock reveal cannot include timer_seconds")

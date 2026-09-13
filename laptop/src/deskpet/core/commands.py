@@ -25,6 +25,9 @@ class ActionId(StrEnum):
     BACK_HOME = "back_home"
     SHOW_TIME = "show_time"
     RESTART_FOCUS = "restart_focus"
+    OPEN_SETTINGS = "open_settings"
+    CYCLE_SETTING = "cycle_setting"
+    TOGGLE_SETTING = "toggle_setting"
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +90,18 @@ class ShowTime: ...
 class RestartFocus: ...
 
 
+@dataclass(frozen=True, slots=True)
+class OpenSettings: ...
+
+
+@dataclass(frozen=True, slots=True)
+class CycleSetting: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ToggleSetting: ...
+
+
 type ControlIntent = (
     OpenFeed
     | BuyItem
@@ -103,6 +118,9 @@ type ControlIntent = (
     | BackHome
     | ShowTime
     | RestartFocus
+    | OpenSettings
+    | CycleSetting
+    | ToggleSetting
 )
 
 

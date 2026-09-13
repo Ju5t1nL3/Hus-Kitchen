@@ -18,6 +18,7 @@ focus). Unbound buttons show a disabled dash, per the button-labeling rule in
 | Screen | What is visible | Button 1 | Button 2 | Button 3 |
 | --- | --- | --- | --- | --- |
 | Home | Large central pet; clock plus compact level/yarn strip (exact XP is dev-only) | Feed: open menu | Focus: open setup | *(unbound)* |
+| Settings | Keyboard and Camera rows with selected marker and On/Off/Unavailable status | Up: select next row | Select: toggle available row | Back: Home |
 | Feed menu | Current yarn balance; Food and Drink with their configured yarn prices | Buy/feed Food | Buy/feed Drink | Back: cancel to Home |
 | Setup | Selected focus minutes; smaller calculated break duration | Up: next duration | Set: start focus | Back: cancel to Home |
 | Focus, running | Large central countdown; small expressive face at top right | Time: show the real clock | Pause | End |
@@ -29,6 +30,11 @@ Breaks can no longer be paused; ending one always goes either straight into
 another focus session (Again) or back to Home. Holds do nothing in MVP; firmware
 emits one press OR one hold per gesture, never both. Labels should fit the actual
 screen; the state machine and actions stay on the laptop.
+
+Holding button 1 on Home opens Settings; an ordinary press still opens Feed. Both
+tracking choices default Off and persist locally once changed. Keyboard is
+available in M28. Camera remains visibly Unavailable until M29 supplies its adapter,
+so selecting it cannot imply tracking occurred.
 
 **Time reveal.** Pressing Time on a running or paused focus screen swaps the
 countdown for the actual wall-clock time (e.g. "4:00", the same HH:MM format used
@@ -109,6 +115,12 @@ Yarn is the spendable currency. Completed focus grants the approved duration and
 focus-chain XP/yarn breakdown from progression design; later tasks add optional
 keystroke/camera yarn plus level-up and daily-streak yarn bonuses. Those later
 bonus rates remain open; M27's base/chain rates and level curve are fixed.
+
+Keyboard tracking is opt-in and counts presses only during active, unpaused focus;
+it never records key identities or text. A completed session earns +1 yarn for
+500–999 eligible presses or +2 for 1,000+, with a two-yarn cap and no XP effect.
+Disabled, unavailable, failed, paused or incomplete tracking earns no keyboard
+bonus and never reduces the base reward.
 
 Home's Feed action opens the Feed menu. Food and Drink each display a configured
 yarn price. Choosing an affordable item atomically spends yarn, feeds the pet and

@@ -6,10 +6,10 @@ phone-checking with a pleasant, glanceable desk device.
 
 Current scope: large home pet and clock, a 5–60-minute focus selector, countdown,
 three context-labeled buttons, focus pause/resume and calculated break offers. The
-approved expansion before final verification adds XP, levels and spendable `yarn`;
-a Feed menu sells Food and Drink for yarn. It then adds a user-specified mood
-catalog, base completion rewards, optional keystroke/camera yarn, and
-level/focus-chain/daily-streak bonuses alongside weekly recap work.
+approved expansion now includes XP, levels, spendable `yarn`, priced Food/Drink,
+the mood catalog, base/focus-chain rewards, and opt-in keyboard-count yarn. Hold
+Home button 1 for Settings; keyboard and camera default Off, and camera remains
+Unavailable until M29. Level-up/daily-streak bonuses and weekly recap follow.
 Health/hunger/friendship remain removed. Timer progress art is a separate future
 idea, not the XP bar.
 

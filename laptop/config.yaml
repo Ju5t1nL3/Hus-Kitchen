@@ -30,7 +30,7 @@ feeding:
       consume_animation: feed
 
 progression:
-  policy_version: 2
+  policy_version: 3
   starting_yarn: 10
   xp_per_level: 75
   xp_level_increment: 25
@@ -39,10 +39,15 @@ progression:
   chain_xp_percent: 15
   chain_yarn_per_step: 1
 
+activity:
+  keyboard_one_yarn_keypresses: 500
+  keyboard_two_yarn_keypresses: 1000
+
 controls:
   bindings:
     home:
       1.press: open_feed
+      1.hold: open_settings
       2.press: open_setup
       3.press: pet
     feed:
@@ -68,6 +73,10 @@ controls:
     break_running:
       1.press: restart_focus
       2.press: end_break
+    settings:
+      1.press: cycle_setting
+      2.press: toggle_setting
+      3.press: back_home
 
 ui:
   clock_timezone: America/Chicago

@@ -114,7 +114,7 @@ laptop remains authoritative for affordability and spending):
 | Field | Contract |
 | --- | --- |
 | revision | Positive increasing per connection; ignore duplicate/older snapshots; gaps allowed |
-| screen | home, feed, setup, focus, break_offer, break |
+| screen | home, feed, setup, focus, break_offer, break, settings |
 | control_epoch | Positive, nondecreasing across accepted snapshots; changes when button meanings change, not each countdown tick |
 | mood | idle, happy, sad, hungry, working_neutral, working_sad, sleeping, party; laptop chooses |
 | clock_text | Valid 24-hour HH:MM on home, or on focus while the laptop is revealing the real time; null elsewhere |
@@ -126,6 +126,7 @@ laptop remains authoritative for affordability and spending):
 | feedback | null, unavailable, or storage_error |
 | progression | On Home and Feed: `{level, xp_into_level, xp_for_next_level, yarn_balance}`; null elsewhere. Physical production UI draws only level/yarn; exact XP fields support dev diagnostics. |
 | earned_rewards | On break_offer: `{xp, yarn}` for the completion just awarded; null on other screens |
+| settings | Present only on Settings: selected row plus independent keyboard/camera enabled and available booleans |
 
 All keys are required, with null for absent content. Reject inconsistent fields
 and decreasing epochs. Swapping the validated desired view is atomic in RAM;

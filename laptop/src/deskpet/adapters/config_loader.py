@@ -10,6 +10,7 @@ import yaml  # pyright: ignore[reportMissingModuleSource]
 from deskpet.app.controls import ACTIONS, validate_bindings
 from deskpet.core.commands import ActionId
 from deskpet.core.config import (
+    ActivityConfig,
     AppConfig,
     DeviceConfig,
     FeedingConfig,
@@ -81,13 +82,23 @@ def load(path: Path) -> AppConfig:
 def _parse(raw: Mapping[str, object]) -> AppConfig:
     _exact_keys(
         raw,
-        {"identity", "focus", "feeding", "progression", "controls", "ui", "device"},
+        {
+            "identity",
+            "focus",
+            "feeding",
+            "progression",
+            "activity",
+            "controls",
+            "ui",
+            "device",
+        },
         "config",
     )
     identity = _mapping(_required(raw, "identity", "config"), "identity")
     focus = _mapping(_required(raw, "focus", "config"), "focus")
     feeding = _mapping(_required(raw, "feeding", "config"), "feeding")
     progression = _mapping(_required(raw, "progression", "config"), "progression")
+    activity = _mapping(_required(raw, "activity", "config"), "activity")
     controls = _mapping(_required(raw, "controls", "config"), "controls")
     ui = _mapping(_required(raw, "ui", "config"), "ui")
     device = _mapping(_required(raw, "device", "config"), "device")
@@ -100,6 +111,7 @@ def _parse(raw: Mapping[str, object]) -> AppConfig:
         ui=_ui(ui),
         device=_device(device),
         progression=_progression(progression),
+        activity=_activity(activity),
     )
     configured_buttons = tuple(
         sorted({button for _context, button, _gesture in config.bindings})
@@ -267,6 +279,24 @@ def _progression(raw: Mapping[str, object]) -> ProgressionConfig:
         chain_yarn_per_step=_integer(
             _required(raw, "chain_yarn_per_step", "progression"),
             "progression.chain_yarn_per_step",
+        ),
+    )
+
+
+def _activity(raw: Mapping[str, object]) -> ActivityConfig:
+    _exact_keys(
+        raw,
+        {"keyboard_one_yarn_keypresses", "keyboard_two_yarn_keypresses"},
+        "activity",
+    )
+    return ActivityConfig(
+        keyboard_one_yarn_keypresses=_integer(
+            _required(raw, "keyboard_one_yarn_keypresses", "activity"),
+            "activity.keyboard_one_yarn_keypresses",
+        ),
+        keyboard_two_yarn_keypresses=_integer(
+            _required(raw, "keyboard_two_yarn_keypresses", "activity"),
+            "activity.keyboard_two_yarn_keypresses",
         ),
     )
 

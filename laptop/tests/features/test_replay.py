@@ -22,6 +22,7 @@ from deskpet.core.events import (
     PetCreated,
     PetFed,
     ProgressionInitialized,
+    TrackingPreferencesChanged,
     UncommittedEvent,
 )
 from deskpet.core.models import (
@@ -76,6 +77,23 @@ def started(seq: int = 2, session_id: str = "focus-1") -> DomainEvent:
 
 
 class ReplayHappyPathTests(unittest.TestCase):
+    def test_tracking_preferences_survive_replay(self) -> None:
+        preference = committed(
+            2,
+            TrackingPreferencesChanged(
+                source=EventSource.LOCAL_CONTROLS,
+                dedupe_key="button:c:1",
+                keyboard_enabled=True,
+                camera_enabled=False,
+            ),
+        )
+
+        rebuilt = rebuild((created(), preference))
+
+        assert rebuilt is not None
+        self.assertTrue(rebuilt.keyboard_tracking_enabled)
+        self.assertFalse(rebuilt.camera_tracking_enabled)
+
     def test_focus_reward_applies_recorded_totals_and_rejects_forgery(self) -> None:
         initialized = committed(
             2,
@@ -113,6 +131,10 @@ class ReplayHappyPathTests(unittest.TestCase):
             chain_xp=0,
             base_yarn=1,
             chain_yarn=0,
+            keyboard_enabled=False,
+            keyboard_available=False,
+            keyboard_keypresses=0,
+            keyboard_yarn=0,
             total_xp_before=0,
             total_xp_after=15,
             level_before=1,

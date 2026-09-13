@@ -7,6 +7,7 @@ from deskpet.core.events import FocusRewardGranted
 from deskpet.core.models import (
     BreakOffer,
     GameState,
+    KeyboardSummary,
     ProgressionState,
     level_for_xp,
     xp_for_next_level,
@@ -20,6 +21,8 @@ POLICY = RewardPolicy(
     yarn_minutes_per_unit=10,
     chain_xp_percent=15,
     chain_yarn_per_step=1,
+    keyboard_one_yarn_keypresses=500,
+    keyboard_two_yarn_keypresses=1000,
 )
 
 
@@ -69,6 +72,40 @@ class RewardDecisionTests(unittest.TestCase):
         )
         self.assertIsInstance(decide(missing, "focus-1", 25, 1, POLICY), Rejected)
         self.assertIsInstance(decide(state(), "other", 25, 1, POLICY), Rejected)
+
+    def test_keyboard_bonus_has_approved_boundaries_and_never_adds_xp(self) -> None:
+        for count, expected_yarn in (
+            (0, 0),
+            (499, 0),
+            (500, 1),
+            (999, 1),
+            (1000, 2),
+            (5000, 2),
+        ):
+            with self.subTest(count=count):
+                result = decide(
+                    state(),
+                    "focus-1",
+                    25,
+                    1,
+                    POLICY,
+                    KeyboardSummary(count, True),
+                )
+                assert isinstance(result, Accepted)
+                event = result.event
+                assert isinstance(event, FocusRewardGranted)
+                self.assertEqual(event.keyboard_yarn, expected_yarn)
+                self.assertEqual(event.total_xp_after, 75)
+
+        unavailable = decide(
+            state(), "focus-1", 25, 1, POLICY, KeyboardSummary(0, False)
+        )
+        assert isinstance(unavailable, Accepted)
+        unavailable_event = unavailable.event
+        assert isinstance(unavailable_event, FocusRewardGranted)
+        self.assertTrue(unavailable_event.keyboard_enabled)
+        self.assertFalse(unavailable_event.keyboard_available)
+        self.assertEqual(unavailable_event.keyboard_yarn, 0)
 
 
 class LevelCurveTests(unittest.TestCase):

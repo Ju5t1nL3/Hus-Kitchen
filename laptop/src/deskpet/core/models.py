@@ -15,6 +15,7 @@ class Screen(StrEnum):
     FOCUS = "focus"
     BREAK_OFFER = "break_offer"
     BREAK = "break"
+    SETTINGS = "settings"
 
 
 class Mood(StrEnum):
@@ -205,6 +206,8 @@ class GameState:
     progression: ProgressionState | None = None
     last_fed_at: datetime | None = None
     needs_comfort: bool = False
+    keyboard_tracking_enabled: bool = False
+    camera_tracking_enabled: bool = False
     focus_dates: frozenset[date] = field(default_factory=lambda: frozenset[date]())
     last_seq: int = 0
 
@@ -247,6 +250,8 @@ class RuntimeState:
     focus_chain_count: int = 0
     last_earned_xp: int | None = None
     last_earned_yarn: int | None = None
+    settings_row: int = 0
+    keyboard_available: bool = True
 
     def __post_init__(self) -> None:
         _require_positive(self.selected_focus_minutes, "selected_focus_minutes")
@@ -264,6 +269,19 @@ class RuntimeState:
         if self.last_earned_xp is not None:
             _require_nonnegative(self.last_earned_xp, "last_earned_xp")
             _require_nonnegative(self.last_earned_yarn or 0, "last_earned_yarn")
+        if self.settings_row not in (0, 1):
+            raise ValueError("settings_row must select keyboard or camera")
+
+
+@dataclass(frozen=True, slots=True)
+class KeyboardSummary:
+    keypress_count: int
+    available: bool
+
+    def __post_init__(self) -> None:
+        _require_nonnegative(self.keypress_count, "keypress_count")
+        if not self.available and self.keypress_count:
+            raise ValueError("unavailable keyboard summary cannot contain presses")
 
 
 @dataclass(frozen=True, slots=True)

@@ -116,6 +116,16 @@ opt-in. Capture only during active focus segments, excluding pauses and breaks.
 - Reading and thinking can be productive without typing or facing the camera;
   therefore these signals only add optional yarn.
 
+M28 fixes keyboard rewards at zero below 500 eligible presses, +1 yarn from
+500–999, and +2 yarn at 1,000 or more. Two yarn is the per-completion maximum.
+Keyboard activity never awards XP. Counts include only active focus segments;
+pause, break and ended sessions are excluded. Persist the enabled/available flags,
+eligible count and resolved yarn in the reward event, never key identities.
+
+Hold Home button 1 to open Settings. Up cycles Keyboard/Camera, Select toggles the
+selected available integration, and Back returns Home. Consent defaults Off and is
+saved locally. Camera is displayed as Unavailable until M29 implements it.
+
 Summary intervals must be valid and nonoverlapping. Permission failures and device
 errors yield zero bonus from that source, never a penalty.
 
