@@ -1,8 +1,11 @@
 # Tamagotchi Desk Pet
 
-A small physical productivity companion. A laptop application owns timers,
-emotions and history; a USB-connected TinyCircuits TinyScreen+ reads buttons and
-renders the screen.
+Your portable key to productivity! 
+
+Tomatchi is a digital pet, desk clock, and Pomodoro timer, all in one tiny screen. 
+A USB-powered TinyCircuits TinyScreen+ reads button presses and
+renders the screen. Plug it into your laptop to activate the corresponding laptop app, which manages all of the logic, timers,
+emotions and history.
 
 This repository contains two separate runtimes:
 
@@ -11,15 +14,14 @@ This repository contains two separate runtimes:
   `arduino-cli`.
 
 They communicate using the versioned JSON Lines protocol described in
-[`docs/serial_protocol.md`](docs/serial_protocol.md). They share protocol contracts,
-but never import code from each other.
+[`docs/serial_protocol.md`](docs/serial_protocol.md). 
 
-[`pico/`](pico/) holds a superseded Raspberry Pi Pico + MicroPython prototype,
-retained for its hardware-debugging record only. It is not built or flashed.
+[`pico/`](pico/) holds a superseded Raspberry Pi Pico + MicroPython prototype that was abandoned,
+retained for debugging record only. 
 
 The expected demo host is an HP Windows laptop, but the application is designed
 to remain OS- and device-agnostic. Serial ports are discovered or configured at
-the adapter boundary; platform paths and board/display details never enter game
+the adapter boundary. Platform paths and board/display details never enter game
 rules. Initial laptop tooling has also been verified on macOS.
 
 Start with [`AGENTS.md`](AGENTS.md) for contributor rules and the documentation map.
